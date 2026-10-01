@@ -1,0 +1,17 @@
+<main>
+  <section aria-labelledby="titulo-cadastro">
+    <img [src]="marca.identidade().logoUrl" (error)="marca.restaurarLogo()" alt="Logo" width="64" height="64">
+    <p class="marca">{{ marca.identidade().nome }}</p>
+    <h1 id="titulo-cadastro">Complete seu cadastro</h1>
+    <p>Seu email foi validado. Informe seu nome para criar sua conta.</p>
+    <form #form="ngForm" (ngSubmit)="cadastrar()">
+      <label for="email">Email verificado</label>
+      <input id="email" type="email" [value]="email()" readonly autocomplete="email">
+      <label for="nome">Nome completo</label>
+      <input id="nome" name="nome" [(ngModel)]="nome" required maxlength="150" pattern=".*\S.*" autocomplete="name" placeholder="Digite seu nome">
+      <p role="status" aria-live="polite">{{ aviso() }}</p>
+      <button type="submit" [disabled]="form.invalid || carregando() || !email()">{{ carregando() ? 'Criando conta…' : 'Criar conta' }}</button>
+      <button class="cancelar" type="button" (click)="cancelar()" [disabled]="carregando()">Voltar ao login</button>
+    </form>
+  </section>
+</main>

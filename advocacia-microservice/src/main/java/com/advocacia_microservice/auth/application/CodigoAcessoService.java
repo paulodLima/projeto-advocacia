@@ -3,7 +3,6 @@ package com.advocacia_microservice.auth.application;
 import com.advocacia_microservice.auth.infrastructure.EmailCodigoSender;
 import com.advocacia_microservice.auth.infrastructure.persistence.*;
 import com.advocacia_microservice.usuario.domain.StatusUsuario;
-import com.advocacia_microservice.usuario.domain.Usuario;
 import com.advocacia_microservice.usuario.infrastructure.persistence.JpaUsuarioRepository;
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -34,13 +33,14 @@ public class CodigoAcessoService {
     @Transactional
     public UUID solicitar(String email) {
         var agora = Instant.now();
-        var usuario = usuarios.findByEmail(email.strip().toLowerCase(Locale.ROOT))
+        email = email.strip().toLowerCase(Locale.ROOT);
+        var usuario = usuarios.findByEmail(email)
                 .map(entity -> entity.paraDominio()).orElse(null);
-        // A mesma resposta é usada para emails inexistentes, inativos ou limitados.
-        if (usuario == null || usuario.status() != StatusUsuario.ATIVO) {
+        // Contas inativas continuam bloqueadas; emails novos podem validar para cadastro.
+        if (usuario != null && usuario.status() != StatusUsuario.ATIVO) {
             return UUID.randomUUID();
         }
-        var codigo = codigos.bloquearPorUsuario(usuario.id()).orElseGet(CodigoAcessoEntity::new);
+        var codigo = codigos.bloquearPorEmail(email).orElseGet(CodigoAcessoEntity::new);
         if (codigo.enviadoEm != null && codigo.enviadoEm.plusSeconds(60).isAfter(agora)) {
             return UUID.randomUUID();
         }
@@ -52,7 +52,8 @@ public class CodigoAcessoService {
             return UUID.randomUUID();
         }
         String valor = String.format("%06d", random.nextInt(1_000_000));
-        codigo.usuarioId = usuario.id();
+        if (codigo.id == null) codigo.id = usuario == null ? UUID.randomUUID() : usuario.id();
+        codigo.email = email;
         codigo.desafioId = UUID.randomUUID();
         codigo.hash = encoder.encode(valor);
         codigo.expiraEm = agora.plus(Duration.ofMinutes(10));
@@ -61,12 +62,12 @@ public class CodigoAcessoService {
         codigo.utilizado = false;
         codigo.enviosNaJanela++;
         codigos.saveAndFlush(codigo);
-        sender.enviar(usuario.email(), valor);
+        sender.enviar(email, valor);
         return codigo.desafioId;
     }
 
     @Transactional
-    public Optional<Usuario> validar(UUID desafio, String valor) {
+    public Optional<String> validar(UUID desafio, String valor) {
         var codigo = codigos.bloquearPorDesafio(desafio).orElse(null);
         if (codigo == null || codigo.utilizado || codigo.tentativas >= 5
                 || !codigo.expiraEm.isAfter(Instant.now())) {
@@ -76,11 +77,11 @@ public class CodigoAcessoService {
         if (!encoder.matches(valor, codigo.hash)) {
             return Optional.empty();
         }
-        var usuario = usuarios.findById(codigo.usuarioId).map(entity -> entity.paraDominio());
-        if (usuario.isEmpty() || usuario.get().status() != StatusUsuario.ATIVO) {
+        var usuario = usuarios.findByEmail(codigo.email).map(entity -> entity.paraDominio());
+        if (usuario.isPresent() && usuario.get().status() != StatusUsuario.ATIVO) {
             return Optional.empty();
         }
         codigo.utilizado = true;
-        return usuario;
+        return Optional.of(codigo.email);
     }
 }

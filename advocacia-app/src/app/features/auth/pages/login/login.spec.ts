@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { Login } from './login';
@@ -9,6 +9,7 @@ describe('Login', () => {
   const auth = {
     solicitarCodigo: vi.fn(() => of({ desafioId: 'desafio', mensagem: 'Verifique seu email.' })),
     validarCodigo: vi.fn(),
+    provedores: vi.fn(() => of({ google: false })),
   };
 
   beforeEach(async () => {
@@ -70,5 +71,30 @@ describe('Login', () => {
     expect(auth.solicitarCodigo).toHaveBeenCalledWith('teste@gmail.com');
     expect(element.querySelector('input[autocomplete="one-time-code"]')).not.toBeNull();
     expect(element.textContent).toContain('Validar e entrar');
+  });
+
+  it('opens cadastro when a new email is validated', async () => {
+    auth.validarCodigo.mockReturnValue(of({ cadastroPendente: true }));
+    const router = TestBed.inject(Router);
+    const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    const fixture = TestBed.createComponent(Login);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+    const email = element.querySelector<HTMLInputElement>('input[type="email"]')!;
+    email.value = 'novo@gmail.com';
+    email.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    element.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const codigo = element.querySelector<HTMLInputElement>('input[autocomplete="one-time-code"]')!;
+    codigo.value = '123456';
+    codigo.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    element.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    expect(navigate).toHaveBeenCalledWith('/cadastro');
   });
 });

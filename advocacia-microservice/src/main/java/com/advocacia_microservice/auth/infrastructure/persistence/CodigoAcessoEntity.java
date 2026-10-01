@@ -5,10 +5,12 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "codigo_acesso")
+@Table(name = "codigo_email")
 public class CodigoAcessoEntity {
     @Id
-    public UUID usuarioId;
+    public UUID id;
+    @Column(nullable = false, unique = true, length = 254)
+    public String email;
     @Column(nullable = false, unique = true)
     public UUID desafioId;
     @Column(nullable = false, length = 100)

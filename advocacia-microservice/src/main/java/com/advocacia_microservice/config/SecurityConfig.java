@@ -34,9 +34,11 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(
+            @org.springframework.beans.factory.annotation.Value("${app.auth.public-url}") String publicUrl) {
         var config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:4200"));
+        var frontend = java.net.URI.create(publicUrl);
+        config.setAllowedOrigins(List.of(frontend.getScheme() + "://" + frontend.getRawAuthority()));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Content-Type", "Authorization", "Accept", "X-CSRF-TOKEN"));
         config.setExposedHeaders(List.of("Location"));
@@ -48,11 +50,15 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JpaUsuarioRepository usuarios) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JpaUsuarioRepository usuarios,
+            org.springframework.beans.factory.ObjectProvider<org.springframework.security.oauth2.client.registration.ClientRegistrationRepository> registrations,
+            com.advocacia_microservice.auth.infrastructure.GoogleLoginSuccessHandler googleSuccess,
+            @org.springframework.beans.factory.annotation.Value("${app.auth.public-url}") String publicUrl) throws Exception {
         http.cors(cors -> {});
         // CSRF permanece habilitado. O frontend obtém o token em /api/auth/csrf.
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/csrf", "/api/auth/codigo", "/api/auth/validar",
+                .requestMatchers("/api/auth/csrf", "/api/auth/codigo", "/api/auth/validar", "/api/auth/providers", "/api/auth/cadastro",
+                        "/oauth2/authorization/**", "/login/oauth2/code/**",
                         "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
                 .anyRequest().authenticated());
         http.exceptionHandling(errors -> errors
@@ -60,6 +66,16 @@ public class SecurityConfig {
         http.logout(logout -> logout.logoutUrl("/api/auth/logout")
                 .deleteCookies("JSESSIONID")
                 .logoutSuccessHandler((request, response, auth) -> response.setStatus(204)));
+        if (registrations.getIfAvailable() != null) {
+            http.oauth2Login(oauth -> oauth
+                    .successHandler(googleSuccess)
+                    .failureHandler((request, response, exception) -> {
+                        SecurityContextHolder.clearContext();
+                        var session = request.getSession(false);
+                        if (session != null) session.invalidate();
+                        response.sendRedirect(publicUrl.replaceAll("/+$", "") + "/login?erro=google_falhou");
+                    }));
+        }
         // Revoga sessões quando o usuário é excluído ou desativado.
         http.addFilterBefore(new OncePerRequestFilter() {
             @Override

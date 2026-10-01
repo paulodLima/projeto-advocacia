@@ -1,0 +1,16 @@
+ :host { display: block; min-height: 100dvh; background: #f5f3f0; color: #292724; }
+main { min-height: 100dvh; display: grid; place-items: center; padding: 32px 20px; box-sizing: border-box; }
+section { width: 100%; max-width: 420px; background: white; padding: 36px; border-radius: 16px; box-shadow: 0 10px 40px #302b2410; box-sizing: border-box; }
+img { display: block; margin: auto; object-fit: contain; }
+.marca { text-align: center; letter-spacing: 1px; color: #8b7d69; }
+h1 { font-size: 26px; margin: 28px 0 12px; }
+p { line-height: 1.6; font-size: 14px; }
+form { display: grid; gap: 12px; margin-top: 24px; }
+label { font-size: 14px; }
+input { min-width: 0; padding: 14px; border: 1px solid #d8d2c9; border-radius: 6px; font: inherit; }
+input:read-only { background: #f6f4f1; color: #655f56; }
+input:focus-visible, button:focus-visible { outline: 2px solid #8b7d69; outline-offset: 3px; }
+[role=status] { margin: 0; color: #9d392e; }
+button { padding: 14px; border: 0; border-radius: 6px; background: #8b7d69; color: white; font: inherit; cursor: pointer; }
+button:disabled { opacity: .55; cursor: default; }
+.cancelar { background: transparent; color: #655f56; }

@@ -1,13 +1,13 @@
 import { Routes } from '@angular/router';
-import { authGuard } from '../../core/guards/auth.guard';
+import { cadastroGuard } from '../../core/guards/cadastro.guard';
 
 // Adicione as rotas com loadComponent quando as páginas forem implementadas.
 export const authRoutes: Routes = [
   {
-    path: 'inicio',
-    title: 'Início — Gestão Advocacia',
-    canActivate: [authGuard],
-    loadComponent: () => import('./pages/inicio/inicio').then((module) => module.Inicio),
+    path: 'cadastro',
+    title: 'Criar conta — Gestão Advocacia',
+    canActivate: [cadastroGuard],
+    loadComponent: () => import('./pages/cadastro/cadastro').then((module) => module.Cadastro),
   },
   {
     path: 'login',

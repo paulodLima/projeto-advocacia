@@ -1,1 +1,72 @@
-<router-outlet />
+<div class="casca-app" (keydown.escape)="menuMobile.set(false); painel.set(null); busca = ''">
+  <a class="pular" href="#conteudo" (click)="pularParaConteudo($event)">Pular para o conteúdo</a>
+  @if (menuMobile()) { <button class="fundo-menu" type="button" aria-label="Fechar menu" (click)="menuMobile.set(false)"></button> }
+  <aside class="menu-lateral" [class.expandido]="fixado()" [class.mobile-aberto]="menuMobile()" aria-label="Menu principal">
+    <div class="marca-menu">
+      <a routerLink="/inicio" (click)="fecharMenu()" class="marca-logo" [attr.aria-label]="marca.identidade().nome">
+        <img [src]="marca.identidade().logoUrl" alt="" (error)="marca.restaurarLogo()">
+      </a>
+      <div class="marca-texto"><p>{{ marca.identidade().nome }}</p><span>ADVOCACIA</span></div>
+      <button class="fechar-mobile" type="button" aria-label="Fechar menu" (click)="menuMobile.set(false)"><app-icone nome="close" /></button>
+    </div>
+    <nav>
+      <a class="item-menu inicio" [routerLink]="'/' + inicio.id" routerLinkActive="ativo" ariaCurrentWhenActive="page" [title]="inicio.label" [attr.aria-label]="inicio.label" (click)="fecharMenu()">
+        <app-icone [nome]="inicio.icon" /><span class="rotulo">{{ inicio.label }}</span>
+      </a>
+      @for (grupo of grupos; track grupo.titulo) {
+        <div class="grupo-menu">
+          <button class="titulo-grupo" type="button" (click)="alternarGrupo(grupo.titulo)" [attr.aria-expanded]="!recolhidos().includes(grupo.titulo)">
+            {{ grupo.titulo }}<app-icone nome="chevron" [class.recolhido]="recolhidos().includes(grupo.titulo)" />
+          </button>
+          <div class="itens-grupo" [class.grupo-recolhido]="recolhidos().includes(grupo.titulo)">
+            @for (item of grupo.itens; track item.id) {
+              <a class="item-menu" [routerLink]="'/' + item.id" routerLinkActive="ativo" ariaCurrentWhenActive="page" [title]="item.label" [attr.aria-label]="item.label" (click)="fecharMenu()">
+                <app-icone [nome]="item.icon" /><span class="rotulo">{{ item.label }}</span>
+                @if (item.emBreve) { <span class="em-breve">em breve</span> }
+              </a>
+            }
+          </div>
+        </div>
+      }
+    </nav>
+    <div class="rodape-menu">
+      <a class="item-menu" routerLink="/config" routerLinkActive="ativo" ariaCurrentWhenActive="page" title="Configurações" aria-label="Configurações" (click)="fecharMenu()"><app-icone nome="settings" /><span class="rotulo">Configurações</span></a>
+      <button class="item-menu fixar" type="button" (click)="alternarMenu()" [attr.aria-pressed]="fixado()" [attr.aria-label]="fixado() ? 'Recolher menu' : 'Fixar o menu aberto'" [title]="fixado() ? 'Recolher menu' : 'Fixar o menu aberto'"><app-icone nome="pin" /><span class="rotulo">Menu fixado</span></button>
+    </div>
+  </aside>
+  <div class="area-principal">
+    <header class="cabecalho">
+      <button class="abrir-mobile botao-icone" type="button" aria-label="Abrir menu" [attr.aria-expanded]="menuMobile()" (click)="menuMobile.set(true)"><app-icone nome="menu" /></button>
+      <h1>{{ titulo() }}</h1>
+      <div class="busca">
+        <label><app-icone nome="search" /><input aria-label="Buscar em tudo" placeholder="Buscar em tudo" [(ngModel)]="busca" autocomplete="off"></label>
+        @if (busca.trim()) {
+          <div class="resultados" aria-label="Resultados da busca">
+            <p class="busca-titulo">Navegação</p>
+            @for (item of resultados; track item.id) { <a [routerLink]="'/' + item.id" (click)="fecharMenu()"><app-icone [nome]="item.icon" />{{ item.label }}<app-icone nome="arrow" /></a> }
+            @empty { <p>Nada encontrado.</p> }
+          </div>
+        }
+      </div>
+      <div class="acoes">
+        <button class="botao-icone" type="button" aria-label="Acesso rápido" [attr.aria-expanded]="painel() === 'atalhos'" (click)="alternarPainel('atalhos')"><app-icone nome="plus" /></button>
+        <button class="botao-icone assistente" type="button" aria-label="Assistente" [attr.aria-expanded]="painel() === 'assistente'" (click)="alternarPainel('assistente')"><app-icone nome="sparkles" /></button>
+        <button class="botao-icone" type="button" aria-label="Notificações" [attr.aria-expanded]="painel() === 'notificacoes'" (click)="alternarPainel('notificacoes')"><app-icone nome="bell" /></button>
+        <span class="avatar" [title]="auth.usuario()?.nome || 'Usuário'" [attr.aria-label]="auth.usuario()?.nome || 'Usuário'">{{ iniciais() }}</span>
+        <button class="sair" type="button" (click)="sair()" [disabled]="saindo()">{{ saindo() ? 'Saindo…' : 'Sair' }}</button>
+      </div>
+      @if (painel()) {
+        <section class="painel-cabecalho" aria-live="polite">
+          <div><h2>{{ painel() === 'notificacoes' ? 'Notificações' : painel() === 'assistente' ? 'Assistente' : 'Acesso rápido' }}</h2><button type="button" class="botao-icone" aria-label="Fechar painel" (click)="painel.set(null)"><app-icone nome="close" /></button></div>
+          @if (painel() === 'atalhos') {
+            <a routerLink="/agenda" (click)="fecharMenu()"><app-icone nome="calendar" />Agenda</a>
+            <a routerLink="/processual" (click)="fecharMenu()"><app-icone nome="scale" />Gestão Processual</a>
+            <a routerLink="/contatos" (click)="fecharMenu()"><app-icone nome="users" />Contatos</a>
+          } @else { <p>{{ painel() === 'notificacoes' ? 'Nenhuma notificação por aqui.' : 'Seu assistente estará disponível em breve.' }}</p> }
+        </section>
+      }
+    </header>
+    @if (erro()) { <p class="erro" role="alert">{{ erro() }}</p> }
+    <main id="conteudo" tabindex="-1"><router-outlet /></main>
+  </div>
+</div>

@@ -69,7 +69,7 @@ Os módulos ainda sem implementação têm `package-info.java`, preservando as p
 
 É uma boa base para um monólito modular: facilita encontrar o código e evoluir as funcionalidades separadamente. O nome do diretório `microservice` não transforma cada módulo em um serviço independente. Separar entidade JPA e domínio tem um custo de conversão, mas permite manter as regras sem dependência da persistência. Para funcionalidades pequenas, evite acrescentar interfaces e abstrações sem necessidade.
 
-`SecurityConfig` configura CORS com credenciais para `http://localhost:4200`, sessões e proteção CSRF. O CRUD exige autenticação por código de email de um usuário cadastrado e ativo. `JacksonConfig` permanece reservado; o Jackson usa a configuração padrão do Spring Boot. Não existe senha no modelo de usuário. Permissões por perfil administrativo ainda não estão implementadas.
+`SecurityConfig` configura CORS com credenciais para `http://localhost:4200`, sessões e proteção CSRF. O CRUD exige sessão de usuário ativo. Emails novos validados por código ou Google podem completar o cadastro antes de entrar. `JacksonConfig` permanece reservado; o Jackson usa a configuração padrão do Spring Boot. Não existe senha no modelo de usuário. Permissões por perfil administrativo ainda não estão implementadas.
 
 ## Autenticação
 
@@ -82,6 +82,14 @@ Os módulos ainda sem implementação têm `package-info.java`, preservando as p
 O frontend envia cookies e obtém o token CSRF antes de cada operação de escrita. O código é gerado com SecureRandom, armazenado como hash BCrypt, expira em 10 minutos e permite cinco tentativas. A validação bloqueia a linha no banco para impedir consumo concorrente do mesmo código. O serviço usa Spring Mail e as variáveis SMTP documentadas no README da raiz. O perfil `prd` exige cookie Secure, portanto precisa ser servido por HTTPS.
 
 Para testar localmente e cadastrar o primeiro usuário, consulte o [README da raiz](../README.md).
+
+O login Google usa Spring Security OAuth2 Client e OpenID Connect. `GoogleOAuthConfig` registra o cliente somente quando Client ID e Secret estão definidos. `GoogleLoginService` verifica o email e o usuário ativo, quando existente e vincula a identidade Google pelo `sub`, armazenado na migration `V3__create_google_identity.sql`. O primeiro vínculo exige email verificado Gmail ou Google Workspace. `GoogleLoginSuccessHandler` converte a autenticação OAuth para a mesma identidade local usada pelo login por código e redireciona para o frontend. Estado e nonce são tratados pelo fluxo OIDC do Spring Security.
+
+- `GET /api/auth/providers`: informa se Google está configurado, sem expor credenciais.
+- `GET /oauth2/authorization/google`: inicia o login Google.
+- `GET /login/oauth2/code/google`: callback autorizado no Google Cloud.
+
+Os testes de Google usam identidades simuladas e credenciais sintéticas, sem chamar o provedor externo. O teste real da conta Google depende das credenciais locais e do callback autorizado.
 
 ## Executar com Docker
 
@@ -136,3 +144,5 @@ Dentro de `advocacia-microservice`:
 ```
 
 Os testes usam H2 em modo PostgreSQL, aplicam a migration e verificam inicialização, CRUD e conflito de email na criação/atualização. Não exigem Docker. O comportamento específico do PostgreSQL ainda deve ser verificado nesse banco.
+
+O cadastro usa uma autorização temporária na sessão (15 minutos), sem permissões de usuário até a conclusão. A migration V4 transfere os códigos para `codigo_email`, que permite validar emails ainda sem usuário. `POST /api/auth/cadastro` recebe nome e utiliza exclusivamente o email validado na sessão. Contas inativas não são recriadas.

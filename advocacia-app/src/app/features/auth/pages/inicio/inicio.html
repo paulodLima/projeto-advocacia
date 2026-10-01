@@ -1,0 +1,36 @@
+<div class="pagina-inicio">
+  <section class="boas-vindas" aria-label="Boas-vindas"><p>{{ saudacao }}</p><h2>Olá, {{ primeiroNome() || 'bem-vindo' }}</h2></section>
+  <section class="indicadores" aria-label="Indicadores">
+    <button class="titulo-indicadores" type="button" (click)="indicadoresAbertos.set(!indicadoresAbertos())" [attr.aria-expanded]="indicadoresAbertos()"><app-icone nome="chevron" [class.aberto]="indicadoresAbertos()" />Indicadores</button>
+    @if (indicadoresAbertos()) {
+      <div class="grade-indicadores">
+        @for (indicador of indicadores; track indicador.destino) {
+          <a class="cartao-indicador" [routerLink]="'/' + indicador.destino">
+            <span class="ilustracao" [class]="'ilustracao ' + indicador.cor"><app-icone [nome]="indicador.icon" /></span>
+            <div><strong aria-label="Indicador ainda não disponível">—</strong><h3>{{ indicador.label }}</h3><p>{{ indicador.apoio }}</p></div>
+          </a>
+        }
+      </div>
+    }
+  </section>
+  <div class="colunas">
+    <div class="coluna">
+      <app-painel-inicio titulo="Acesso rápido" resumo="4 atalhos" [aberto]="false">
+        <div class="atalhos">@for (atalho of atalhos; track atalho.destino) { <a [routerLink]="'/' + atalho.destino"><span><app-icone [nome]="atalho.icon" /></span>{{ atalho.label }}</a> }</div>
+      </app-painel-inicio>
+      <app-painel-inicio titulo="Notícias" resumo="jurídicas, para o escritório" [aberto]="false"><p class="vazio">Nenhuma notícia por aqui.</p></app-painel-inicio>
+      <app-painel-inicio titulo="Rotinas do escritório"><p class="vazio">Nenhuma rotina cadastrada.</p><a class="link-discreto" routerLink="/config">Configurações <app-icone nome="arrow" /></a></app-painel-inicio>
+    </div>
+    <div class="coluna">
+      <app-painel-inicio titulo="Atualizações processuais">
+        <a acoes class="link-discreto" routerLink="/processual">Ver todas <app-icone nome="arrow" /></a>
+        <div class="abas" role="tablist" aria-label="Tipo de atualização">
+          <button id="aba-movimentacoes" type="button" role="tab" aria-controls="conteudo-atualizacoes" [attr.aria-selected]="atualizacao() === 'movimentacoes'" [class.ativa]="atualizacao() === 'movimentacoes'" (click)="atualizacao.set('movimentacoes')">Movimentações</button>
+          <button id="aba-publicacoes" type="button" role="tab" aria-controls="conteudo-atualizacoes" [attr.aria-selected]="atualizacao() === 'publicacoes'" [class.ativa]="atualizacao() === 'publicacoes'" (click)="atualizacao.set('publicacoes')">Publicações / Intimações</button>
+        </div>
+        <p id="conteudo-atualizacoes" role="tabpanel" [attr.aria-labelledby]="atualizacao() === 'movimentacoes' ? 'aba-movimentacoes' : 'aba-publicacoes'" class="vazio atualizacoes">{{ atualizacao() === 'movimentacoes' ? 'Nenhuma movimentação recente.' : 'Nada pendente por aqui.' }}</p>
+      </app-painel-inicio>
+      <app-painel-inicio titulo="Últimos casos"><a acoes class="link-discreto" routerLink="/casos">Ir para casos <app-icone nome="arrow" /></a><p class="vazio">Nenhum caso ainda.</p></app-painel-inicio>
+    </div>
+  </div>
+</div>

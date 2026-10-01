@@ -76,7 +76,7 @@ features/usuario/
 - `services`: comunicação HTTP com a API.
 - `models`: tipos dos dados e contratos de request/response.
 
-Pastas reservadas usam `.gitkeep` para serem preservadas no Git. A página `/login` usa o visual de `docs/index.html`, com acesso principal por código enviado ao email. Após validar, abre `/inicio`, protegida por guard que verifica a sessão no backend. A raiz redireciona para `/login`. O Google aparece somente como ícone secundário, aguardando integração OAuth. As demais funcionalidades ainda estão reservadas.
+Pastas reservadas usam `.gitkeep` para serem preservadas no Git. A página `/login` usa o visual de `docs/index.html`, com acesso principal por código enviado ao email. Após validar, abre `/inicio`, protegida por guard que verifica a sessão no backend. A raiz redireciona para `/login`. O Google aparece como ícone secundário: consulta `/api/auth/providers` e redireciona o navegador para `/oauth2/authorization/google` no backend. As credenciais Google ficam somente no backend. Falhas do retorno OAuth aparecem na tela com mensagens controladas. As demais funcionalidades ainda estão reservadas.
 
 `core/auth/auth.service.ts` gerencia solicitação/validação do código, consulta da sessão e logout. `core/interceptors/session.interceptor.ts` envia cookies somente para a API configurada e busca o token CSRF antes das escritas. As credenciais não são armazenadas em localStorage. A rota `/inicio` usa renderização no cliente para não prerenderizar conteúdo de uma sessão privada. No ambiente local, os códigos chegam ao Mailpit em http://localhost:8025, conforme documentado no README da raiz.
 
@@ -139,3 +139,11 @@ Para executar os testes existentes:
 ```sh
 npm test -- --watch=false
 ```
+
+A rota `/cadastro` é protegida por `cadastroGuard` e renderizada no cliente. Ela exige uma validação recente por código ou Google, mostra o email verificado como somente leitura e pede nome completo. Ao concluir, a API cria a conta, inicia a sessão e o frontend abre `/inicio`.
+
+### Menu e painel após o login
+
+A rota `/inicio` usa o layout autenticado baseado em `docs/index.html`: menu lateral musgo recolhível, grupos Principal/Relacionamento/Ferramentas/Gestão, cabeçalho com busca, avatar e saída, saudação e cartões iniciais. O menu pode ser fixado e a preferência é salva por usuário no navegador. Em telas pequenas, abre como um painel sobre o conteúdo.
+
+Os itens e destinos ficam em `core/navigation/menu.model.ts`. As áreas ainda sem implementação usam uma página compartilhada “Em breve”. A busca do cabeçalho encontra áreas do menu; os indicadores e cartões permanecem vazios até a integração de dados. O painel não consulta APIs dos módulos. Login, sessão e saída usam a autenticação existente.

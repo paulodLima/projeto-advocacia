@@ -1,6 +1,8 @@
 package com.advocacia_microservice.auth.api;
 
 import com.advocacia_microservice.auth.application.CodigoAcessoService;
+import com.advocacia_microservice.auth.application.ConcluirCadastroService;
+import com.advocacia_microservice.auth.infrastructure.SessaoCadastro;
 import com.advocacia_microservice.auth.infrastructure.LoginRateLimiter;
 import com.advocacia_microservice.usuario.api.response.UsuarioResponse;
 import com.advocacia_microservice.usuario.domain.StatusUsuario;
@@ -9,15 +11,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
-import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.MailException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,11 +29,14 @@ public class AuthController {
     private final CodigoAcessoService codigos;
     private final JpaUsuarioRepository usuarios;
     private final LoginRateLimiter limite;
+    private final ConcluirCadastroService cadastro;
+    public record CadastroRequest(@NotBlank @Size(max = 150) String nome) {}
 
-    public AuthController(CodigoAcessoService codigos, JpaUsuarioRepository usuarios, LoginRateLimiter limite) {
+    public AuthController(CodigoAcessoService codigos, JpaUsuarioRepository usuarios, LoginRateLimiter limite, ConcluirCadastroService cadastro) {
         this.codigos = codigos;
         this.usuarios = usuarios;
         this.limite = limite;
+        this.cadastro = cadastro;
     }
 
     @GetMapping("/csrf")
@@ -52,7 +52,7 @@ public class AuthController {
         }
         try {
             return ResponseEntity.ok(new DesafioResponse(codigos.solicitar(body.email()),
-                    "Se este email estiver cadastrado e ativo, você receberá um código de acesso."));
+                    "Confira seu email para validar o acesso. Se sua conta estiver desativada, fale com o administrador."));
         } catch (MailException exception) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                     .body(java.util.Map.of("detail", "Não foi possível enviar o email. Tente novamente mais tarde."));
@@ -62,19 +62,33 @@ public class AuthController {
     @PostMapping("/validar")
     public ResponseEntity<?> validar(@Valid @RequestBody ValidarRequest body,
                                     HttpServletRequest request, HttpServletResponse response) {
-        var usuario = codigos.validar(body.desafioId(), body.codigo());
-        if (usuario.isEmpty()) {
+        var emailValidado = codigos.validar(body.desafioId(), body.codigo());
+        if (emailValidado.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(java.util.Map.of("detail", "Código inválido ou expirado. Solicite um novo código."));
         }
-        request.getSession();
-        request.changeSessionId();
-        var context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
-                usuario.get().id().toString(), null, List.of(new SimpleGrantedAuthority("ROLE_USER"))));
-        SecurityContextHolder.setContext(context);
-        new HttpSessionSecurityContextRepository().saveContext(context, request, response);
-        return ResponseEntity.ok(UsuarioResponse.de(usuario.get()));
+        var conta = usuarios.findByEmail(emailValidado.get()).map(entity -> entity.paraDominio());
+        if (conta.isEmpty()) {
+            SessaoCadastro.iniciar(request, response, emailValidado.get(), null);
+            return ResponseEntity.ok(java.util.Map.of("cadastroPendente", true));
+        }
+        SessaoCadastro.autenticar(request, response, conta.get());
+        return ResponseEntity.ok(UsuarioResponse.de(conta.get()));
+    }
+
+    @GetMapping("/cadastro")
+    public java.util.Map<String, String> cadastroPendente(HttpServletRequest request) {
+        var pendente = SessaoCadastro.obter(request);
+        return java.util.Map.of("email", pendente.email());
+    }
+
+    @PostMapping("/cadastro")
+    public UsuarioResponse cadastrar(@Valid @RequestBody CadastroRequest body,
+                                     HttpServletRequest request, HttpServletResponse response) {
+        var pendente = SessaoCadastro.obter(request);
+        var usuario = cadastro.executar(body.nome(), pendente);
+        SessaoCadastro.autenticar(request, response, usuario);
+        return UsuarioResponse.de(usuario);
     }
 
     @GetMapping("/me")

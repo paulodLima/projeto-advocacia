@@ -9,13 +9,27 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly url = inject(API_URL).replace(/\/$/, '') + '/api/auth';
   readonly usuario = signal<Usuario | null>(null);
+  readonly googleLoginUrl = inject(API_URL).replace(/\/$/, '') + '/oauth2/authorization/google';
+
+  provedores() {
+    return this.http.get<{ google: boolean }>(this.url + '/providers');
+  }
 
   solicitarCodigo(email: string) {
     return this.http.post<{ desafioId: string; mensagem: string }>(this.url + '/codigo', { email });
   }
 
   validarCodigo(desafioId: string, codigo: string) {
-    return this.http.post<Usuario>(this.url + '/validar', { desafioId, codigo })
+    return this.http.post<Usuario | { cadastroPendente: true }>(this.url + '/validar', { desafioId, codigo })
+      .pipe(tap((usuario) => this.usuario.set('cadastroPendente' in usuario ? null : usuario)));
+  }
+
+  cadastroPendente() {
+    return this.http.get<{ email: string }>(this.url + '/cadastro');
+  }
+
+  concluirCadastro(nome: string) {
+    return this.http.post<Usuario>(this.url + '/cadastro', { nome })
       .pipe(tap((usuario) => this.usuario.set(usuario)));
   }
 

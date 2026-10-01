@@ -1,3 +1,8 @@
-:host {
-  display: block;
-}
+ :host { display: block; color: #2a2723; }
+.casca-app { height: 100dvh; display: flex; gap: 16px; padding: 16px; overflow: hidden; background: radial-gradient(58% 46% at 12% 8%, #afb69580 0%, transparent 62%), radial-gradient(50% 44% at 88% 4%, #b8935a4d 0%, transparent 58%), radial-gradient(62% 56% at 78% 92%, #7d6c5e42 0%, transparent 60%), radial-gradient(48% 40% at 26% 96%, #4f5a4938 0%, transparent 58%), #f7f4ef; }
+button, a, input { font: inherit; } button, a { -webkit-tap-highlight-color: transparent; } button { cursor: pointer; } a { text-decoration: none; } button:disabled { opacity: .6; cursor: wait; }
+button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid #b8935a; outline-offset: 3px; }
+.pular { position: fixed; left: 100px; top: -70px; z-index: 100; padding: 12px 20px; border-radius: 10px; background: white; color: #4f5a49; } .pular:focus { top: 24px; }
+.area-principal { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 16px; }
+main { flex: 1; overflow: auto; min-height: 0; padding-bottom: 8px; scrollbar-width: thin; scrollbar-color: #7d6c5e55 transparent; } main:focus { outline: none; } .erro { color: #b4442f; font-size: 13px; }
+.cabecalho .abrir-mobile, .fechar-mobile, .fundo-menu { display: none; }

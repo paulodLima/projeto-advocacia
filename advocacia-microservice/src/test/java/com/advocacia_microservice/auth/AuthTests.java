@@ -90,8 +90,7 @@ class AuthTests {
     }
 
     @Test
-    void naoEnviaParaDesconhecidoOuInativoELimitaReenvio() {
-        assertTrue(service.validar(service.solicitar("ausente@example.com"), "000000").isEmpty());
+    void naoEnviaParaInativoELimitaReenvio() {
         var usuario = criar.executar("Teste", "teste@example.com");
         usuarios.saveAndFlush(UsuarioEntity.de(usuario.atualizar(usuario.nome(), usuario.email(), StatusUsuario.INATIVO)));
         service.solicitar(usuario.email());
@@ -105,9 +104,46 @@ class AuthTests {
 
     @Test
     void exigeSessaoECsrfEPermiteObterToken() throws Exception {
+        mvc.perform(get("/api/auth/providers")).andExpect(status().isOk()).andExpect(jsonPath("$.google").value(false));
         mvc.perform(get("/api/usuarios/" + UUID.randomUUID())).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/auth/codigo").contentType("application/json")
                 .content("{\"email\":\"teste@example.com\"}")).andExpect(status().isForbidden());
         mvc.perform(get("/api/auth/csrf")).andExpect(status().isOk()).andExpect(jsonPath("$.token").isNotEmpty());
+    }
+
+    @Test
+    void novoEmailValidaSemAcessoEConcluiCadastroComEmailDaSessao() throws Exception {
+        mvc.perform(post("/api/auth/cadastro").with(csrf()).contentType("application/json")
+            .content("{\"nome\":\"Sem validação\"}")).andExpect(status().isUnauthorized());
+        var desafio = service.solicitar("teste@example.com");
+        var codigo = codigoEnviado();
+        var result = mvc.perform(post("/api/auth/validar").with(csrf()).contentType("application/json")
+            .content("{\"desafioId\":\"" + desafio + "\",\"codigo\":\"" + codigo + "\"}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.cadastroPendente").value(true)).andReturn();
+        var session = (MockHttpSession) result.getRequest().getSession(false);
+        assertEquals(0, usuarios.count());
+        mvc.perform(get("/api/auth/me").session(session)).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/usuarios/" + UUID.randomUUID()).session(session)).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/cadastro").session(session)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.email").value("teste@example.com"));
+        mvc.perform(post("/api/auth/cadastro").session(session).with(csrf()).contentType("application/json")
+            .content("{\"nome\":\"  Novo usuário  \",\"email\":\"outro@example.com\"}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.email").value("teste@example.com"))
+            .andExpect(jsonPath("$.nome").value("Novo usuário"));
+        mvc.perform(get("/api/auth/me").session(session)).andExpect(status().isOk());
+        mvc.perform(post("/api/auth/cadastro").session(session).with(csrf()).contentType("application/json")
+            .content("{\"nome\":\"Repetir\"}")).andExpect(status().isUnauthorized());
+        assertTrue(service.validar(desafio, codigo).isEmpty());
+        assertEquals(1, usuarios.count());
+    }
+
+    @Test
+    void cadastroExpiradoNaoCriaConta() throws Exception {
+        var session = new MockHttpSession();
+        session.setAttribute("CADASTRO_VALIDADO", new com.advocacia_microservice.auth.infrastructure.SessaoCadastro.Pendente(
+            "novo@example.com", null, Instant.now().minusSeconds(1)));
+        mvc.perform(post("/api/auth/cadastro").session(session).with(csrf()).contentType("application/json")
+            .content("{\"nome\":\"Novo\"}")).andExpect(status().isUnauthorized());
+        assertEquals(0, usuarios.count());
     }
 }

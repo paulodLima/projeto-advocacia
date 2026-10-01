@@ -1,45 +1,31 @@
-import { Component, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { IdentidadeEmpresaService } from '../../../../core/branding/identidade-empresa.service';
+import { Icone } from '../../../../shared/components/icone/icone';
+import { PainelInicio } from '../../../../shared/components/painel-inicio/painel-inicio';
 
 @Component({
   selector: 'app-inicio',
-  template: `
-    <main>
-      <section>
-        <p class="marca">{{ marca.identidade().nome }}</p>
-        <h1>Bem-vindo, {{ auth.usuario()?.nome }}</h1>
-        <p>Seu acesso foi validado.</p>
-        <p>{{ auth.usuario()?.email }}</p>
-        <button type="button" (click)="sair()" [disabled]="saindo()">Sair</button>
-        @if (erro()) { <p role="alert">{{ erro() }}</p> }
-      </section>
-    </main>
-  `,
-  styles: `
-    :host { display: block; color: #2a2723; }
-    main { min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: #f7f4ef; }
-    section { max-width: 560px; width: 100%; padding: 40px; border-radius: 24px; background: white; box-shadow: 0 12px 40px #3a342d15; }
-    .marca { color: #7d6c5e; margin-bottom: 24px; }
-    h1 { font-size: 24px; margin-bottom: 16px; }
-    p { overflow-wrap: anywhere; }
-    button { margin-top: 24px; border: 0; padding: 12px 24px; border-radius: 8px; background: #4f5a49; color: white; font: inherit; cursor: pointer; }
-    button:disabled { opacity: .6; }
-  `,
+  imports: [RouterLink, Icone, PainelInicio],
+  templateUrl: './inicio.html',
+  styleUrl: './inicio.scss',
 })
 export class Inicio {
-  protected readonly marca = inject(IdentidadeEmpresaService);
   protected readonly auth = inject(AuthService);
-  private readonly router = inject(Router);
-  protected readonly saindo = signal(false);
-  protected readonly erro = signal('');
-
-  protected sair() {
-    this.saindo.set(true);
-    this.auth.sair().subscribe({
-      next: () => { void this.router.navigateByUrl('/login'); },
-      error: () => { this.saindo.set(false); this.erro.set('Não foi possível sair. Tente novamente.'); },
-    });
-  }
+  protected readonly primeiroNome = computed(() => this.auth.usuario()?.nome.trim().split(/\s+/)[0] || '');
+  protected readonly saudacao = new Date().getHours() < 12 ? 'BOM DIA' : new Date().getHours() < 18 ? 'BOA TARDE' : 'BOA NOITE';
+  protected readonly indicadoresAbertos = signal(true);
+  protected readonly atualizacao = signal('movimentacoes');
+  protected readonly indicadores = [
+    { label: 'Processos ativos', apoio: 'judiciais e administrativos em curso', icon: 'scale', destino: 'processual', cor: 'verde' },
+    { label: 'Tarefas pendentes', apoio: 'prazos e compromissos a cumprir', icon: 'file', destino: 'agenda', cor: 'taupe' },
+    { label: 'Leads em cadência', apoio: 'oportunidades em acompanhamento', icon: 'crm', destino: 'crm', cor: 'dourado' },
+    { label: 'Casos em andamento', apoio: 'trabalho que ainda não virou processo', icon: 'folder-open', destino: 'casos', cor: 'verde' },
+  ];
+  protected readonly atalhos = [
+    { label: 'Agenda', icon: 'calendar', destino: 'agenda' },
+    { label: 'Casos', icon: 'folder-open', destino: 'casos' },
+    { label: 'Contatos', icon: 'users', destino: 'contatos' },
+    { label: 'Documentos', icon: 'file', destino: 'documentos' },
+  ];
 }

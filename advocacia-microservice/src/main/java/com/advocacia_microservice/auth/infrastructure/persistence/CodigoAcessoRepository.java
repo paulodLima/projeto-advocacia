@@ -9,8 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface CodigoAcessoRepository extends JpaRepository<CodigoAcessoEntity, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select c from CodigoAcessoEntity c where c.usuarioId = :id")
-    Optional<CodigoAcessoEntity> bloquearPorUsuario(UUID id);
+    @Query("select c from CodigoAcessoEntity c where c.email = :email")
+    Optional<CodigoAcessoEntity> bloquearPorEmail(String email);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from CodigoAcessoEntity c where c.desafioId = :id")

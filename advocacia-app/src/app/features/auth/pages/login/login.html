@@ -15,7 +15,7 @@
             <p class="conta">{{ desafio() ? 'Informe o código enviado para seu email.' : 'Receba um código de acesso no seu email.' }}</p>
           </header>
           @if (aviso()) {
-            <p class="aviso" role="status">{{ aviso() }}</p>
+            <p class="aviso" [class.aviso-erro]="erroAviso()" role="status">{{ aviso() }}</p>
           }
           @if (!desafio()) {
             <form #emailForm="ngForm" (ngSubmit)="solicitarCodigo()">
@@ -44,7 +44,7 @@
               </div>
             </form>
           }
-          <p class="privacidade">O código é válido por 10 minutos. Apenas usuários cadastrados e ativos podem acessar.</p>
+          <p class="privacidade">O código é válido por 10 minutos. No primeiro acesso, você completa seu cadastro.</p>
           <div class="google-alternativa">
           <button type="button" class="google-button" (click)="entrarComGoogle()"
                   aria-label="Entrar com Google" title="Entrar com Google" [disabled]="carregando()">
