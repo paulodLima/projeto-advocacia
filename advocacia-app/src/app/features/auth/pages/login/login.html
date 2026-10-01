@@ -1,0 +1,68 @@
+<main class="tela-login">
+  <section class="tela-login-cartao" aria-labelledby="login-title">
+    <div class="tela-login-form">
+      <div class="conteudo">
+        <div class="marca" [attr.aria-label]="marca.identidade().nome">
+          <div class="marca-simbolo">
+            <img [src]="marca.identidade().logoUrl" [alt]="'Logo de ' + marca.identidade().nome"
+                 (error)="marca.restaurarLogo()" />
+          </div>
+          <p class="marca-nome">{{ marca.identidade().nome }}</p>
+        </div>
+        <div class="login-painel">
+          <header>
+            <h1 id="login-title">Entrar</h1>
+            <p class="conta">{{ desafio() ? 'Informe o código enviado para seu email.' : 'Receba um código de acesso no seu email.' }}</p>
+          </header>
+          @if (aviso()) {
+            <p class="aviso" role="status">{{ aviso() }}</p>
+          }
+          @if (!desafio()) {
+            <form #emailForm="ngForm" (ngSubmit)="solicitarCodigo()">
+              <label for="login-email">Email</label>
+              <input id="login-email" name="email" type="email" [(ngModel)]="email"
+                     required email maxlength="254" autocomplete="email" placeholder="seu@email.com"
+                     [disabled]="carregando()" />
+              <button type="submit" class="primary-button" [disabled]="emailForm.invalid || carregando()">
+                {{ carregando() ? 'Enviando código…' : 'Receber código de acesso' }}
+              </button>
+            </form>
+          } @else {
+            <form #codigoForm="ngForm" (ngSubmit)="validarCodigo()">
+              <p class="email-destino">{{ email }}</p>
+              <label for="login-codigo">Código de acesso</label>
+              <input id="login-codigo" class="codigo-input" name="codigo" type="text"
+                     [(ngModel)]="codigo" required pattern="[0-9]{6}" maxlength="6"
+                     inputmode="numeric" autocomplete="one-time-code" placeholder="000000"
+                     [disabled]="carregando()" />
+              <button type="submit" class="primary-button" [disabled]="codigoForm.invalid || carregando()">
+                {{ carregando() ? 'Validando…' : 'Validar e entrar' }}
+              </button>
+              <div class="acoes-codigo">
+                <button type="button" (click)="trocarEmail()" [disabled]="carregando()">Trocar email</button>
+                <button type="button" (click)="reenviar()" [disabled]="carregando()">Reenviar código</button>
+              </div>
+            </form>
+          }
+          <p class="privacidade">O código é válido por 10 minutos. Apenas usuários cadastrados e ativos podem acessar.</p>
+          <div class="google-alternativa">
+          <button type="button" class="google-button" (click)="entrarComGoogle()"
+                  aria-label="Entrar com Google" title="Entrar com Google" [disabled]="carregando()">
+            <svg viewBox="0 0 48 48" aria-hidden="true">
+              <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.2 17.6 9.5 24 9.5z" />
+              <path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9.1h12.4c-.5 2.9-2.2 5.3-4.7 6.9l7.3 5.7c4.3-3.9 6.8-9.7 6.8-16.6z" />
+              <path fill="#FBBC05" d="M10.4 28.7c-.5-1.4-.8-2.9-.8-4.5s.3-3.1.8-4.5l-7.8-6.1C.9 16.8 0 20.3 0 24s.9 7.2 2.6 10.3l7.8-5.6z" />
+              <path fill="#34A853" d="M24 48c6.2 0 11.5-2 15.3-5.6l-7.3-5.7c-2 1.4-4.7 2.3-8 2.3-6.4 0-11.7-3.7-13.6-9.8l-7.8 5.6C6.5 42.6 14.6 48 24 48z" />
+            </svg>
+          </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tela-login-foto">
+      <img [src]="marca.identidade().imagemLoginUrl" [alt]="'Imagem de apresentação de ' + marca.identidade().nome"
+           (error)="marca.restaurarImagemLogin()" fetchpriority="high" />
+      <div class="tela-login-foto-overlay"></div>
+    </div>
+  </section>
+</main>

@@ -1,0 +1,70 @@
+:host { display: block; color: #2a2723; }
+.tela-login {
+  display: flex; min-height: 100vh; min-height: 100dvh; width: 100%;
+  align-items: center; justify-content: center; padding: 32px; box-sizing: border-box;
+  background:
+    radial-gradient(58% 46% at 12% 8%, rgba(175,182,149,.50) 0%, transparent 62%),
+    radial-gradient(50% 44% at 88% 4%, rgba(184,147,90,.30) 0%, transparent 58%),
+    radial-gradient(62% 56% at 78% 92%, rgba(125,108,94,.26) 0%, transparent 60%),
+    radial-gradient(48% 40% at 26% 96%, rgba(79,90,73,.22) 0%, transparent 58%), #f7f4ef;
+}
+.tela-login-cartao {
+  width: 100%; max-width: 1000px; min-height: 600px; display: flex;
+  border-radius: 24px; overflow: hidden; position: relative; background: #fff;
+  box-shadow: 0 20px 60px rgba(58,52,45,.20);
+}
+.tela-login-form {
+  flex: 1 1 50%; display: flex; align-items: center; justify-content: center;
+  padding: 40px; position: relative; z-index: 2; background: #f7f4ef; min-width: 0;
+}
+.conteudo { width: 100%; max-width: 460px; }
+.marca { display: flex; flex-direction: column; align-items: center; margin-bottom: 32px; width: 100%; max-width: 400px; }
+.marca-simbolo {
+  height: 100px; width: 100px; border-radius: 16px; display: flex;
+  align-items: center; justify-content: center; margin-bottom: 12px; overflow: hidden;
+  color: #7d6c5e; background: rgba(255,255,255,.7); border: 1px solid rgba(255,255,255,.8);
+}
+.marca-nome { font-size: 20px; line-height: 28px; font-weight: 300; letter-spacing: .025em; }
+.marca-simbolo img { max-width: 76px; max-height: 76px; object-fit: contain; }
+.login-painel {
+  padding: 34px; border-radius: 16px; background: rgba(255,255,255,.62);
+  backdrop-filter: blur(22px) saturate(150%); border: 1px solid rgba(255,255,255,.7);
+  box-shadow: 0 1px 2px rgba(58,52,45,.03), 0 8px 28px rgba(58,52,45,.06);
+  > * + * { margin-top: 20px; }
+}
+h1 { font-size: 20px; line-height: 28px; font-weight: 600; }
+.conta { font-size: 14px; line-height: 20px; margin-top: 6px; color: #7d6c5e; }
+.google-button {
+  width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;
+  padding: 14px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,.68);
+  background: #fff; color: #2a2723; font: inherit; font-size: 16px; line-height: 24px;
+  cursor: pointer; transition: background .15s, box-shadow .15s;
+  svg { width: 20px; height: 20px; flex-shrink: 0; }
+  &:hover { background: #faf9f6; box-shadow: 0 2px 8px rgba(58,52,45,.08); }
+  &:focus-visible { outline: 2px solid #4f5a49; outline-offset: 4px; }
+}
+.google-alternativa { display: flex; justify-content: center; border-top: 1px solid rgba(107,99,91,.14); padding-top: 20px; }
+form { display: flex; flex-direction: column; gap: 12px; }
+label { font-size: 13px; color: #7d6c5e; }
+input { width: 100%; min-width: 0; padding: 12px 14px; border: 1px solid #d9d4cb; border-radius: 8px; background: #fff; color: #2a2723; font: inherit; font-size: 16px; }
+input:focus-visible { outline: 2px solid #4f5a49; outline-offset: 2px; }
+.primary-button { border: 0; border-radius: 8px; padding: 14px 12px; background: #4f5a49; color: #fff; font: inherit; font-size: 14px; cursor: pointer; }
+button:disabled { opacity: .5; cursor: default; }
+.primary-button:hover:not(:disabled) { background: #3e4839; }
+.primary-button:focus-visible { outline: 2px solid #4f5a49; outline-offset: 3px; }
+.codigo-input { text-align: center; letter-spacing: .35em; font-size: 22px; }
+.email-destino { color: #7d6c5e; font-size: 13px; overflow-wrap: anywhere; }
+.acoes-codigo { display: flex; justify-content: space-between; gap: 12px; }
+.acoes-codigo button { padding: 4px 0; border: 0; background: none; color: #4f5a49; font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline; }
+.privacidade { font-size: 11px; line-height: 16.5px; color: #7d6c5e; }
+.aviso { padding: 12px; border-radius: 8px; background: #f7eae8; color: #8a4a42; font-size: 12px; line-height: 18px; }
+.tela-login-foto { display: none; position: relative; flex: 1 1 50%; overflow: hidden; }
+.tela-login-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; display: block; }
+.tela-login-foto-overlay { position: absolute; inset: 0; background: #4f5a49; opacity: .72; }
+@media (min-width: 860px) { .tela-login-foto { display: block; } }
+@media (max-width: 640px) {
+  .tela-login { padding: 20px; }
+  .tela-login-cartao { min-height: auto; }
+  .tela-login-form { padding: 32px 20px; }
+  .login-painel { padding: 24px; }
+}

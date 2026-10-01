@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 106" fill="none">
+  <title>Gestão Advocacia — GA</title>
+  <g stroke="#7D6C5E" stroke-width="2.4" stroke-linecap="butt" stroke-linejoin="miter">
+    <path d="M83 23C76 11 64 5 51 5C28 5 12 23 12 47C12 72 28 89 51 89C66 89 78 82 85 71V48H58"/>
+    <path d="M85 48H74V73"/>
+    <path d="M27 100L56 25L86 100"/>
+    <path d="M39 69H73"/>
+    <path d="M20 100H39M76 100H94"/>
+  </g>
+</svg>

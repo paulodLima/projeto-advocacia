@@ -1,0 +1,86 @@
+name: gestao-advocacia
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: advocacia-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-advocacia}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - advocacia-network
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../advocacia-microservice
+      dockerfile: Dockerfile
+    container_name: advocacia-api
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-advocacia}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      SERVER_PORT: 8080
+      MAIL_HOST: ${MAIL_HOST:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_FROM: ${MAIL_FROM:-acesso@local.test}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_AUTH: ${MAIL_AUTH:-false}
+      MAIL_STARTTLS: ${MAIL_STARTTLS:-false}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    networks:
+      - advocacia-network
+    restart: unless-stopped
+
+  app:
+    build:
+      context: ../advocacia-app
+      dockerfile: Dockerfile
+    container_name: advocacia-app
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      API_URL: http://api:8080
+    ports:
+      - "${APP_PORT:-4200}:4000"
+    depends_on:
+      api:
+        condition: service_started
+    networks:
+      - advocacia-network
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
+    networks:
+      - advocacia-network
+    restart: unless-stopped
+
+networks:
+  advocacia-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
