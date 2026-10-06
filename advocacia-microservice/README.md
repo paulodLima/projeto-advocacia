@@ -60,6 +60,8 @@ Os módulos ainda sem implementação têm `package-info.java`, preservando as p
 
 ## Como aplicar o padrão
 
+A organização atual dos módulos de empresas e administração e a separação de entidades/repositories estão em [Arquitetura do backend](../docs/arquitetura-backend.md). DTOs HTTP ficam em arquivos próprios em `api/request` e `api/response`; entidades JPA em `infrastructure/persistence/entity`; Spring Data e adaptadores em `infrastructure/persistence/repository`.
+
 - `api`: recebe HTTP, valida os requests e converte respostas. Não acessa JPA diretamente.
 - `application`: coordena os casos de uso e define os limites de transação.
 - `domain`: representa dados e regras, além do contrato do repositório. Não depende de Spring nem JPA.
@@ -69,7 +71,7 @@ Os módulos ainda sem implementação têm `package-info.java`, preservando as p
 
 É uma boa base para um monólito modular: facilita encontrar o código e evoluir as funcionalidades separadamente. O nome do diretório `microservice` não transforma cada módulo em um serviço independente. Separar entidade JPA e domínio tem um custo de conversão, mas permite manter as regras sem dependência da persistência. Para funcionalidades pequenas, evite acrescentar interfaces e abstrações sem necessidade.
 
-`SecurityConfig` configura CORS com credenciais para `http://localhost:4200`, sessões e proteção CSRF. O CRUD exige sessão de usuário ativo. Emails novos validados por código ou Google podem completar o cadastro antes de entrar. `JacksonConfig` permanece reservado; o Jackson usa a configuração padrão do Spring Boot. Não existe senha no modelo de usuário. Permissões por perfil administrativo ainda não estão implementadas.
+`SecurityConfig` configura CORS com credenciais para `http://localhost:4200`, sessões e proteção CSRF. O CRUD exige sessão de usuário ativo. O cadastro público está bloqueado; contas precisam ser provisionadas pela administração. `JacksonConfig` permanece reservado; o Jackson usa a configuração padrão do Spring Boot. Não existe senha no modelo de usuário. O acesso administrativo da plataforma é separado dos vínculos com empresas e revalidado no banco.
 
 ## Autenticação
 
@@ -145,4 +147,4 @@ Dentro de `advocacia-microservice`:
 
 Os testes usam H2 em modo PostgreSQL, aplicam a migration e verificam inicialização, CRUD e conflito de email na criação/atualização. Não exigem Docker. O comportamento específico do PostgreSQL ainda deve ser verificado nesse banco.
 
-O cadastro usa uma autorização temporária na sessão (15 minutos), sem permissões de usuário até a conclusão. A migration V4 transfere os códigos para `codigo_email`, que permite validar emails ainda sem usuário. `POST /api/auth/cadastro` recebe nome e utiliza exclusivamente o email validado na sessão. Contas inativas não são recriadas.
+A migration V4 permite validar emails ainda sem usuário, mas as rotas públicas de cadastro estão bloqueadas. O primeiro administrador é provisionado por configuração operacional; consulte a documentação da etapa 1.

@@ -5,6 +5,8 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter, finalize } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/auth/auth.service';
+import { EscritorioService } from '../../core/escritorio/escritorio.service';
+import { PlataformaService } from '../../core/plataforma/plataforma.service';
 import { IdentidadeEmpresaService } from '../../core/branding/identidade-empresa.service';
 import { CONFIGURACOES, GRUPOS_MENU, INICIO, ITENS_MENU } from '../../core/navigation/menu.model';
 import { Icone } from '../../shared/components/icone/icone';
@@ -17,6 +19,8 @@ import { Icone } from '../../shared/components/icone/icone';
 })
 export class AuthenticatedLayout {
   protected readonly auth = inject(AuthService);
+  protected readonly escritorios = inject(EscritorioService);
+  protected readonly plataforma = inject(PlataformaService);
   protected readonly marca = inject(IdentidadeEmpresaService);
   private readonly router = inject(Router);
   private readonly document = inject(DOCUMENT);
@@ -34,7 +38,7 @@ export class AuthenticatedLayout {
   protected readonly titulo = computed(() => {
     this.navigation();
     const id = this.router.url.split('?')[0].split('/')[1];
-    return ITENS_MENU.find((item) => item.id === id)?.label || 'Início';
+    return id === 'escritorios' ? 'Escritórios' : ITENS_MENU.find((item) => item.id === id)?.label || 'Início';
   });
   protected readonly iniciais = computed(() => (this.auth.usuario()?.nome || 'Usuário').trim().split(/\s+/)
     .filter(Boolean).slice(0, 2).map((nome) => nome[0]).join('').toUpperCase());

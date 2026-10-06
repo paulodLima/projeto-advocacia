@@ -73,8 +73,8 @@ describe('Login', () => {
     expect(element.textContent).toContain('Validar e entrar');
   });
 
-  it('opens cadastro when a new email is validated', async () => {
-    auth.validarCodigo.mockReturnValue(of({ cadastroPendente: true }));
+  it('opens inicio after validating a registered account', async () => {
+    auth.validarCodigo.mockReturnValue(of({ id: 'usuario', nome: 'Usuário' }));
     const router = TestBed.inject(Router);
     const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
     const fixture = TestBed.createComponent(Login);
@@ -95,6 +95,6 @@ describe('Login', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     element.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    expect(navigate).toHaveBeenCalledWith('/cadastro');
+    expect(navigate).toHaveBeenCalledWith('/inicio');
   });
 });

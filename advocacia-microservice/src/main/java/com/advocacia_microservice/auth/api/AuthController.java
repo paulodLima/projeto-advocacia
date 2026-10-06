@@ -1,16 +1,15 @@
 package com.advocacia_microservice.auth.api;
 
 import com.advocacia_microservice.auth.application.CodigoAcessoService;
-import com.advocacia_microservice.auth.application.ConcluirCadastroService;
+import com.advocacia_microservice.auth.api.request.*;
+import com.advocacia_microservice.auth.api.response.*;
 import com.advocacia_microservice.auth.infrastructure.SessaoCadastro;
 import com.advocacia_microservice.auth.infrastructure.LoginRateLimiter;
 import com.advocacia_microservice.usuario.api.response.UsuarioResponse;
-import com.advocacia_microservice.usuario.domain.StatusUsuario;
-import com.advocacia_microservice.usuario.infrastructure.persistence.JpaUsuarioRepository;
+import com.advocacia_microservice.auth.application.ContaAutenticadaService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,22 +20,16 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
-    public record SolicitarRequest(@NotBlank @Email @Size(max = 254) String email) {}
-    public record ValidarRequest(@NotNull UUID desafioId, @NotBlank @Pattern(regexp = "[0-9]{6}") String codigo) {}
-    public record DesafioResponse(UUID desafioId, String mensagem) {}
-    public record CsrfResponse(String token, String headerName) {}
 
     private final CodigoAcessoService codigos;
-    private final JpaUsuarioRepository usuarios;
+    private final ContaAutenticadaService contas;
     private final LoginRateLimiter limite;
-    private final ConcluirCadastroService cadastro;
-    public record CadastroRequest(@NotBlank @Size(max = 150) String nome) {}
 
-    public AuthController(CodigoAcessoService codigos, JpaUsuarioRepository usuarios, LoginRateLimiter limite, ConcluirCadastroService cadastro) {
+    public AuthController(CodigoAcessoService codigos, ContaAutenticadaService contas, LoginRateLimiter limite) {
         this.codigos = codigos;
-        this.usuarios = usuarios;
+        this.contas = contas;
         this.limite = limite;
-        this.cadastro = cadastro;
+
     }
 
     @GetMapping("/csrf")
@@ -67,10 +60,10 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(java.util.Map.of("detail", "Código inválido ou expirado. Solicite um novo código."));
         }
-        var conta = usuarios.findByEmail(emailValidado.get()).map(entity -> entity.paraDominio());
+        var conta = contas.buscarPorEmail(emailValidado.get());
         if (conta.isEmpty()) {
-            SessaoCadastro.iniciar(request, response, emailValidado.get(), null);
-            return ResponseEntity.ok(java.util.Map.of("cadastroPendente", true));
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(java.util.Map.of("detail", "Acesso não liberado. Solicite seu cadastro ao administrador da plataforma."));
         }
         SessaoCadastro.autenticar(request, response, conta.get());
         return ResponseEntity.ok(UsuarioResponse.de(conta.get()));
@@ -78,24 +71,18 @@ public class AuthController {
 
     @GetMapping("/cadastro")
     public java.util.Map<String, String> cadastroPendente(HttpServletRequest request) {
-        var pendente = SessaoCadastro.obter(request);
-        return java.util.Map.of("email", pendente.email());
+        throw new org.springframework.security.access.AccessDeniedException("Cadastro disponível somente por convite autorizado.");
     }
 
     @PostMapping("/cadastro")
     public UsuarioResponse cadastrar(@Valid @RequestBody CadastroRequest body,
                                      HttpServletRequest request, HttpServletResponse response) {
-        var pendente = SessaoCadastro.obter(request);
-        var usuario = cadastro.executar(body.nome(), pendente);
-        SessaoCadastro.autenticar(request, response, usuario);
-        return UsuarioResponse.de(usuario);
+        throw new org.springframework.security.access.AccessDeniedException("Cadastro disponível somente por convite autorizado.");
     }
 
     @GetMapping("/me")
     public ResponseEntity<?> me(java.security.Principal principal) {
-        var usuario = usuarios.findById(UUID.fromString(principal.getName()))
-                .map(entity -> entity.paraDominio())
-                .filter(item -> item.status() == StatusUsuario.ATIVO);
+        var usuario = contas.buscarAtivo(UUID.fromString(principal.getName()));
         return usuario.<ResponseEntity<?>>map(item -> ResponseEntity.ok(UsuarioResponse.de(item)))
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }

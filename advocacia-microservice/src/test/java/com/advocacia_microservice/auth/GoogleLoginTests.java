@@ -1,10 +1,12 @@
 package com.advocacia_microservice.auth;
 
 import com.advocacia_microservice.auth.application.GoogleLoginService;
-import com.advocacia_microservice.auth.infrastructure.persistence.*;
+import com.advocacia_microservice.auth.infrastructure.persistence.entity.*;
+import com.advocacia_microservice.auth.infrastructure.persistence.repository.*;
 import com.advocacia_microservice.usuario.application.CriarUsuarioUseCase;
 import com.advocacia_microservice.usuario.domain.StatusUsuario;
-import com.advocacia_microservice.usuario.infrastructure.persistence.*;
+import com.advocacia_microservice.usuario.infrastructure.persistence.entity.*;
+import com.advocacia_microservice.usuario.infrastructure.persistence.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,8 +66,9 @@ class GoogleLoginTests {
     }
 
     @Test
-    void emailNovoRequerCadastroEEmailNaoVerificadoEhNegado() {
-        assertNull(login.autenticar(google("unknown", "ausente@gmail.com", true)));
+    void emailNovoEEmailNaoVerificadoSaoNegados() {
+        assertThrows(OAuth2AuthenticationException.class,
+                () -> login.autenticar(google("unknown", "ausente@gmail.com", true)));
         criar.executar("Teste", "teste@gmail.com");
         assertThrows(OAuth2AuthenticationException.class,
                 () -> login.autenticar(google("unverified", "teste@gmail.com", false)));
@@ -133,23 +136,18 @@ class GoogleLoginTests {
     }
 
     @Test
-    void googleNovoVaiParaCadastroEVinculaContaAoConcluir() throws Exception {
+    void googleNovoNaoCriaContaNemRecebeSessao() throws Exception {
         var principal = google("new-subject", "novo@gmail.com", true);
         var authentication = new org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken(
             principal, java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_USER")), "google");
         var request = new org.springframework.mock.web.MockHttpServletRequest();
         var response = new org.springframework.mock.web.MockHttpServletResponse();
         success.onAuthenticationSuccess(request, response, authentication);
-        assertEquals("http://localhost:4200/cadastro", response.getRedirectedUrl());
+        assertEquals("http://localhost:4200/login?erro=google_acesso_negado", response.getRedirectedUrl());
         org.springframework.security.core.context.SecurityContextHolder.clearContext();
-        var session = (org.springframework.mock.web.MockHttpSession) request.getSession(false);
-        mvc.perform(get("/api/auth/me").session(session)).andExpect(status().isUnauthorized());
-        mvc.perform(post("/api/auth/cadastro").session(session).with(csrf()).contentType("application/json")
-            .content("{\"nome\":\"Novo Google\"}"))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.email").value("novo@gmail.com"));
-        mvc.perform(get("/api/auth/me").session(session)).andExpect(status().isOk());
-        assertEquals(1, identities.count());
-        assertNotNull(login.autenticar(principal));
+        mvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized());
+        assertEquals(0, identities.count());
+        assertEquals(0, usuarios.count());
         org.springframework.security.core.context.SecurityContextHolder.clearContext();
     }
 }

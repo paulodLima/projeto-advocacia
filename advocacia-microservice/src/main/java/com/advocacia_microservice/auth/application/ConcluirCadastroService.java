@@ -1,7 +1,8 @@
 package com.advocacia_microservice.auth.application;
 
 import com.advocacia_microservice.auth.infrastructure.SessaoCadastro.Pendente;
-import com.advocacia_microservice.auth.infrastructure.persistence.*;
+import com.advocacia_microservice.auth.infrastructure.persistence.entity.*;
+import com.advocacia_microservice.auth.infrastructure.persistence.repository.*;
 import com.advocacia_microservice.usuario.application.CriarUsuarioUseCase;
 import com.advocacia_microservice.usuario.domain.Usuario;
 import org.springframework.stereotype.Service;

@@ -1,7 +1,8 @@
-package com.advocacia_microservice.usuario.infrastructure.persistence;
+package com.advocacia_microservice.usuario.infrastructure.persistence.repository;
 
 import com.advocacia_microservice.usuario.domain.Usuario;
 import com.advocacia_microservice.usuario.domain.UsuarioRepository;
+import com.advocacia_microservice.usuario.infrastructure.persistence.entity.UsuarioEntity;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Repository;
@@ -28,6 +29,8 @@ public class UsuarioRepositoryImpl implements UsuarioRepository {
     public boolean existePorEmail(String email) {
         return jpa.existsByEmail(email);
     }
+    @Override
+    public Optional<Usuario> buscarPorEmail(String email) { return jpa.findByEmail(email).map(UsuarioEntity::paraDominio); }
 
     @Override
     public boolean existePorEmailEIdDiferente(String email, UUID id) {

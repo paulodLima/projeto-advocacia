@@ -1,9 +1,10 @@
 package com.advocacia_microservice.auth.application;
 
-import com.advocacia_microservice.auth.infrastructure.persistence.*;
+import com.advocacia_microservice.auth.infrastructure.persistence.entity.*;
+import com.advocacia_microservice.auth.infrastructure.persistence.repository.*;
 import com.advocacia_microservice.usuario.domain.StatusUsuario;
 import com.advocacia_microservice.usuario.domain.Usuario;
-import com.advocacia_microservice.usuario.infrastructure.persistence.JpaUsuarioRepository;
+import com.advocacia_microservice.usuario.domain.UsuarioRepository;
 import java.util.Locale;
 import org.springframework.security.oauth2.core.*;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
@@ -12,10 +13,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class GoogleLoginService {
-    private final JpaUsuarioRepository usuarios;
+    private final UsuarioRepository usuarios;
     private final GoogleIdentityRepository identities;
 
-    public GoogleLoginService(JpaUsuarioRepository usuarios, GoogleIdentityRepository identities) {
+    public GoogleLoginService(UsuarioRepository usuarios, GoogleIdentityRepository identities) {
         this.usuarios = usuarios;
         this.identities = identities;
     }
@@ -27,7 +28,7 @@ public class GoogleLoginService {
         }
         var vinculo = identities.findBySubject(google.getSubject()).orElse(null);
         if (vinculo != null) {
-            return usuarios.findById(vinculo.usuarioId).map(item -> item.paraDominio())
+            return usuarios.buscarPorId(vinculo.usuarioId)
                     .filter(item -> item.status() == StatusUsuario.ATIVO).orElseThrow(this::negado);
         }
         String email = google.getEmail();
@@ -39,8 +40,8 @@ public class GoogleLoginService {
         boolean workspace = hostedDomain != null && !hostedDomain.isBlank()
                 && email.endsWith("@" + hostedDomain.toLowerCase(Locale.ROOT));
         if (!email.endsWith("@gmail.com") && !workspace) throw negado();
-        var usuario = usuarios.findByEmail(email).map(item -> item.paraDominio()).orElse(null);
-        if (usuario == null) return null; // Email verificado: completar cadastro antes de autenticar.
+        var usuario = usuarios.buscarPorEmail(email).orElse(null);
+        if (usuario == null) throw negado(); // Autenticação externa não provisiona acesso à plataforma.
         if (usuario.status() != StatusUsuario.ATIVO) throw negado();
         var existente = identities.findById(usuario.id()).orElse(null);
         if (existente != null && !existente.subject.equals(google.getSubject())) throw negado();

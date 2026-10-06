@@ -6,6 +6,7 @@ import java.util.UUID;
 public interface UsuarioRepository {
     Usuario salvar(Usuario usuario);
     Optional<Usuario> buscarPorId(UUID id);
+    Optional<Usuario> buscarPorEmail(String email);
     boolean existePorEmail(String email);
     boolean existePorEmailEIdDiferente(String email, UUID id);
     void excluir(Usuario usuario);

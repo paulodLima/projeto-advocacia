@@ -1,7 +1,7 @@
 package com.advocacia_microservice.config;
 
 import com.advocacia_microservice.usuario.domain.StatusUsuario;
-import com.advocacia_microservice.usuario.infrastructure.persistence.JpaUsuarioRepository;
+import com.advocacia_microservice.usuario.domain.UsuarioRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -50,7 +50,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JpaUsuarioRepository usuarios,
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, UsuarioRepository usuarios,
+            com.advocacia_microservice.plataforma.application.AcessoPlataformaService plataforma,
             org.springframework.beans.factory.ObjectProvider<org.springframework.security.oauth2.client.registration.ClientRegistrationRepository> registrations,
             com.advocacia_microservice.auth.infrastructure.GoogleLoginSuccessHandler googleSuccess,
             @org.springframework.beans.factory.annotation.Value("${app.auth.public-url}") String publicUrl) throws Exception {
@@ -60,6 +61,20 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/csrf", "/api/auth/codigo", "/api/auth/validar", "/api/auth/providers", "/api/auth/cadastro",
                         "/oauth2/authorization/**", "/login/oauth2/code/**",
                         "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
+                .requestMatchers("/api/plataforma/admin/**").access((authentication, context) ->
+                        new org.springframework.security.authorization.AuthorizationDecision(
+                                plataforma.podeAdministrar(authentication.get().getName())))
+                // A criação passa para a API administrativa na etapa de cadastro de empresas.
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/escritorios", "/api/escritorios/**").denyAll()
+                // A conta é global; administração de membros será feita no contexto do escritório.
+                .requestMatchers("/api/usuarios/**").access((authentication, context) -> {
+                    var identidade = authentication.get();
+                    var request = context.getRequest();
+                    boolean permitido = "GET".equals(request.getMethod())
+                            && identidade != null && identidade.isAuthenticated()
+                            && request.getRequestURI().equals("/api/usuarios/" + identidade.getName());
+                    return new org.springframework.security.authorization.AuthorizationDecision(permitido);
+                })
                 .anyRequest().authenticated());
         http.exceptionHandling(errors -> errors
                 .authenticationEntryPoint((request, response, error) -> response.sendError(HttpStatus.UNAUTHORIZED.value())));
@@ -85,8 +100,8 @@ public class SecurityConfig {
                 if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
                     boolean ativo;
                     try {
-                        ativo = usuarios.findById(UUID.fromString(auth.getName()))
-                                .map(item -> item.paraDominio().status() == StatusUsuario.ATIVO).orElse(false);
+                        ativo = usuarios.buscarPorId(UUID.fromString(auth.getName()))
+                                .map(item -> item.status() == StatusUsuario.ATIVO).orElse(false);
                     } catch (IllegalArgumentException error) {
                         ativo = false;
                     }

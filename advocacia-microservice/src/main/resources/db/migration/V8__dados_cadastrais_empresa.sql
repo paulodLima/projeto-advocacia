@@ -1,0 +1,11 @@
+ALTER TABLE escritorio ADD COLUMN razao_social VARCHAR(150);
+ALTER TABLE escritorio ADD COLUMN cnpj VARCHAR(14);
+ALTER TABLE escritorio ADD CONSTRAINT uk_escritorio_cnpj UNIQUE (cnpj);
+ALTER TABLE escritorio ADD COLUMN quantidade_funcionarios INTEGER;
+ALTER TABLE escritorio ADD CONSTRAINT ck_empresa_funcionarios CHECK (quantidade_funcionarios >= 0);
+ALTER TABLE escritorio ADD COLUMN email VARCHAR(254);
+ALTER TABLE escritorio ADD COLUMN telefone VARCHAR(30);
+ALTER TABLE escritorio ADD COLUMN endereco VARCHAR(300);
+ALTER TABLE escritorio ADD COLUMN cidade VARCHAR(100);
+ALTER TABLE escritorio ADD COLUMN uf VARCHAR(2);
+ALTER TABLE escritorio ADD COLUMN cep VARCHAR(8);

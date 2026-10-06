@@ -26,6 +26,9 @@ spring:
       mail.smtp.writetimeout: 5000
 
 app:
+  plataforma:
+    admin-inicial-email: ${PLATAFORMA_ADMIN_EMAIL:}
+    admin-inicial-nome: ${PLATAFORMA_ADMIN_NOME:Administrador da plataforma}
   auth:
     mail-from: ${MAIL_FROM:acesso@local.test}
     public-url: ${PUBLIC_URL:http://localhost:4200}

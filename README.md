@@ -2,6 +2,19 @@
 
 Projeto com backend Spring Boot (Java 21), frontend Angular com SSR e PostgreSQL 17.
 
+## Fundação white label
+
+Após autenticar, o usuário sem escritório ativo é direcionado para
+`/escritorios`, onde pode selecionar um vínculo existente. A criação pública de empresas está bloqueada.
+Contas existentes não recebem vínculos
+automaticamente. A seleção é validada no backend e pode ser trocada pelo cabeçalho.
+
+As operações globais de criação, alteração e exclusão em `/api/usuarios` estão
+bloqueadas nesta etapa. A consulta da própria conta permanece disponível.
+A administração de membros por escritório e a matriz completa de permissões
+ainda estão em desenvolvimento. Consulte as decisões, APIs e pendências em
+[Fundação white label](docs/white-label-fundacao.md).
+
 A estrutura do backend, os perfis de ambiente e o CRUD de usuário estão documentados no [README do backend](advocacia-microservice/README.md).
 
 ## Pré-requisitos
@@ -103,22 +116,15 @@ Os Dockerfiles compilam a aplicação durante o build; os testes do backend não
 
 ## Login por código de email
 
-Na tela de login, informe seu email. Usuários ativos entram após validar o código; emails novos seguem para `/cadastro`, onde informam o nome completo e criam a conta. Contas inativas continuam bloqueadas. O código tem seis dígitos, expira em 10 minutos, permite até cinco tentativas e só pode ser utilizado uma vez. Há intervalo de um minuto entre envios, limite de cinco envios por hora por email e 30 solicitações por hora por IP na instância da API. Apenas o hash do código é persistido.
+Na tela de login, informe seu email. Usuários ativos entram após validar o código; emails sem cadastro são bloqueados após a validação do código. Contas inativas continuam bloqueadas. O código tem seis dígitos, expira em 10 minutos, permite até cinco tentativas e só pode ser utilizado uma vez. Há intervalo de um minuto entre envios, limite de cinco envios por hora por email e 30 solicitações por hora por IP na instância da API. Apenas o hash do código é persistido.
 
 Com a configuração padrão, os emails são capturados no Mailpit em http://localhost:8025, sem chegar a caixas reais. Após validar o código, a aplicação cria uma sessão em cookie HttpOnly e abre `/inicio`. A sessão expira após 30 minutos de inatividade, é perdida ao reiniciar o backend e é revogada no próximo acesso quando o usuário é desativado ou excluído. As APIs de usuário agora exigem sessão autenticada; operações de escrita também exigem token CSRF.
 
-Não há autocadastro público. Para cadastrar o primeiro usuário, um administrador deve inserir o registro no banco. Abra o terminal SQL com o comando mostrado acima e execute, substituindo nome e email pelos dados desejados:
-
-```sql
-INSERT INTO usuario (id, nome, email, status)
-VALUES (gen_random_uuid(), 'Seu Nome', 'seu-email@example.com', 'ATIVO');
-```
-
-Use email em minúsculas. Nenhum usuário padrão é criado automaticamente. O modelo atual ainda não diferencia permissões administrativas entre usuários autenticados.
+Não há autocadastro público. O primeiro administrador é provisionado uma única vez por configuração operacional. Consulte [Etapa 1 — Administração da plataforma](docs/etapa1-administracao-plataforma.md) para configurar o email e validar as telas. A conta administrativa entra em `/administracao` sem precisar de empresa. Cadastro de empresas, usuários e liberação de módulos serão entregues nas próximas etapas.
 
 Quando for configurar um SMTP real, altere `MAIL_HOST`, `MAIL_PORT`, `MAIL_FROM`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_AUTH` e `MAIL_STARTTLS` em `docker/.env`. Para um SMTP com STARTTLS, use `MAIL_AUTH=true` e `MAIL_STARTTLS=true`; configure o remetente autorizado pelo provedor. Reinicie o serviço `api` após a alteração. Não publique o `.env` no Git.
 
-O ícone Google inicia o OAuth quando Client ID e Secret estão configurados. Usuários ativos entram diretamente; emails novos verificados seguem para completar o cadastro. O login por código continua disponível.
+O ícone Google inicia o OAuth quando Client ID e Secret estão configurados. Usuários ativos entram diretamente; emails sem cadastro são bloqueados. O login por código continua disponível.
 
 ## Configurar o login Google
 
@@ -141,13 +147,11 @@ Após preencher as credenciais, execute na pasta `docker`:
 docker compose up --build -d
 ```
 
-O retorno do Google valida o email: usuários ativos entram e emails novos seguem para completar o cadastro. A conta só é criada após enviar o nome completo. No primeiro acesso, contas Gmail ou Google Workspace são vinculadas ao identificador estável `sub` do Google, persistido no banco. Contas Google com email externo sem Workspace usam o fluxo de código por email para evitar vínculo automático baseado em um endereço sobre o qual o Google não é autoridade. Uma conta Google diferente não substitui um vínculo existente.
+O retorno do Google valida o email: usuários ativos entram e emails sem cadastro são bloqueados. No primeiro acesso, contas Gmail ou Google Workspace são vinculadas ao identificador estável `sub` do Google, persistido no banco. Contas Google com email externo sem Workspace usam o fluxo de código por email para evitar vínculo automático baseado em um endereço sobre o qual o Google não é autoridade. Uma conta Google diferente não substitui um vínculo existente.
 
-### Cadastro após validar o email
+### Cadastro controlado
 
-`GET /api/auth/cadastro` informa o email validado da sessão e `POST /api/auth/cadastro` recebe apenas `nome`. O email é definido pelo backend e não pode ser trocado no formulário. A autorização de cadastro expira em 15 minutos e é removida ao concluir. Antes da conclusão, essa sessão não autoriza acesso às APIs protegidas. No Google, o vínculo `sub` é salvo junto com a criação da conta.
-
-O cadastro atual cria um usuário ativo com nome e email. Empresas, isolamento de dados e perfil master ainda dependem da implementação de multiempresa.
+As rotas públicas de cadastro estão desativadas; GET e POST em `/api/auth/cadastro` negam acesso. O futuro cadastro e os convites serão administrados pela plataforma.
 
 ### Envio de códigos por Gmail
 

@@ -1,4 +1,4 @@
-package com.advocacia_microservice.usuario.infrastructure.persistence;
+package com.advocacia_microservice.usuario.infrastructure.persistence.entity;
 
 import com.advocacia_microservice.usuario.domain.StatusUsuario;
 import com.advocacia_microservice.usuario.domain.Usuario;

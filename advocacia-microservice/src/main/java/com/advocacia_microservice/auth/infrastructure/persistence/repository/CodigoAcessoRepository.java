@@ -1,9 +1,10 @@
-package com.advocacia_microservice.auth.infrastructure.persistence;
+package com.advocacia_microservice.auth.infrastructure.persistence.repository;
 
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import com.advocacia_microservice.auth.infrastructure.persistence.entity.*;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 

@@ -30,6 +30,9 @@
       }
     </nav>
     <div class="rodape-menu">
+      @if (plataforma.podeAdministrar()) {
+        <a class="item-menu" routerLink="/administracao" title="Administração da plataforma" (click)="fecharMenu()"><app-icone nome="settings" /><span class="rotulo">Administração da plataforma</span></a>
+      }
       <a class="item-menu" routerLink="/config" routerLinkActive="ativo" ariaCurrentWhenActive="page" title="Configurações" aria-label="Configurações" (click)="fecharMenu()"><app-icone nome="settings" /><span class="rotulo">Configurações</span></a>
       <button class="item-menu fixar" type="button" (click)="alternarMenu()" [attr.aria-pressed]="fixado()" [attr.aria-label]="fixado() ? 'Recolher menu' : 'Fixar o menu aberto'" [title]="fixado() ? 'Recolher menu' : 'Fixar o menu aberto'"><app-icone nome="pin" /><span class="rotulo">Menu fixado</span></button>
     </div>
@@ -38,6 +41,7 @@
     <header class="cabecalho">
       <button class="abrir-mobile botao-icone" type="button" aria-label="Abrir menu" [attr.aria-expanded]="menuMobile()" (click)="menuMobile.set(true)"><app-icone nome="menu" /></button>
       <h1>{{ titulo() }}</h1>
+      <a routerLink="/escritorios" (click)="fecharMenu()" aria-label="Selecionar escritório">{{ escritorios.ativo()?.nome || 'Selecionar escritório' }}</a>
       <div class="busca">
         <label><app-icone nome="search" /><input aria-label="Buscar em tudo" placeholder="Buscar em tudo" [(ngModel)]="busca" autocomplete="off"></label>
         @if (busca.trim()) {

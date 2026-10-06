@@ -1,4 +1,4 @@
-package com.advocacia_microservice.auth.infrastructure.persistence;
+package com.advocacia_microservice.auth.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
 import java.util.UUID;

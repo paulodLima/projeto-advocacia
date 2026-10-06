@@ -1,9 +1,10 @@
 package com.advocacia_microservice.auth.application;
 
 import com.advocacia_microservice.auth.infrastructure.EmailCodigoSender;
-import com.advocacia_microservice.auth.infrastructure.persistence.*;
+import com.advocacia_microservice.auth.infrastructure.persistence.entity.*;
+import com.advocacia_microservice.auth.infrastructure.persistence.repository.*;
 import com.advocacia_microservice.usuario.domain.StatusUsuario;
-import com.advocacia_microservice.usuario.infrastructure.persistence.JpaUsuarioRepository;
+import com.advocacia_microservice.usuario.domain.UsuarioRepository;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
@@ -16,13 +17,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CodigoAcessoService {
-    private final JpaUsuarioRepository usuarios;
+    private final UsuarioRepository usuarios;
     private final CodigoAcessoRepository codigos;
     private final EmailCodigoSender sender;
     private final PasswordEncoder encoder;
     private final SecureRandom random = new SecureRandom();
 
-    public CodigoAcessoService(JpaUsuarioRepository usuarios, CodigoAcessoRepository codigos,
+    public CodigoAcessoService(UsuarioRepository usuarios, CodigoAcessoRepository codigos,
                                EmailCodigoSender sender, PasswordEncoder encoder) {
         this.usuarios = usuarios;
         this.codigos = codigos;
@@ -34,8 +35,8 @@ public class CodigoAcessoService {
     public UUID solicitar(String email) {
         var agora = Instant.now();
         email = email.strip().toLowerCase(Locale.ROOT);
-        var usuario = usuarios.findByEmail(email)
-                .map(entity -> entity.paraDominio()).orElse(null);
+        var usuario = usuarios.buscarPorEmail(email)
+                .orElse(null);
         // Contas inativas continuam bloqueadas; emails novos podem validar para cadastro.
         if (usuario != null && usuario.status() != StatusUsuario.ATIVO) {
             return UUID.randomUUID();
@@ -77,7 +78,7 @@ public class CodigoAcessoService {
         if (!encoder.matches(valor, codigo.hash)) {
             return Optional.empty();
         }
-        var usuario = usuarios.findByEmail(codigo.email).map(entity -> entity.paraDominio());
+        var usuario = usuarios.buscarPorEmail(codigo.email);
         if (usuario.isPresent() && usuario.get().status() != StatusUsuario.ATIVO) {
             return Optional.empty();
         }
