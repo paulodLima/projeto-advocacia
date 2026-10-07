@@ -1,0 +1,19 @@
+ :host { display: block; }
+.configuracoes { width: 100%; padding: 28px; border: 1px solid #ffffffb3; border-radius: 16px; background: #ffffff9e; backdrop-filter: blur(22px); box-shadow: 0 8px 28px #3a342d0f; }
+.cabecalho-secao { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
+.icone { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; background: var(--tema-suave); color: var(--tema-primaria); }
+.icone app-icone { width: 24px; height: 24px; } h2 { margin: 0 0 4px; font: 400 24px 'Book Antiqua', Palatino, Georgia, serif; color: #2a2723; }
+p { font-size: 12px; line-height: 1.7; color: #7d6c5e; }
+.campo-tema { display: flex; gap: 24px; align-items: center; justify-content: space-between; padding-top: 24px; border-top: 1px solid #6b635b24; }
+label { display: block; font-size: 14px; font-weight: 600; color: #2a2723; margin-bottom: 6px; }
+select { font: inherit; font-size: 13px; color: #2a2723; background: #ffffffb3; border: 1px solid #d9d4cb; border-radius: 10px; padding: 12px 36px 12px 14px; min-width: 210px; cursor: pointer; }
+select:focus-visible, a:focus-visible { outline: 2px solid var(--tema-destaque); outline-offset: 3px; }
+.previa { display: flex; gap: 14px; border-radius: 16px; border: 1px solid #ffffffb3; padding: 16px; margin-top: 28px; background: radial-gradient(80% 80% at 10% 0%, var(--tema-fundo-1), transparent), var(--tema-fundo); }
+.previa-menu { display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 20px 16px; color: white; background: var(--tema-menu); border-radius: 12px; }
+.previa-conteudo { flex: 1; min-width: 0; } .previa-saudacao { background: var(--tema-saudacao); color: white; border-radius: 12px; padding: 18px; display: grid; gap: 5px; }
+.previa-saudacao small { color: var(--tema-clara); font-size: 8px; letter-spacing: .15em; }
+.previa-saudacao span { font: 400 18px 'Book Antiqua', Palatino, Georgia, serif; }
+.previa-cartoes { display: flex; gap: 10px; margin: 12px 0; } .previa-cartoes span { height: 40px; flex: 1; background: #ffffffb3; border: 1px solid #ffffffb3; border-radius: 8px; }
+.botao { display: inline-flex; align-items: center; gap: 8px; border: 0; background: var(--tema-primaria); padding: 10px 16px; border-radius: 8px; font-size: 12px; color: white; text-decoration: none; }
+.salvo { display: flex; align-items: center; gap: 8px; margin-top: 20px; font-size: 11px; } .ponto { background: var(--tema-primaria); width: 6px; height: 6px; border-radius: 50%; flex: 0 0 auto; }
+@media (max-width: 600px) { .configuracoes { padding: 20px; } .campo-tema { flex-direction: column; align-items: stretch; gap: 16px; } select { width: 100%; min-width: 0; } .previa { padding: 12px; gap: 10px; } .previa-menu { padding: 16px 12px; } .previa-saudacao { padding: 14px; } .salvo { align-items: flex-start; } .ponto { margin-top: 6px; } }

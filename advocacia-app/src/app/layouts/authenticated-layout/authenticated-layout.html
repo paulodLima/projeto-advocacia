@@ -1,10 +1,11 @@
-<div class="casca-app" (keydown.escape)="menuMobile.set(false); painel.set(null); busca = ''">
+<div class="casca-app" [attr.data-tema]="tema.atual()" (keydown.escape)="menuMobile.set(false); painel.set(null); busca = ''">
   <a class="pular" href="#conteudo" (click)="pularParaConteudo($event)">Pular para o conteúdo</a>
   @if (menuMobile()) { <button class="fundo-menu" type="button" aria-label="Fechar menu" (click)="menuMobile.set(false)"></button> }
   <aside class="menu-lateral" [class.expandido]="fixado()" [class.mobile-aberto]="menuMobile()" aria-label="Menu principal">
     <div class="marca-menu">
-      <a routerLink="/inicio" (click)="fecharMenu()" class="marca-logo" [attr.aria-label]="marca.identidade().nome">
-        <img [src]="marca.identidade().logoUrl" alt="" (error)="marca.restaurarLogo()">
+      <a routerLink="/inicio" (click)="fecharMenu()" class="marca-logo" [attr.aria-label]="marca.identidade().nome"
+         [class.logo-personalizada]="((fixado() || menuMobile()) ? marca.identidade().logoExpandidoUrl : marca.identidade().logoRecolhidoUrl) !== '/images/logo-ga.svg'">
+        <img [src]="(fixado() || menuMobile()) ? marca.identidade().logoExpandidoUrl : marca.identidade().logoRecolhidoUrl" alt="" (error)="marca.restaurarLogo()">
       </a>
       <div class="marca-texto"><p>{{ marca.identidade().nome }}</p><span>ADVOCACIA</span></div>
       <button class="fechar-mobile" type="button" aria-label="Fechar menu" (click)="menuMobile.set(false)"><app-icone nome="close" /></button>
@@ -13,7 +14,7 @@
       <a class="item-menu inicio" [routerLink]="'/' + inicio.id" routerLinkActive="ativo" ariaCurrentWhenActive="page" [title]="inicio.label" [attr.aria-label]="inicio.label" (click)="fecharMenu()">
         <app-icone [nome]="inicio.icon" /><span class="rotulo">{{ inicio.label }}</span>
       </a>
-      @for (grupo of grupos; track grupo.titulo) {
+      @for (grupo of grupos(); track grupo.titulo) {
         <div class="grupo-menu">
           <button class="titulo-grupo" type="button" (click)="alternarGrupo(grupo.titulo)" [attr.aria-expanded]="!recolhidos().includes(grupo.titulo)">
             {{ grupo.titulo }}<app-icone nome="chevron" [class.recolhido]="recolhidos().includes(grupo.titulo)" />
@@ -52,16 +53,16 @@
         <button class="botao-icone" type="button" aria-label="Acesso rápido" [attr.aria-expanded]="painel() === 'atalhos'" (click)="alternarPainel('atalhos')"><app-icone nome="plus" /></button>
         <button class="botao-icone assistente" type="button" aria-label="Assistente" [attr.aria-expanded]="painel() === 'assistente'" (click)="alternarPainel('assistente')"><app-icone nome="sparkles" /></button>
         <button class="botao-icone" type="button" aria-label="Notificações" [attr.aria-expanded]="painel() === 'notificacoes'" (click)="alternarPainel('notificacoes')"><app-icone nome="bell" /></button>
-        <span class="avatar" [title]="auth.usuario()?.nome || 'Usuário'" [attr.aria-label]="auth.usuario()?.nome || 'Usuário'">{{ iniciais() }}</span>
+        <span class="avatar" [title]="auth.usuario()?.nome || 'Usuário'" [attr.aria-label]="auth.usuario()?.nome || 'Usuário'">@if (meuPerfil.perfil()?.foto) { <img [src]="meuPerfil.perfil()!.foto" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" /> } @else { {{ iniciais() }} }</span>
         <button class="sair" type="button" (click)="sair()" [disabled]="saindo()">{{ saindo() ? 'Saindo…' : 'Sair' }}</button>
       </div>
       @if (painel()) {
         <section class="painel-cabecalho" aria-live="polite">
           <div><h2>{{ painel() === 'notificacoes' ? 'Notificações' : painel() === 'assistente' ? 'Assistente' : 'Acesso rápido' }}</h2><button type="button" class="botao-icone" aria-label="Fechar painel" (click)="painel.set(null)"><app-icone nome="close" /></button></div>
           @if (painel() === 'atalhos') {
-            <a routerLink="/agenda" (click)="fecharMenu()"><app-icone nome="calendar" />Agenda</a>
-            <a routerLink="/processual" (click)="fecharMenu()"><app-icone nome="scale" />Gestão Processual</a>
-            <a routerLink="/contatos" (click)="fecharMenu()"><app-icone nome="users" />Contatos</a>
+            @if (acesso.permite('agenda')) { <a routerLink="/agenda" (click)="fecharMenu()"><app-icone nome="calendar" />Agenda</a> }
+            @if (acesso.permite('processual')) { <a routerLink="/processual" (click)="fecharMenu()"><app-icone nome="scale" />Gestão Processual</a> }
+            @if (acesso.permite('contatos')) { <a routerLink="/contatos" (click)="fecharMenu()"><app-icone nome="users" />Contatos</a> }
           } @else { <p>{{ painel() === 'notificacoes' ? 'Nenhuma notificação por aqui.' : 'Seu assistente estará disponível em breve.' }}</p> }
         </section>
       }
