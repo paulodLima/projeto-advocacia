@@ -30,13 +30,15 @@ public class AuthController {
     private final JpaUsuarioRepository usuarios;
     private final LoginRateLimiter limite;
     private final ConcluirCadastroService cadastro;
+    private final com.advocacia_microservice.equipe.application.EquipeService equipe;
     public record CadastroRequest(@NotBlank @Size(max = 150) String nome) {}
 
-    public AuthController(CodigoAcessoService codigos, JpaUsuarioRepository usuarios, LoginRateLimiter limite, ConcluirCadastroService cadastro) {
+    public AuthController(CodigoAcessoService codigos, JpaUsuarioRepository usuarios, LoginRateLimiter limite, ConcluirCadastroService cadastro, com.advocacia_microservice.equipe.application.EquipeService equipe) {
         this.codigos = codigos;
         this.usuarios = usuarios;
         this.limite = limite;
         this.cadastro = cadastro;
+        this.equipe = equipe;
     }
 
     @GetMapping("/csrf")
@@ -72,6 +74,7 @@ public class AuthController {
             SessaoCadastro.iniciar(request, response, emailValidado.get(), null);
             return ResponseEntity.ok(java.util.Map.of("cadastroPendente", true));
         }
+        equipe.aceitarConvite(conta.get());
         SessaoCadastro.autenticar(request, response, conta.get());
         return ResponseEntity.ok(UsuarioResponse.de(conta.get()));
     }

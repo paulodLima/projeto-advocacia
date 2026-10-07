@@ -11,9 +11,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class ConcluirCadastroService {
     private final CriarUsuarioUseCase criar;
     private final GoogleIdentityRepository identities;
-    public ConcluirCadastroService(CriarUsuarioUseCase criar, GoogleIdentityRepository identities) {
+    private final com.advocacia_microservice.equipe.application.EquipeService equipe;
+    public ConcluirCadastroService(CriarUsuarioUseCase criar, GoogleIdentityRepository identities, com.advocacia_microservice.equipe.application.EquipeService equipe) {
         this.criar = criar;
         this.identities = identities;
+        this.equipe = equipe;
     }
     @Transactional
     public Usuario executar(String nome, Pendente pendente) {
@@ -24,6 +26,7 @@ public class ConcluirCadastroService {
             identidade.subject = pendente.googleSubject();
             identities.saveAndFlush(identidade);
         }
+        equipe.aceitarConvite(usuario);
         return usuario;
     }
 }

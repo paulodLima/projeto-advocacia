@@ -51,12 +51,14 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JpaUsuarioRepository usuarios,
+            com.advocacia_microservice.equipe.application.EquipeService equipe,
             org.springframework.beans.factory.ObjectProvider<org.springframework.security.oauth2.client.registration.ClientRegistrationRepository> registrations,
             com.advocacia_microservice.auth.infrastructure.GoogleLoginSuccessHandler googleSuccess,
             @org.springframework.beans.factory.annotation.Value("${app.auth.public-url}") String publicUrl) throws Exception {
         http.cors(cors -> {});
         // CSRF permanece habilitado. O frontend obtém o token em /api/auth/csrf.
         http.authorizeHttpRequests(auth -> auth
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/public/empresas/*/identidade").permitAll()
                 .requestMatchers("/api/auth/csrf", "/api/auth/codigo", "/api/auth/validar", "/api/auth/providers", "/api/auth/cadastro",
                         "/oauth2/authorization/**", "/login/oauth2/code/**",
                         "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
@@ -87,6 +89,7 @@ public class SecurityConfig {
                     try {
                         ativo = usuarios.findById(UUID.fromString(auth.getName()))
                                 .map(item -> item.paraDominio().status() == StatusUsuario.ATIVO).orElse(false);
+                        ativo = ativo && equipe.ativo(UUID.fromString(auth.getName()));
                     } catch (IllegalArgumentException error) {
                         ativo = false;
                     }
@@ -94,6 +97,15 @@ public class SecurityConfig {
                         SecurityContextHolder.clearContext();
                         var session = request.getSession(false);
                         if (session != null) session.invalidate();
+                    } else {
+                        var acesso = equipe.acesso(UUID.fromString(auth.getName()));
+                        var caminho = request.getRequestURI().substring(request.getContextPath().length());
+                        var modulo = java.util.Arrays.stream(caminho.split("/")).skip(2).findFirst().orElse("");
+                        boolean negado = caminho.startsWith("/api/")
+                                && com.advocacia_microservice.equipe.domain.PermissoesEquipe.TODOS.contains(modulo)
+                                && !modulo.equals("equipe") && !modulo.equals("config") && !acesso.modulos().contains(modulo);
+                        if (caminho.startsWith("/api/documentos/assinaturas") && !acesso.enviaDocumento()) negado = true;
+                        if (negado) { response.sendError(HttpStatus.FORBIDDEN.value()); return; }
                     }
                 }
                 chain.doFilter(request, response);

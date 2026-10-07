@@ -3,7 +3,7 @@
     <div class="tela-login-form">
       <div class="conteudo">
         <div class="marca" [attr.aria-label]="marca.identidade().nome">
-          <div class="marca-simbolo">
+          <div class="marca-simbolo" [style.background]="marca.identidade().logoLoginBranca ? '#4f5a49' : null">
             <img [src]="marca.identidade().logoUrl" [alt]="'Logo de ' + marca.identidade().nome"
                  (error)="marca.restaurarLogo()" />
           </div>
@@ -61,6 +61,7 @@
     </div>
     <div class="tela-login-foto">
       <img [src]="marca.identidade().imagemLoginUrl" [alt]="'Imagem de apresentação de ' + marca.identidade().nome"
+           [style.object-position]="marca.identidade().posX + '% ' + marca.identidade().posY + '%'" [style.transform]="'scale(' + marca.identidade().zoom + ')'"
            (error)="marca.restaurarImagemLogin()" fetchpriority="high" />
       <div class="tela-login-foto-overlay"></div>
     </div>
