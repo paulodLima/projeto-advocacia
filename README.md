@@ -345,3 +345,25 @@ docker run --rm node:24-alpine node -e "console.log(require('crypto').randomByte
 Escritas e revelação exigem CSRF, além da sessão ativa. O backend determina a empresa e verifica a visibilidade em cada operação; IDs externos e itens ocultos retornam 404. As respostas não permitem cache (`Cache-Control: no-store`). Na edição, `senha: null` mantém a senha existente; criar exige senha. Limites: nome 150, URL 1000, login 254, senha 4096, descrição 500 e observações 4000 caracteres. URLs aceitam apenas HTTP/HTTPS sem usuário/senha embutidos. Nomes são únicos por empresa. Versões desatualizadas retornam 409, preservando o registro.
 
 A tela permite busca, criação, edição, exclusão e revelação. A senha revelada fica apenas em memória, desaparece após 30 segundos, ao ocultar a aba do navegador ou ao sair da tela. A senha digitada é limpa ao cancelar, após salvar e ao fechar a tela. A listagem não consulta senhas automaticamente. Credenciais não são armazenadas em localStorage nem enviadas a serviços externos. Falhas preservam os formulários para nova tentativa. Esta etapa não inclui autofill, sincronização com gestores externos ou rotação de senhas dos sistemas cadastrados.
+
+### Contatos
+
+O menu **Contatos** segue a referência de `docs/index.html`: grade/lista, busca, filtros por tipo e indicadores, painel lateral de cadastro, ficha e edição. Os seis tipos são Cliente, Parte adversa, Parte interessada, Advogado(a), Fornecedor e Parceiro. Pessoas físicas e jurídicas têm qualificação, telefones/WhatsApp, endereço, representantes, origem, carteira, indicadores e observações. A consulta opcional ao ViaCEP usa somente o CEP informado; falhas permitem preencher o endereço manualmente.
+
+A migração V15 cria `contato`, `contato_dado`, `contato_representante`, `contato_indicador`, `contato_tag` e `contato_evento`. Dados e referências são isolados por empresa. MASTER e membros ativos com acesso ao módulo e perfil ADMINISTRADOR, ADVOGADO ou ASSISTENTE podem editar; FINANCEIRO pode consultar. A empresa é determinada pela sessão. Contas sem empresa ou sem acesso ao módulo recebem 403, e IDs de outras empresas retornam 404.
+
+| Método | Endpoint | Uso |
+| --- | --- | --- |
+| GET | `/api/contatos?busca=&tipo=&indicador=&pagina=0&tamanho=24` | Listagem paginada; tamanho máximo 100 |
+| GET | `/api/contatos/opcoes` | Permissão de edição, indicadores, origens ativas e parceiros |
+| GET | `/api/contatos/{id}` | Ficha completa |
+| POST | `/api/contatos` | Criar contato |
+| PUT | `/api/contatos/{id}` | Atualizar contato com versão |
+| DELETE | `/api/contatos/{id}?versao=N` | Excluir a versão conhecida |
+| POST | `/api/contatos/indicadores` | Criar indicador com `{ "nome": "..." }` |
+
+POST e PUT recebem `{ "versao": 0, "dados": { ... }, "representantes": [], "indicadores": [] }`. A ficha retornada inclui `id`, `empresaId` e `versao`. Escritas exigem CSRF e são atômicas. Versões desatualizadas e documentos duplicados na mesma empresa retornam 409. A verificação de CPF/CNPJ considera a quantidade de dígitos e a unicidade, sem validar os dígitos verificadores. Clientes exigem nome, documento, telefone e e-mail; os demais tipos exigem nome. Limites: 20 representantes, 50 indicadores por contato, 100 indicadores por empresa e 4000 caracteres nas observações.
+
+Origem usa o cadastro ativo de Configurações → Cadastros e sistemas. Carteira de parceiro utiliza um contato do tipo Parceiro da mesma empresa; enquanto houver contatos vinculados, esse parceiro não pode ser excluído nem mudar de tipo. Indicadores desta tela são próprios de Contatos. O histórico registra identificadores, operação e data, sem copiar os dados pessoais para o evento. Não há importação automática de dados antigos do navegador.
+
+Esta etapa não implementa vínculos com processos, campanhas automáticas de marketing nem o módulo completo de Parceiros. A ficha informa que os processos serão integrados com Gestão Processual. Para atualizar os containers locais, execute `docker compose -f docker/compose.yaml up --build -d` na raiz do projeto; o Flyway aplica V15 ao iniciar a API.

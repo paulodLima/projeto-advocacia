@@ -27,4 +27,15 @@ describe('Permissões de navegação', () => {
     const resultado = verificar('financeiro'); http.expectOne('/api/equipe/me').flush({}, { status: 503, statusText: 'Unavailable' });
     expect(TestBed.inject(Router).serializeUrl(await resultado as UrlTree)).toBe('/login');
   });
+  it('verifica contatos também nas rotas internas de listagem, ficha e edição', async () => {
+    for (const path of ['', ':id', ':id/editar']) {
+      const route = { routeConfig: { path }, data: { modulo: 'contatos' } } as unknown as ActivatedRouteSnapshot;
+      const permitido = firstValueFrom(TestBed.runInInjectionContext(() => moduloGuard(route, {} as RouterStateSnapshot)) as Observable<boolean | UrlTree>);
+      http.expectOne('/api/equipe/me').flush({ ...resposta, modulos: [...resposta.modulos, 'contatos'] });
+      expect(await permitido).toBe(true);
+      const bloqueado = firstValueFrom(TestBed.runInInjectionContext(() => moduloGuard(route, {} as RouterStateSnapshot)) as Observable<boolean | UrlTree>);
+      http.expectOne('/api/equipe/me').flush(resposta);
+      expect(TestBed.inject(Router).serializeUrl(await bloqueado as UrlTree)).toBe('/inicio');
+    }
+  });
 });
