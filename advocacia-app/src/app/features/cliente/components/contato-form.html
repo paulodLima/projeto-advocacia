@@ -1,0 +1,302 @@
+<form class="contatos-ui formulario" (ngSubmit)="salvar()">
+  @if (erro()) {
+    <p class="mensagem erro" role="alert">{{ erro() }}</p>
+  }
+  <fieldset class="cartao pilha" [disabled]="salvando()">
+    <div class="alternancia">
+      <button
+        type="button"
+        [class.ativo]="form.dados['tipo_pessoa'] === 'PF'"
+        (click)="tipoPessoa('PF')"
+      >
+        Pessoa Física</button
+      ><button
+        type="button"
+        [class.ativo]="form.dados['tipo_pessoa'] === 'PJ'"
+        (click)="tipoPessoa('PJ')"
+      >
+        Pessoa Jurídica
+      </button>
+    </div>
+    <div class="campos">
+      <label class="larga"
+        >{{ form.dados['tipo_pessoa'] === 'PJ' ? 'Razão social' : 'Nome completo' }}
+        <span class="obrigatorio">*</span
+        ><input autofocus name="nome" [(ngModel)]="form.dados['nome']" maxlength="150" required
+      /></label>
+      <label
+        >Tipo<select name="tipo" [(ngModel)]="form.dados['tipo']">
+          @for (tipo of tipos; track tipo) {
+            <option>{{ tipo }}</option>
+          }
+        </select></label
+      >
+      @if (form.dados['tipo_pessoa'] === 'PJ') {
+        <label class="larga"
+          >Nome fantasia<input
+            name="nome_fantasia"
+            [(ngModel)]="form.dados['nome_fantasia']"
+            maxlength="150" /></label
+        ><span></span>
+      }
+      <label
+        >{{ form.dados['tipo_pessoa'] === 'PJ' ? 'CNPJ' : 'CPF' }}
+        @if (form.dados['tipo'] === 'Cliente') {
+          <span class="obrigatorio">*</span>
+        }
+        <input
+          name="documento"
+          [ngModel]="form.dados['documento']"
+          (ngModelChange)="mudar('documento', $event)"
+          [required]="form.dados['tipo'] === 'Cliente'"
+          [placeholder]="
+            form.dados['tipo_pessoa'] === 'PJ' ? '00.000.000/0000-00' : '000.000.000-00'
+          "
+          inputmode="numeric"
+      /></label>
+      <label
+        >Telefone
+        @if (form.dados['tipo'] === 'Cliente') {
+          <span class="obrigatorio">*</span>
+        }
+        <input
+          name="telefone"
+          [ngModel]="form.dados['telefone']"
+          (ngModelChange)="mudar('telefone', $event)"
+          [required]="form.dados['tipo'] === 'Cliente'"
+          placeholder="(61) 90000-0000"
+          inputmode="tel"
+      /></label>
+      <label
+        >E-mail
+        @if (form.dados['tipo'] === 'Cliente') {
+          <span class="obrigatorio">*</span>
+        }
+        <input
+          name="email"
+          [(ngModel)]="form.dados['email']"
+          type="email"
+          maxlength="254"
+          [required]="form.dados['tipo'] === 'Cliente'"
+      /></label>
+      <label
+        >2º telefone<input
+          name="telefone2"
+          [ngModel]="form.dados['telefone2']"
+          (ngModelChange)="mudar('telefone2', $event)"
+          placeholder="(61) 90000-0000"
+          inputmode="tel"
+      /></label>
+      <label class="larga"
+        >Qual é o WhatsApp<select name="whatsapp" [(ngModel)]="form.dados['whatsapp']">
+          <option value="telefone">O telefone principal</option>
+          <option value="telefone2">O segundo telefone</option>
+          <option value="nenhum">Nenhum é WhatsApp</option>
+        </select></label
+      >
+    </div>
+    <h3>{{ form.dados['tipo_pessoa'] === 'PJ' ? 'Dados da empresa' : 'Qualificação' }}</h3>
+    <div class="campos">
+      @if (form.dados['tipo_pessoa'] === 'PJ') {
+        <label class="larga"
+          >Ramo de atuação<input
+            name="profissao"
+            [(ngModel)]="form.dados['profissao']"
+            maxlength="150"
+            placeholder="Construção civil, comércio varejista, locação de equipamentos…"
+        /></label>
+      } @else {
+        @for (c of qualificacao; track c.k) {
+          <label
+            >{{ c.r }}
+            @if (c.tipo === 'select') {
+              <select [name]="c.k" [attr.name]="c.k" [(ngModel)]="form.dados[c.k]">
+                <option value="">—</option>
+                @for (e of estados; track e) {
+                  <option>{{ e }}</option>
+                }
+              </select>
+            } @else {
+              <input
+                [name]="c.k"
+                [attr.name]="c.k"
+                [(ngModel)]="form.dados[c.k]"
+                [type]="c.tipo"
+                maxlength="150"
+                [attr.min]="c.tipo === 'date' ? '1900-01-01' : null"
+              />
+            }
+          </label>
+        }
+      }
+    </div>
+    <h3>Endereço</h3>
+    <div class="campos">
+      @for (c of endereco; track c.k) {
+        <label [class.larga]="c.larga"
+          >{{ c.r }}
+          @if (c.k === 'cep' && buscandoCep()) {
+            (buscando…)
+          }
+          <input
+            [name]="c.k"
+            [attr.name]="c.k"
+            [ngModel]="form.dados[c.k]"
+            (ngModelChange)="mudar(c.k, $event)"
+            (blur)="c.k === 'cep' && buscarCep()"
+            [placeholder]="c.k === 'cep' ? '00000-000' : ''"
+            maxlength="150"
+        /></label>
+      }
+    </div>
+    @if (erroCep()) {
+      <p class="dica" role="status">{{ erroCep() }}</p>
+    }
+    @if (form.dados['tipo_pessoa'] === 'PJ') {
+      <div class="linha entre">
+        <h3>Representantes</h3>
+        <button
+          type="button"
+          (click)="adicionarRepresentante()"
+          [disabled]="form.representantes.length >= 20"
+        >
+          + Adicionar
+        </button>
+      </div>
+      @for (rep of form.representantes; track $index; let indice = $index) {
+        <div class="representante">
+          @for (c of representanteCampos; track c.k) {
+            <label
+              >{{ c.r }}
+              @if (c.tipo === 'select') {
+                <select
+                  [name]="'rep-' + indice + '-' + c.k"
+                  [attr.name]="'rep-' + indice + '-' + c.k"
+                  [(ngModel)]="rep[c.k]"
+                >
+                  <option value="">Estado civil</option>
+                  @for (e of estados; track e) {
+                    <option>{{ e }}</option>
+                  }
+                </select>
+              } @else {
+                <input
+                  [name]="'rep-' + indice + '-' + c.k"
+                  [attr.name]="'rep-' + indice + '-' + c.k"
+                  [ngModel]="rep[c.k]"
+                  (ngModelChange)="
+                    rep[c.k] =
+                      c.k === 'cpf'
+                        ? documento($event)
+                        : c.k === 'telefone'
+                          ? telefone($event)
+                          : $event
+                  "
+                  [type]="c.tipo || 'text'"
+                  [required]="c.k === 'nome'"
+                  maxlength="150"
+                />
+              }
+            </label>
+          }
+          <button
+            type="button"
+            class="perigo"
+            (click)="removerRepresentante(indice)"
+            [attr.aria-label]="'Remover representante ' + (indice + 1)"
+          >
+            remover
+          </button>
+        </div>
+      } @empty {
+        <p class="dica">Nenhum representante ainda.</p>
+      }
+    }
+    <div class="campos">
+      <label
+        >Origem<select name="origem_id" [(ngModel)]="form.dados['origem_id']">
+          <option value="">—</option>
+          @for (o of opcoes().origens; track o.id) {
+            <option [value]="o.id">{{ o.nome }}</option>
+          }
+        </select></label
+      >
+      <label
+        >Carteira<select name="carteira" [(ngModel)]="form.dados['carteira']">
+          <option value="casa">Nossa carteira</option>
+          <option value="parceiro">Carteira de um parceiro</option>
+        </select></label
+      >
+      @if (form.dados['carteira'] === 'parceiro') {
+        <label
+          >De qual parceiro<select
+            name="carteira_parceiro_id"
+            [(ngModel)]="form.dados['carteira_parceiro_id']"
+            required
+          >
+            <option value="">—</option>
+            @for (p of opcoes().parceiros; track p.id) {
+              @if (p.id !== contato()?.id) {
+                <option [value]="p.id">{{ p.nome }}</option>
+              }
+            }
+          </select>
+          @if (!opcoes().parceiros.length) {
+            <small>Cadastre um contato do tipo Parceiro.</small>
+          }
+        </label>
+      }
+    </div>
+    <div>
+      <label>Indicadores para marketing sazonal</label>
+      <div class="indicadores">
+        @for (i of opcoes().indicadores; track i.id) {
+          <button
+            type="button"
+            class="indicador"
+            [class.selecionado]="form.indicadores.includes(i.id)"
+            [style.--cor-indicador]="i.cor"
+            [attr.aria-pressed]="form.indicadores.includes(i.id)"
+            (click)="alternarIndicador(i.id)"
+          >
+            {{ form.indicadores.includes(i.id) ? '✓ ' : '' }}{{ i.nome }}
+          </button>
+        }
+      </div>
+      <div class="linha novo-indicador">
+        <input
+          name="novoIndicador"
+          [(ngModel)]="novoIndicador"
+          maxlength="80"
+          placeholder="Criar novo indicador…"
+          (keydown.enter)="$event.preventDefault(); criarIndicador()"
+        /><button
+          type="button"
+          (click)="criarIndicador()"
+          [disabled]="criandoIndicador() || !novoIndicador.trim()"
+        >
+          {{ criandoIndicador() ? 'Criando…' : '+ Adicionar' }}
+        </button>
+      </div>
+    </div>
+    <label
+      >Observações<textarea
+        name="observacoes"
+        [(ngModel)]="form.dados['observacoes']"
+        maxlength="4000"
+        rows="2"
+      ></textarea>
+    </label>
+    <div class="linha fim">
+      <button type="button" class="texto" (click)="cancelar.emit()">Cancelar</button
+      ><button class="salvar" type="submit" [disabled]="salvando() || !form.dados['nome'].trim()">
+        {{ salvando() ? 'Salvando…' : contato() ? 'Salvar alterações' : 'Salvar contato' }}
+      </button>
+    </div>
+  </fieldset>
+  <aside class="cartao dica">
+    Os indicadores alimentam o Marketing Sazonal — quem é pai, quem é mãe, quem tem pensão atrelada
+    ao salário mínimo. É o que faz as campanhas de janeiro, maio, agosto e dezembro encontrarem
+    sozinhas os destinatários certos.
+  </aside>
+</form>

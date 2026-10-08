@@ -13,20 +13,42 @@ export const routes: Routes = [
     path: '',
     canActivate: [authGuard],
     canActivateChild: [authGuard, moduloGuard],
-    loadComponent: () => import('./layouts/authenticated-layout/authenticated-layout').then((module) => module.AuthenticatedLayout),
+    loadComponent: () =>
+      import('./layouts/authenticated-layout/authenticated-layout').then(
+        (module) => module.AuthenticatedLayout,
+      ),
     children: [
       {
-        path: 'inicio', title: 'Início — Gestão Advocacia',
-        loadComponent: () => import('./features/auth/pages/inicio/inicio').then((module) => module.Inicio),
+        path: 'inicio',
+        title: 'Início — Gestão Advocacia',
+        loadComponent: () =>
+          import('./features/auth/pages/inicio/inicio').then((module) => module.Inicio),
       },
       {
-        path: 'config', title: 'Configurações — Gestão Advocacia',
-        loadComponent: () => import('./features/configuracoes/pages/configuracoes/configuracoes').then((module) => module.Configuracoes),
+        path: 'config',
+        title: 'Configurações — Gestão Advocacia',
+        loadComponent: () =>
+          import('./features/configuracoes/pages/configuracoes/configuracoes').then(
+            (module) => module.Configuracoes,
+          ),
       },
-      ...ITENS_MENU.filter((item) => item.id !== 'inicio' && item.id !== 'config').map((item) => ({
-        path: item.id, title: item.label + ' — Gestão Advocacia', data: { label: item.label, icon: item.icon },
-        loadComponent: () => import('./shared/pages/modulo-em-breve/modulo-em-breve').then((module) => module.ModuloEmBreve),
-      })),
+      {
+        path: 'contatos',
+        data: { modulo: 'contatos' },
+        loadChildren: () =>
+          import('./features/cliente/cliente.routes').then((m) => m.clienteRoutes),
+      },
+      ...ITENS_MENU.filter((item) => !['inicio', 'config', 'contatos'].includes(item.id)).map(
+        (item) => ({
+          path: item.id,
+          title: item.label + ' — Gestão Advocacia',
+          data: { label: item.label, icon: item.icon },
+          loadComponent: () =>
+            import('./shared/pages/modulo-em-breve/modulo-em-breve').then(
+              (module) => module.ModuloEmBreve,
+            ),
+        }),
+      ),
     ],
   },
   { path: '**', redirectTo: 'login' },
