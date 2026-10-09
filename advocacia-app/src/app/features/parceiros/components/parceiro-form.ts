@@ -1,3 +1,4 @@
+import { MascaraDirective } from '../../../shared/directives/mascara.directive';
 import { Component, DestroyRef, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -15,7 +16,7 @@ import {
 
 @Component({
   selector: 'app-parceiro-form',
-  imports: [FormsModule],
+  imports: [FormsModule, MascaraDirective],
   templateUrl: './parceiro-form.html',
   styles: ':host{display:block;min-width:0}',
 })
@@ -62,25 +63,6 @@ export class ParceiroForm {
   }
   protected pj() {
     return this.form.dados['tipo_pessoa'] === 'PJ';
-  }
-  protected documento(valor: string) {
-    const n = valor.replace(/\D/g, '').slice(0, this.pj() ? 14 : 11);
-    this.form.dados['documento'] = this.pj()
-      ? n
-          .replace(/^(\d{2})(\d)/, '$1.$2')
-          .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-          .replace(/\.(\d{3})(\d)/, '.$1/$2')
-          .replace(/(\d{4})(\d)/, '$1-$2')
-      : n
-          .replace(/^(\d{3})(\d)/, '$1.$2')
-          .replace(/\.(\d{3})(\d)/, '.$1.$2')
-          .replace(/(\d{3})(\d)/, '$1-$2');
-  }
-  protected telefone(valor: string) {
-    const n = valor.replace(/\D/g, '').slice(0, 11);
-    this.form.dados['telefone'] = n
-      .replace(/^(\d{2})(\d)/, '($1) $2')
-      .replace(n.length > 10 ? /(\d{5})(\d)/ : /(\d{4})(\d)/, '$1-$2');
   }
   protected cep(valor: string) {
     this.cepSequencia++;

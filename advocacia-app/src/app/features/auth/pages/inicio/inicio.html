@@ -15,10 +15,12 @@
   </section>
   <div class="colunas">
     <div class="coluna">
-      <app-painel-inicio titulo="Acesso rápido" [resumo]="(atalhos.length + sistemas().length) + ' atalhos'" [aberto]="false">
-        <div class="atalhos">@for (atalho of atalhos; track atalho.destino) { <a [routerLink]="'/' + atalho.destino"><span><app-icone [nome]="atalho.icon" /></span>{{ atalho.label }}</a> }
+      <app-painel-inicio titulo="Acesso rápido" [resumo]="(atalhos().length + sistemas().length) + ' atalhos'" [aberto]="false">
+        <div class="atalhos">@for (atalho of atalhos(); track atalho.destino) { <a [routerLink]="'/' + atalho.destino"><span><app-icone [nome]="atalho.icon" /></span>{{ atalho.label }}</a> }
           @for (sistema of sistemas(); track sistema.id) { <a [href]="sistema.url" target="_blank" rel="noopener noreferrer"><span [style.background]="sistema.cor">@if (sistema.logo) { <img [src]="sistema.logo" alt="" width="32" height="32" style="object-fit:contain" /> } @else { <app-icone [nome]="sistema.icone" /> }</span>{{ sistema.nome }}</a> }
         </div>
+        @if (!carregandoCadastros() && !erroCadastros() && !atalhos().length && !sistemas().length) { <p class="vazio">Nenhum acesso rápido selecionado.</p> }
+        @if (acesso.permiteConfiguracao('cadastros')) { <a class="link-discreto" routerLink="/config" [queryParams]="{secao: 'cadastros'}">Editar acesso rápido <app-icone nome="arrow" /></a> }
       </app-painel-inicio>
       <app-painel-inicio titulo="Notícias" resumo="jurídicas, para o escritório" [aberto]="false"><p class="vazio">Nenhuma notícia por aqui.</p></app-painel-inicio>
       <app-painel-inicio titulo="Rotinas do escritório">

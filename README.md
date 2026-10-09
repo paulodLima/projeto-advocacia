@@ -4,6 +4,8 @@ Projeto com backend Spring Boot (Java 21), frontend Angular com SSR e PostgreSQL
 
 A estrutura do backend, os perfis de ambiente e o CRUD de usuário estão documentados no [README do backend](advocacia-microservice/README.md).
 
+O módulo CRM acompanha leads, cadências de contato, consultas, qualificação e campanhas de Marketing Sazonal, com dados separados por empresa. Consulte os fluxos, endpoints e integrações previstas na [documentação do CRM](docs/crm.md).
+
 ## Pré-requisitos
 
 - Git para clonar o repositório.

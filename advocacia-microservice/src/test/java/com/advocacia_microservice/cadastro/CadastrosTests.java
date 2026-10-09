@@ -38,6 +38,21 @@ class CadastrosTests {
     CadastroRegistro criar(String tipo, Map<String, String> campos) { return service.salvar(master.id(), tipo, null, campos, true); }
     Sistema sistema(UUID id, String nome, String url) { return new Sistema(id, nome, url, true, "link", "#e4dbd2", ""); }
 
+    @Test void atalhosPersistemAceitamListaVaziaEExigemMasterDaEmpresa() throws Exception {
+        assertEquals(List.of("agenda", "casos", "contatos", "documentos"), service.inicio(master.id()).atalhos());
+        service.salvarAtalhos(master.id(), List.of("crm", "parceiros"));
+        assertEquals(List.of("crm", "parceiros"), service.buscar(master.id()).atalhos());
+        var outro = usuario(); empresa(outro);
+        assertEquals(List.of("agenda", "casos", "contatos", "documentos"), service.inicio(outro.id()).atalhos());
+        assertThrows(IllegalArgumentException.class, () -> service.salvarAtalhos(master.id(), List.of("inexistente")));
+        assertThrows(IllegalArgumentException.class, () -> service.salvarAtalhos(master.id(), List.of("crm", "crm")));
+        var membro = usuario(); empresaRepository.vincular(new VinculoEmpresa(membro.id(), empresa, PapelEmpresa.MEMBRO));
+        mvc.perform(put("/api/config/cadastros/atalhos").with(user(membro.id().toString())).with(csrf()).contentType("application/json").content("{\"atalhos\":[\"agenda\"]}")).andExpect(status().isForbidden());
+        mvc.perform(put("/api/config/cadastros/atalhos").with(user(master.id().toString())).contentType("application/json").content("{\"atalhos\":[]}")).andExpect(status().isForbidden());
+        mvc.perform(put("/api/config/cadastros/atalhos").with(user(master.id().toString())).with(csrf()).contentType("application/json").content("{\"atalhos\":[]}")).andExpect(status().isOk());
+        assertTrue(service.inicio(master.id()).atalhos().isEmpty());
+    }
+
     @Test void crudDeListasRestauraDoBancoRenomeiaSemPerderReferenciaEBloqueiaExclusaoEmUso() throws Exception {
         var grupo = criar("grupos", Map.of("nome", " Cível ", "sigla", "cv"));
         var acao = criar("acoes", Map.of("nome", "Indenização", "grupo", grupo.id().toString()));

@@ -22,6 +22,20 @@ describe('Cadastros e sistemas no servidor', () => {
   async function abrir(valor = resposta) {
     const fixture = TestBed.createComponent(CadastrosConfig); http.expectOne(url).flush(valor); await fixture.whenStable(); return fixture;
   }
+  it('salva as páginas selecionadas e restaura a seleção do banco', async () => {
+    const fixture = TestBed.createComponent(CadastrosConfig);
+    http.expectOne(url).flush({ ...resposta, atalhos: ['crm'] }); await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+    const selecionar = (nome: string) => Array.from(element.querySelectorAll<HTMLLabelElement>('.cfg-check')).find(l => l.textContent?.trim() === nome)!.querySelector<HTMLInputElement>('input')!;
+    expect(selecionar('CRM').checked).toBe(true);
+    expect(selecionar('Agenda').checked).toBe(false);
+    selecionar('Agenda').click(); await fixture.whenStable();
+    Array.from(element.querySelectorAll<HTMLButtonElement>('button')).find(b => b.textContent?.trim() === 'Salvar atalhos')!.click();
+    const req = http.expectOne(url + '/atalhos');
+    expect(req.request.method).toBe('PUT'); expect(req.request.body).toEqual({ atalhos: ['crm', 'agenda'] });
+    req.flush(['crm', 'agenda']); await fixture.whenStable();
+    expect(element.textContent).toContain('Salvo no banco de dados para toda a empresa');
+  });
   it('usa o banco, conserva o rascunho após falha e só confirma a atualização após resposta', async () => {
     const fixture = await abrir(); const element = fixture.nativeElement as HTMLElement;
     element.querySelector<HTMLButtonElement>('.cadastro-cartao')!.click(); await fixture.whenStable();

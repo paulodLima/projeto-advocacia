@@ -6,6 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { ConfiguracoesLocalService } from '../services/configuracoes-local.service';
 import { LISTAS_CADASTRO, ListaCadastro, RegistroLocal, SistemaLocal } from '../models/configuracoes.model';
 import { Icone } from '../../../shared/components/icone/icone';
+import { GRUPOS_MENU } from '../../../core/navigation/menu.model';
 
 @Component({ selector: 'app-cadastros-config', imports: [FormsModule, Icone], template: `
   <div class="cfg-titulo"><app-icone nome="settings" /><div><h2>Cadastros e sistemas</h2><p>as listas reutilizadas pela intranet, as pontes com o mundo lá fora e os atalhos para os sistemas</p></div></div>
@@ -38,6 +39,10 @@ import { Icone } from '../../../shared/components/icone/icone';
       @for (periodo of periodos; track periodo.id) { <section><h4>{{ periodo.nome }}</h4><div class="cfg-pilha" style="gap:8px;margin-top:8px">@for (rotina of rotinas(periodo.id); track rotina.id) { <div class="cfg-linha"><span class="cresce">{{ rotina.nome }}</span><button class="cfg-texto" (click)="removerRotina(rotina.id)">remover</button></div> } @empty { <p>Nenhuma ainda.</p> }</div><form class="cfg-linha" style="margin-top:8px" (ngSubmit)="adicionarRotina(periodo.id)"><input class="cresce" name="rotina" [(ngModel)]="novaRotina[periodo.id]" placeholder="Nova rotina" aria-label="Nova rotina" required /><button type="submit" [attr.aria-label]="'Adicionar rotina ' + periodo.nome">+</button></form></section> }
     </div></div></details>
     <details class="cfg-card"><summary><div><h3>Sistemas</h3><p>os atalhos que aparecem na tela de Início</p></div></summary><div class="cfg-detalhe cfg-pilha">
+      <section class="cfg-pilha"><h4>Páginas no Acesso rápido</h4><p>Selecione as páginas que aparecerão no Início da equipe. Cada pessoa verá apenas aquelas para as quais tem permissão.</p>
+        <div class="cfg-grade">@for (grupo of gruposAtalhos; track grupo.titulo) { <section><h4>{{ grupo.titulo }}</h4>@for (pagina of grupo.itens; track pagina.id) { <label class="cfg-check"><input type="checkbox" [checked]="atalhos.includes(pagina.id)" (change)="alternarAtalho(pagina.id)" /><app-icone [nome]="pagina.icon" />{{ pagina.label }}</label> }</section> }</div>
+        <div><button type="button" class="cfg-primario" (click)="salvarAtalhos()">Salvar atalhos</button></div>
+      </section>
       <div class="cfg-linha"><p class="cresce">Os sistemas habilitados aparecem como atalho na tela de Início. Envie uma logo ou escolha um dos ícones disponíveis.</p><button class="cfg-primario" (click)="novoSistema()">+ Novo acesso rápido</button></div>
       <div class="integracoes">@for (sistema of sistemas; track sistema.id) { <section class="cfg-card"><div class="cfg-linha"><span class="cadastro-icone" [style.background]="sistema.cor">@if (sistema.logo) { <img [src]="sistema.logo" alt="Logo do sistema" /> } @else { <app-icone [nome]="sistema.icone" /> }</span><label class="cfg-check cresce"><input type="checkbox" [(ngModel)]="sistema.ativo" />aparece no Início da equipe</label><button class="cfg-texto" (click)="removerSistema(sistema.id)">remover</button></div>
         <label>Título<input [(ngModel)]="sistema.nome" placeholder="Título (ex.: ADVBOX)" /></label><label>Endereço<input [(ngModel)]="sistema.url" type="url" placeholder="https://…" /></label>
@@ -53,6 +58,17 @@ export class CadastrosConfig {
   protected registro: Record<string, string | number> = {};
   protected novaRotina: Record<string, string> = {};
   protected sistemas: SistemaLocal[] = [];
+  protected atalhos: string[] = [];
+  protected readonly gruposAtalhos = GRUPOS_MENU;
+  protected alternarAtalho(id: string) {
+    if (!this.podeEditar || this.ocupado()) return;
+    this.atalhos = this.atalhos.includes(id) ? this.atalhos.filter(a => a !== id) : [...this.atalhos, id];
+  }
+  protected salvarAtalhos() {
+    this.executar(this.api.salvarAtalhos([...this.atalhos]), atalhos => {
+      this.atalhos = [...atalhos]; this.dados.update(d => d && ({ ...d, atalhos }));
+    });
+  }
   protected readonly api = inject(CadastrosApiService);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly dados = signal<Cadastros | null>(null);
@@ -82,6 +98,7 @@ export class CadastrosConfig {
     this.api.carregar().pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.carregando.set(false))).subscribe({
       next: dados => {
         this.dados.set(dados); this.listasSalvas.set(dados.listas); this.sistemas = structuredClone(dados.sistemas);
+        this.atalhos = [...(dados.atalhos ?? ['agenda', 'casos', 'contatos', 'documentos'])];
         this.rascunhos = Object.fromEntries(Object.values(dados.listas).flat().map(item => [item.id, structuredClone(item)]));
         this.pronto.set(true); this.erro.set(false);
       }, error: erro => this.falha(erro),
