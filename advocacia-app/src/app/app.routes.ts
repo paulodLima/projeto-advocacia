@@ -38,7 +38,12 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./features/cliente/cliente.routes').then((m) => m.clienteRoutes),
       },
-      ...ITENS_MENU.filter((item) => !['inicio', 'config', 'contatos'].includes(item.id)).map(
+      {
+        path: 'parceiros',
+        data: { modulo: 'parceiros' },
+        loadChildren: () => import('./features/parceiros/parceiros.routes').then(m=>m.parceirosRoutes),
+      },
+      ...ITENS_MENU.filter((item) => !['inicio', 'config', 'contatos', 'parceiros'].includes(item.id)).map(
         (item) => ({
           path: item.id,
           title: item.label + ' — Gestão Advocacia',
