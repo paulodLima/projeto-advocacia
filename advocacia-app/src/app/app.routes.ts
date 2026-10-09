@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { adminPlataformaGuard } from './core/guards/admin-plataforma.guard';
 import { moduloGuard } from './core/guards/modulo.guard';
 import { ITENS_MENU } from './core/navigation/menu.model';
 
