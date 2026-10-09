@@ -46,7 +46,10 @@ public class ContatosService {
         if(parceiro!=null&&(parceiro.equals(c.id())||!repository.referencia(empresa,parceiro,"contato","Parceiro"))) throw new IllegalArgumentException("Selecione um parceiro da sua empresa.");
         var validos=indicadores(empresa).stream().map(Indicador::id).toList();if(!validos.containsAll(c.indicadores())) throw new IllegalArgumentException("Indicador fora da sua empresa.");
         if(anterior!=null&&anterior.dados().get("tipo").equals("Parceiro")&&!c.dados().get("tipo").equals("Parceiro")&&jdbc.queryForObject("SELECT COUNT(*) FROM contato WHERE empresa_id=? AND parceiro_id=?",Long.class,empresa,id)>0) throw new ConflitoException("Este parceiro possui contatos vinculados à carteira.");
-        repository.salvar(c,anterior==null);repository.auditar(empresa,c.id(),usuario,anterior==null?"CRIAR":"EDITAR");return c;
+        if(anterior!=null&&!c.dados().get("tipo").equals("Parceiro")&&jdbc.queryForObject("SELECT COUNT(*) FROM parceiro_dado WHERE contato_id=?",Long.class,id)>0) throw new ConflitoException("Este contato possui cadastro profissional em Parceiros e deve manter o tipo Parceiro.");
+        repository.salvar(c,anterior==null);
+        if(anterior!=null&&c.dados().get("tipo_pessoa").equals("PF")) jdbc.update("DELETE FROM parceiro_socio WHERE contato_id=?",c.id());
+        repository.auditar(empresa,c.id(),usuario,anterior==null?"CRIAR":"EDITAR");return c;
     }
     @Transactional public void excluir(UUID usuario,UUID id,Integer versao) {var empresa=acesso(usuario,true).empresaId();repository.bloquear(empresa);exigirVersao(empresa,id,versao);if(jdbc.queryForObject("SELECT COUNT(*) FROM contato WHERE empresa_id=? AND parceiro_id=?",Long.class,empresa,id)>0) throw new ConflitoException("Contato vinculado a uma carteira. Remova o vínculo antes de excluir.");repository.excluir(empresa,id);repository.auditar(empresa,id,usuario,"EXCLUIR");}
     @Transactional public Indicador criarIndicador(UUID usuario,String nome) {

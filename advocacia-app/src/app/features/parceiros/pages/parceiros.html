@@ -1,0 +1,304 @@
+<div class="contatos-ui parceiros-ui">
+  @if (erroOpcoes()) {
+    <div class="mensagem erro" role="alert">
+      {{ erroOpcoes() }} <button type="button" (click)="carregarOpcoes()">Tentar novamente</button>
+    </div>
+  }
+  @if (!id) {
+    <header class="cabecalho linha entre">
+      <div class="titulo">
+        <app-icone nome="handshake" />
+        <h2>Parceiros</h2>
+        <span>advogados e escritórios parceiros</span>
+      </div>
+      @if (opcoes()?.podeEditar) {
+        <button type="button" class="primario linha" (click)="abrirNovo()">
+          <app-icone nome="plus" />Novo parceiro
+        </button>
+      }
+    </header>
+    <div class="cartao busca">
+      <app-icone nome="search" /><input
+        aria-label="Buscar parceiro"
+        [(ngModel)]="busca"
+        (ngModelChange)="filtrar()"
+        placeholder="Buscar parceiro…"
+        maxlength="150"
+      />
+    </div>
+    <div class="linha filtros-parceiros">
+      <select aria-label="Filtrar por estado" [(ngModel)]="uf" (ngModelChange)="filtrar()">
+        <option value="">Todos os estados</option>
+        @for (estado of opcoes()?.estados || []; track estado) {
+          <option>{{ estado }}</option>
+        }
+      </select>
+      <select aria-label="Filtrar por área" [(ngModel)]="area" (ngModelChange)="filtrar()">
+        <option value="">Todas as áreas</option>
+        @for (a of areas; track a) {
+          <option>{{ a }}</option>
+        }
+      </select>
+      @if (resultado(); as r) {
+        <span>{{ r.total }} parceiro(s)</span>
+      }
+    </div>
+    @if (carregando()) {
+      <p role="status">Lendo os parceiros…</p>
+    }
+    @if (erro()) {
+      <div class="mensagem erro" role="alert">
+        {{ erro() }} <button type="button" (click)="carregar()">Tentar novamente</button>
+      </div>
+    }
+    @if (!carregando() && resultado(); as r) {
+      @if (!r.itens.length) {
+        <div class="cartao vazio">Nenhum parceiro encontrado.</div>
+      }
+      <div class="grade-parceiros">
+        @for (p of r.itens; track p.id) {
+          <a class="cartao-parceiro" [routerLink]="['/parceiros', p.id]" [queryParams]="filtros()">
+            <div class="linha resumo-parceiro">
+              @if (p.dados['foto_propria']) {
+                <img class="avatar-parceiro" [src]="p.dados['foto_propria']" alt="" />
+              } @else {
+                <span class="avatar-parceiro">{{ iniciais(p.dados['nome']) }}</span>
+              }
+              <div class="cresce">
+                <strong>{{ p.dados['nome'] }}</strong>
+                <p>
+                  {{ p.dados['oab']
+                  }}{{ p.dados['oab'] && p.dados['cidade'] && p.dados['uf'] ? ' · ' : ''
+                  }}{{
+                    p.dados['cidade'] && p.dados['uf']
+                      ? p.dados['cidade'] + '/' + p.dados['uf']
+                      : ''
+                  }}
+                </p>
+              </div>
+            </div>
+            @if (p.areasAtuacao.length) {
+              <div class="areas-resumo">
+                @for (a of p.areasAtuacao.slice(0, 4); track a) {
+                  <span>{{ a }}</span>
+                }
+              </div>
+            }
+          </a>
+        }
+      </div>
+      @if (r.total > r.tamanho) {
+        <div class="linha fim paginacao">
+          <button type="button" [disabled]="pagina === 0" (click)="mudarPagina(-1)">Anterior</button
+          ><span>Página {{ pagina + 1 }}</span
+          ><button
+            type="button"
+            [disabled]="(pagina + 1) * r.tamanho >= r.total"
+            (click)="mudarPagina(1)"
+          >
+            Próxima
+          </button>
+        </div>
+      }
+    }
+  } @else {
+    @if (carregando()) {
+      <p role="status">Lendo o parceiro…</p>
+    }
+    @if (erro()) {
+      <div class="mensagem erro" role="alert">
+        {{ erro() }} <button type="button" (click)="abrirFicha()">Reabrir ficha</button>
+      </div>
+    }
+    @if (parceiro(); as p) {
+      @if (editar) {
+        <div class="edicao-parceiro pilha">
+          <a class="voltar" [routerLink]="['/parceiros', p.id]" [queryParams]="routeParams"
+            >‹ Cancelar</a
+          >
+          <div class="titulo">
+            <app-icone nome="handshake" />
+            <h2>Editar parceiro</h2>
+          </div>
+          @if (opcoes()?.podeEditar) {
+            <app-parceiro-form [parceiro]="p" (salvo)="salvo($event)" (cancelar)="salvo(p)" />
+          } @else if (opcoes()) {
+            <p class="mensagem">Seu perfil permite apenas consultar parceiros.</p>
+          }
+        </div>
+      } @else {
+        <div class="ficha-parceiro pilha">
+          <a class="voltar" routerLink="/parceiros" [queryParams]="routeParams"
+            >‹ Voltar para os parceiros</a
+          >
+          <section class="cartao ficha-profissional">
+            <header class="ficha-cabecalho linha">
+              @if (p.dados['foto_propria']) {
+                <img
+                  class="avatar-parceiro"
+                  [src]="p.dados['foto_propria']"
+                  alt="Foto do parceiro"
+                />
+              } @else {
+                <span class="avatar-parceiro">{{ iniciais(p.dados['nome']) }}</span>
+              }
+              <div class="cresce">
+                <h2>{{ p.dados['nome'] }}</h2>
+                @if (p.dados['nome_fantasia']) {
+                  <p>{{ p.dados['nome_fantasia'] }}</p>
+                }
+              </div>
+              @if (opcoes()?.podeEditar) {
+                <a
+                  class="editar"
+                  [routerLink]="['/parceiros', p.id, 'editar']"
+                  [queryParams]="routeParams"
+                  >✎ Editar</a
+                >
+              }
+            </header>
+            <div class="ficha-dados-profissionais">
+              @for (c of campos(p); track c[0]) {
+                <div>
+                  <p class="rotulo">{{ c[0] }}</p>
+                  <p>{{ c[1] }}</p>
+                </div>
+              }
+              @if (p.socios.length) {
+                <div class="inteira">
+                  <p class="rotulo">Sócios</p>
+                  @for (s of p.socios; track $index) {
+                    <p>{{ s.nome }}{{ s.oab ? ' · ' + s.oab : '' }}</p>
+                  }
+                </div>
+              }
+              @if (p.areasAtuacao.length) {
+                <div class="inteira">
+                  <p class="rotulo">Áreas de atuação</p>
+                  <div class="areas ficha-areas">
+                    @for (a of p.areasAtuacao; track a) {
+                      <span>{{ a }}</span>
+                    }
+                  </div>
+                </div>
+              }
+              @if (p.dados['observacoes']) {
+                <div class="inteira">
+                  <p class="rotulo">Observações</p>
+                  <p class="observacoes">{{ p.dados['observacoes'] }}</p>
+                </div>
+              }
+            </div>
+          </section>
+          @if (opcoes()?.podeVerContatos) {
+            <section class="cartao pilha">
+              <h3>Parceria</h3>
+              <div>
+                <p class="rotulo">Clientes da carteira dele</p>
+                @if (carregandoCarteira()) {
+                  <p role="status">Lendo a carteira…</p>
+                }
+                @if (erroCarteira()) {
+                  <p class="mensagem erro" role="alert">
+                    {{ erroCarteira() }}
+                    <button type="button" (click)="carregarCarteira()">Tentar novamente</button>
+                  </p>
+                }
+                @if (carteira(); as c) {
+                  <div class="areas carteira">
+                    @for (cliente of c.itens; track cliente.id) {
+                      <a [routerLink]="['/contatos', cliente.id]">{{ cliente.nome }}</a>
+                    }
+                  </div>
+                  @if (!c.total) {
+                    <p>Nenhum contato vinculado à carteira deste parceiro.</p>
+                  }
+                  @if (c.total > c.tamanho) {
+                    <div class="linha fim">
+                      <button
+                        type="button"
+                        [disabled]="carregandoCarteira() || c.pagina === 0"
+                        (click)="carregarCarteira(c.pagina - 1)"
+                      >
+                        Anterior</button
+                      ><span>Página {{ c.pagina + 1 }}</span
+                      ><button
+                        type="button"
+                        [disabled]="carregandoCarteira() || (c.pagina + 1) * c.tamanho >= c.total"
+                        (click)="carregarCarteira(c.pagina + 1)"
+                      >
+                        Próxima
+                      </button>
+                    </div>
+                  }
+                }
+              </div>
+            </section>
+          }
+          @if (opcoes()?.podeEditar) {
+            <div class="linha fim">
+              <button
+                type="button"
+                class="perigo"
+                [disabled]="excluindo()"
+                (click)="confirmarExclusao.set(true)"
+              >
+                Excluir parceiro
+              </button>
+            </div>
+          }
+          @if (confirmarExclusao()) {
+            <section class="cartao pilha" role="alert">
+              <p>
+                Excluir {{ p.dados['nome'] }}? O cadastro compartilhado com Contatos também será
+                excluído. Não há como desfazer.
+              </p>
+              <div class="linha fim">
+                <button
+                  type="button"
+                  [disabled]="excluindo()"
+                  (click)="confirmarExclusao.set(false)"
+                >
+                  Cancelar</button
+                ><button type="button" class="perigo" [disabled]="excluindo()" (click)="excluir()">
+                  {{ excluindo() ? 'Excluindo…' : 'Confirmar exclusão' }}
+                </button>
+              </div>
+            </section>
+          }
+        </div>
+      }
+    }
+  }
+  <dialog
+    #novo
+    class="painel-novo"
+    aria-labelledby="titulo-novo-parceiro"
+    (cancel)="fecharNovo($event)"
+    (close)="novoAberto.set(false)"
+  >
+    <header class="painel-cabecalho">
+      <div>
+        <h2 id="titulo-novo-parceiro">Novo parceiro</h2>
+        <p>advogado ou escritório com quem dividimos causa</p>
+      </div>
+      <button
+        type="button"
+        aria-label="Fechar novo parceiro"
+        [disabled]="ocupado()"
+        (click)="fecharNovo()"
+      >
+        <app-icone nome="close" />
+      </button>
+    </header>
+    <div class="painel-corpo">
+      @if (novoAberto()) {
+        <app-parceiro-form
+          (salvo)="salvo($event)"
+          (cancelar)="fecharNovo()"
+          (ocupado)="ocupado.set($event)"
+        />
+      }
+    </div>
+  </dialog>
+</div>

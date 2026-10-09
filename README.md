@@ -366,4 +366,30 @@ POST e PUT recebem `{ "versao": 0, "dados": { ... }, "representantes": [], "indi
 
 Origem usa o cadastro ativo de Configurações → Cadastros e sistemas. Carteira de parceiro utiliza um contato do tipo Parceiro da mesma empresa; enquanto houver contatos vinculados, esse parceiro não pode ser excluído nem mudar de tipo. Indicadores desta tela são próprios de Contatos. O histórico registra identificadores, operação e data, sem copiar os dados pessoais para o evento. Não há importação automática de dados antigos do navegador.
 
-Esta etapa não implementa vínculos com processos, campanhas automáticas de marketing nem o módulo completo de Parceiros. A ficha informa que os processos serão integrados com Gestão Processual. Para atualizar os containers locais, execute `docker compose -f docker/compose.yaml up --build -d` na raiz do projeto; o Flyway aplica V15 ao iniciar a API.
+Esta etapa não implementa vínculos com processos nem campanhas automáticas de marketing. O cadastro profissional de parceiros está descrito na seção seguinte. A ficha informa que os processos serão integrados com Gestão Processual. Para atualizar os containers locais, execute `docker compose -f docker/compose.yaml up --build -d` na raiz do projeto; o Flyway aplica V15 ao iniciar a API.
+
+### Parceiros
+
+O menu **Parceiros** segue `docs/index.html`: lista em duas colunas, busca por nome/nome fantasia/OAB/cidade, filtros por estado e área, cadastro em painel lateral, ficha e edição. O formulário oferece Advogado (PF), Escritório (PJ), OAB, advogado responsável, sócios, foto, site, Instagram, endereço, áreas de atuação e observações.
+
+Parceiros e Contatos compartilham o mesmo cadastro e UUID. Contatos do tipo Parceiro já existentes aparecem no menu, com os dados profissionais inicialmente vazios. Criar um parceiro o disponibiliza imediatamente no seletor de carteira de Contatos. Alterações dos campos comuns aparecem nas duas telas; os dados profissionais e indicadores existentes são preservados ao editar pela outra tela. A versão é compartilhada: alterações simultâneas por Contatos ou Parceiros retornam 409 para o formulário desatualizado. Cadastros profissionais devem manter o tipo Parceiro. Salvar como PF remove os sócios; a foto e os demais dados profissionais permanecem.
+
+A migração V16 cria `parceiro_dado`, `parceiro_socio` e `parceiro_area`, vinculadas ao contato, e um índice para consultar carteiras. O backend determina a empresa pela sessão. MASTER e membros ativos com acesso a Parceiros e perfil ADMINISTRADOR, ADVOGADO ou ASSISTENTE podem editar; FINANCEIRO pode consultar. A carteira exige também permissão de Contatos, e usa vínculos reais da mesma empresa. IDs externos ou contatos de outro tipo retornam 404; acesso não autorizado retorna 403. Não há importação automática do navegador.
+
+| Método | Endpoint | Uso |
+| --- | --- | --- |
+| GET | `/api/parceiros?busca=&uf=&area=&pagina=0&tamanho=24` | Listagem paginada; tamanho máximo 100 |
+| GET | `/api/parceiros/opcoes` | Permissões, estados cadastrados e áreas disponíveis |
+| GET | `/api/parceiros/{id}` | Ficha completa |
+| GET | `/api/parceiros/{id}/carteira?pagina=0&tamanho=24` | Contatos vinculados à carteira |
+| POST | `/api/parceiros` | Criar parceiro e contato compartilhado |
+| PUT | `/api/parceiros/{id}` | Atualizar a versão conhecida |
+| DELETE | `/api/parceiros/{id}?versao=N` | Excluir parceiro e contato compartilhado |
+
+POST/PUT recebem `{ "versao": 0, "dados": { "nome": "...", "tipo_pessoa": "PF" }, "socios": [], "areasAtuacao": [] }`. Sócios têm `nome` e `oab`; as áreas são as 12 opções da referência. O nome é obrigatório; CPF/CNPJ, telefone e e-mail são opcionais, mas validados quando preenchidos. Documentos seguem a quantidade de dígitos e a unicidade por empresa de Contatos, sem validação dos dígitos verificadores. Limites: 20 sócios, 150 caracteres por campo comum, 254 no e-mail, 1000 no site e 4000 nas observações. Site aceita HTTP/HTTPS sem credenciais embutidas.
+
+A foto é reduzida no navegador a até 400 pixels e enviada junto do formulário como JPEG. A API valida o conteúdo da imagem, formato JPEG/PNG, dimensões máximas de 512 × 512 e tamanho de 512 KB; a foto fica no PostgreSQL. A prévia só é persistida ao salvar. A consulta opcional ao ViaCEP transmite somente o CEP e permite preencher o endereço manualmente em caso de erro.
+
+Escritas exigem CSRF e são atômicas, incluindo os campos compartilhados. Respostas usam `Cache-Control: no-store`. A auditoria utiliza `contato_evento` com identificadores, operação e data. Parceiros com contatos na carteira não podem ser excluídos: primeiro remova os vínculos. A exclusão remove também o contato compartilhado e seus dados profissionais. Esta etapa não implementa processos em parceria, percentuais, repasses nem saldos financeiros; essas partes da referência serão integradas com Gestão Processual e Financeiro.
+
+Atualize os containers pela raiz com `docker compose -f docker/compose.yaml up --build -d`. O Flyway aplica V16 ao iniciar a API.
