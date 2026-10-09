@@ -24,12 +24,16 @@ public class AuthController {
     private final CodigoAcessoService codigos;
     private final ContaAutenticadaService contas;
     private final LoginRateLimiter limite;
+    private final ConcluirCadastroService cadastro;
+    private final com.advocacia_microservice.equipe.application.EquipeService equipe;
+    public record CadastroRequest(@NotBlank @Size(max = 150) String nome) {}
 
-    public AuthController(CodigoAcessoService codigos, ContaAutenticadaService contas, LoginRateLimiter limite) {
+    public AuthController(CodigoAcessoService codigos, JpaUsuarioRepository usuarios, LoginRateLimiter limite, ConcluirCadastroService cadastro, com.advocacia_microservice.equipe.application.EquipeService equipe) {
         this.codigos = codigos;
         this.contas = contas;
         this.limite = limite;
-
+        this.cadastro = cadastro;
+        this.equipe = equipe;
     }
 
     @GetMapping("/csrf")
@@ -65,6 +69,7 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(java.util.Map.of("detail", "Acesso não liberado. Solicite seu cadastro ao administrador da plataforma."));
         }
+        equipe.aceitarConvite(conta.get());
         SessaoCadastro.autenticar(request, response, conta.get());
         return ResponseEntity.ok(UsuarioResponse.de(conta.get()));
     }

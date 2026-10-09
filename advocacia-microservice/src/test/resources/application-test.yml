@@ -3,3 +3,6 @@ spring:
     url: jdbc:h2:mem:advocacia;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
     username: sa
     password: ""
+
+# Exclusivamente para testes; nunca utilizada na aplicação Docker.
+COFRE_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=

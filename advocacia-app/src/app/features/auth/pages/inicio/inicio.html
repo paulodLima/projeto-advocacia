@@ -15,11 +15,18 @@
   </section>
   <div class="colunas">
     <div class="coluna">
-      <app-painel-inicio titulo="Acesso rápido" resumo="4 atalhos" [aberto]="false">
-        <div class="atalhos">@for (atalho of atalhos; track atalho.destino) { <a [routerLink]="'/' + atalho.destino"><span><app-icone [nome]="atalho.icon" /></span>{{ atalho.label }}</a> }</div>
+      <app-painel-inicio titulo="Acesso rápido" [resumo]="(atalhos.length + sistemas().length) + ' atalhos'" [aberto]="false">
+        <div class="atalhos">@for (atalho of atalhos; track atalho.destino) { <a [routerLink]="'/' + atalho.destino"><span><app-icone [nome]="atalho.icon" /></span>{{ atalho.label }}</a> }
+          @for (sistema of sistemas(); track sistema.id) { <a [href]="sistema.url" target="_blank" rel="noopener noreferrer"><span [style.background]="sistema.cor">@if (sistema.logo) { <img [src]="sistema.logo" alt="" width="32" height="32" style="object-fit:contain" /> } @else { <app-icone [nome]="sistema.icone" /> }</span>{{ sistema.nome }}</a> }
+        </div>
       </app-painel-inicio>
       <app-painel-inicio titulo="Notícias" resumo="jurídicas, para o escritório" [aberto]="false"><p class="vazio">Nenhuma notícia por aqui.</p></app-painel-inicio>
-      <app-painel-inicio titulo="Rotinas do escritório"><p class="vazio">Nenhuma rotina cadastrada.</p><a class="link-discreto" routerLink="/config">Configurações <app-icone nome="arrow" /></a></app-painel-inicio>
+      <app-painel-inicio titulo="Rotinas do escritório">
+        @if (carregandoCadastros()) { <p class="vazio" role="status">Carregando rotinas e sistemas…</p> }
+        @else if (erroCadastros()) { <p class="vazio" role="alert">Não foi possível carregar rotinas e sistemas.</p><button type="button" (click)="carregarCadastros()">Tentar novamente</button> }
+        @else { @for (periodo of periodos; track periodo.id) { @if (rotinas(periodo.id).length) { <h3>{{ periodo.nome }}</h3><ul>@for (rotina of rotinas(periodo.id); track rotina.id) { <li>{{ rotina.nome }}</li> }</ul> } } @if (!cadastros()?.rotinas?.length) { <p class="vazio">Nenhuma rotina cadastrada.</p> } }
+        <a class="link-discreto" routerLink="/config" [queryParams]="{secao: 'cadastros'}">Configurações <app-icone nome="arrow" /></a>
+      </app-painel-inicio>
     </div>
     <div class="coluna">
       <app-painel-inicio titulo="Atualizações processuais">

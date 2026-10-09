@@ -1,0 +1,246 @@
+.contatos-ui.parceiros-ui {
+  .parceiro-form fieldset {
+    margin: 0;
+  }
+  .parceiro-form label {
+    line-height: 24px;
+  }
+  .parceiro-form input,
+  .parceiro-form select,
+  .parceiro-form textarea,
+  .parceiro-form button {
+    line-height: 20px;
+  }
+  .parceiro-form h3 {
+    padding-top: 8px;
+  }
+  .painel-cabecalho {
+    padding-bottom: 16px;
+  }
+  .filtros-parceiros {
+    margin: 20px 0;
+  }
+  .filtros-parceiros select {
+    width: auto;
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+  .filtros-parceiros span {
+    font-size: 12px;
+    color: #7d6c5e;
+  }
+  .grade-parceiros {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .cartao-parceiro {
+    border: 1px solid var(--linha);
+    border-radius: 16px;
+    overflow: hidden;
+    background: #ffffff80;
+  }
+  .cartao-parceiro:hover {
+    background: #ffffffb0;
+  }
+  .resumo-parceiro {
+    padding: 16px;
+    gap: 12px;
+    flex-wrap: nowrap;
+  }
+  .resumo-parceiro strong {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 14px;
+  }
+  .resumo-parceiro p {
+    font-size: 11px;
+    color: #7d6c5e;
+  }
+  .avatar-parceiro {
+    height: 56px;
+    width: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--tema-primaria);
+    color: white;
+    font-weight: 600;
+  }
+  .areas-resumo {
+    padding: 0 16px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .areas-resumo span {
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 10px;
+    background: #f0ede5;
+    color: #7d6c5e;
+  }
+  .areas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .areas button {
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+  .parceiro-form {
+    max-width: 768px;
+  }
+  .parceiro-form .pilha {
+    gap: 12px;
+  }
+  .campos.dois {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .enviar-foto {
+    display: block;
+    padding: 8px 12px;
+    border: 1px solid var(--linha);
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .enviar-foto input {
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    position: absolute;
+  }
+  .enviar-foto:focus-within {
+    outline: 2px solid var(--tema-destaque);
+  }
+  .socio-campos {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 8px;
+    align-items: end;
+    padding: 8px;
+    border-radius: 8px;
+    background: #ffffff66;
+  }
+  .socio-oab {
+    gap: 4px;
+    flex-wrap: nowrap;
+  }
+  .socio-oab input {
+    flex: 1;
+    margin: 0;
+  }
+  .sem-socios {
+    font-size: 11px;
+    color: #8a8275;
+  }
+  .parceiro-form .titulo-areas {
+    font-weight: 400;
+    padding-top: 0;
+  }
+  .socio-campos button {
+    height: 38px;
+  }
+  .salvar {
+    background: var(--tema-destaque);
+    color: white;
+    border-color: var(--tema-destaque);
+    font-size: 14px;
+  }
+  .salvar:hover {
+    background: var(--tema-destaque);
+    filter: brightness(1.08);
+  }
+  .edicao-parceiro {
+    max-width: 768px;
+  }
+  .ficha-parceiro {
+    max-width: 896px;
+  }
+  .ficha-profissional {
+    padding: 0;
+    overflow: hidden;
+  }
+  .ficha-cabecalho {
+    padding: 24px;
+    background: linear-gradient(135deg, var(--tema-primaria), var(--tema-destaque));
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .ficha-cabecalho .avatar-parceiro {
+    width: 64px;
+    height: 64px;
+    font-size: 18px;
+    background: #ffffff40;
+  }
+  .ficha-cabecalho h2 {
+    font-size: 20px;
+    font-weight: 300;
+    color: white;
+    overflow-wrap: anywhere;
+  }
+  .ficha-cabecalho p {
+    color: #ffffffd9;
+    font-size: 14px;
+  }
+  .ficha-dados-profissionais {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: 20px;
+    gap: 16px;
+  }
+  .ficha-dados-profissionais p {
+    overflow-wrap: anywhere;
+  }
+  .inteira {
+    grid-column: 1 / -1;
+    padding-top: 4px;
+  }
+  .rotulo {
+    font-size: 11px;
+    color: #7d6c5e;
+    margin-bottom: 4px;
+  }
+  .ficha-areas span {
+    background: var(--tema-primaria);
+    color: white;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 11px;
+  }
+  .carteira a {
+    border: 1px solid var(--linha);
+    border-radius: 999px;
+    font-size: 11px;
+    padding: 4px 10px;
+  }
+  .observacoes {
+    white-space: pre-wrap;
+  }
+  @media (max-width: 639px) {
+    .grade-parceiros,
+    .campos.dois,
+    .ficha-dados-profissionais {
+      grid-template-columns: 1fr;
+    }
+    .socio-campos {
+      grid-template-columns: 1fr auto;
+    }
+    .socio-campos label:first-child {
+      grid-column: 1 / -1;
+    }
+    .ficha-cabecalho {
+      flex-wrap: wrap;
+    }
+  }
+}

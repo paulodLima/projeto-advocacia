@@ -1,4 +1,6 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { CadastrosInicio, CadastrosApiService } from '../../../configuracoes/services/cadastros-api.service';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { Icone } from '../../../../shared/components/icone/icone';
@@ -11,6 +13,23 @@ import { PainelInicio } from '../../../../shared/components/painel-inicio/painel
   styleUrl: './inicio.scss',
 })
 export class Inicio {
+  private readonly api = inject(CadastrosApiService);
+  private readonly destroyRef = inject(DestroyRef);
+  protected readonly cadastros = signal<CadastrosInicio | null>(null);
+  protected readonly erroCadastros = signal(false);
+  protected readonly carregandoCadastros = signal(false);
+  protected readonly sistemas = computed(() => this.cadastros()?.sistemas.filter(s => s.ativo) || []);
+  protected readonly periodos = [{ id: 'diaria', nome: 'Diárias' }, { id: 'semanal', nome: 'Semanais' }, { id: 'mensal', nome: 'Mensais' }, { id: 'anual', nome: 'Anuais' }];
+  constructor() { this.carregarCadastros(); }
+  protected carregarCadastros() {
+    if (this.carregandoCadastros()) return;
+    this.carregandoCadastros.set(true); this.erroCadastros.set(false);
+    this.api.inicio().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: dados => { this.cadastros.set(dados); this.carregandoCadastros.set(false); },
+      error: () => { this.erroCadastros.set(true); this.carregandoCadastros.set(false); },
+    });
+  }
+  protected rotinas(periodo: string) { return this.cadastros()?.rotinas.filter(r => r.periodo === periodo) || []; }
   protected readonly auth = inject(AuthService);
   protected readonly primeiroNome = computed(() => this.auth.usuario()?.nome.trim().split(/\s+/)[0] || '');
   protected readonly saudacao = new Date().getHours() < 12 ? 'BOM DIA' : new Date().getHours() < 18 ? 'BOA TARDE' : 'BOA NOITE';

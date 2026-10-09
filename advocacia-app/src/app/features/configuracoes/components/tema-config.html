@@ -1,0 +1,17 @@
+<section class="configuracoes" aria-labelledby="titulo-aparencia">
+  <div class="cabecalho-secao"><span class="icone"><app-icone nome="settings" /></span><div><h2 id="titulo-aparencia">Aparência</h2><p>Deixe seu espaço com as cores que combinam com você.</p></div></div>
+  <div class="campo-tema">
+    <div><label for="tema">Tema</label><p id="ajuda-tema">A cor escolhida será aplicada ao menu, fundo, botões e painel inicial.</p></div>
+    <select id="tema" name="tema" [disabled]="!tema.pronto()" [ngModel]="tema.atual()" (ngModelChange)="tema.selecionar($event)" aria-describedby="ajuda-tema">
+      @for (opcao of temas; track opcao.id) { <option [value]="opcao.id">{{ opcao.nome }}</option> }
+    </select>
+  </div>
+  <div class="previa" aria-label="Prévia do tema escolhido">
+    <div class="previa-menu"><app-icone nome="home" /><app-icone nome="calendar" /><app-icone nome="file" /></div>
+    <div class="previa-conteudo"><div class="previa-saudacao"><small>SEU ESPAÇO, SUAS CORES</small><span>Bem-vindo à Gestão Advocacia</span></div><div class="previa-cartoes"><span></span><span></span><span></span></div><a class="botao" routerLink="/inicio">Ver no início <app-icone nome="arrow" /></a></div>
+  </div>
+  @if (tema.carregando()) { <p class="salvo" role="status">Carregando seu tema…</p> }
+  @else if (tema.salvando()) { <p class="salvo" role="status">Aplicado na tela. Salvando na sua conta…</p> }
+  @else { <p class="salvo" [attr.role]="tema.erro() ? 'alert' : 'status'"><span class="ponto"></span>{{ tema.aviso() }}</p> }
+  @if (tema.erro()) { <button class="botao" type="button" (click)="tema.tentarNovamente()">Tentar novamente</button> }
+</section>

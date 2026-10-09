@@ -15,10 +15,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class GoogleLoginService {
     private final UsuarioRepository usuarios;
     private final GoogleIdentityRepository identities;
+    private final com.advocacia_microservice.equipe.application.EquipeService equipe;
 
-    public GoogleLoginService(UsuarioRepository usuarios, GoogleIdentityRepository identities) {
+    public GoogleLoginService(JpaUsuarioRepository usuarios, GoogleIdentityRepository identities, com.advocacia_microservice.equipe.application.EquipeService equipe) {
         this.usuarios = usuarios;
         this.identities = identities;
+        this.equipe = equipe;
     }
 
     @Transactional
@@ -28,8 +30,13 @@ public class GoogleLoginService {
         }
         var vinculo = identities.findBySubject(google.getSubject()).orElse(null);
         if (vinculo != null) {
-            return usuarios.buscarPorId(vinculo.usuarioId)
+            var usuario = usuarios.findById(vinculo.usuarioId).map(item -> item.paraDominio())
                     .filter(item -> item.status() == StatusUsuario.ATIVO).orElseThrow(this::negado);
+            // O sub continua autenticando a conta, mas um convite exige o e-mail atual verificado.
+            if (google.getEmail() != null && usuario.email().equals(google.getEmail().strip().toLowerCase(Locale.ROOT))) {
+                equipe.aceitarConvite(usuario);
+            }
+            return usuario;
         }
         String email = google.getEmail();
         if (email == null) throw negado();
@@ -49,6 +56,7 @@ public class GoogleLoginService {
         identidade.usuarioId = usuario.id();
         identidade.subject = google.getSubject();
         identities.saveAndFlush(identidade);
+        equipe.aceitarConvite(usuario);
         return usuario;
     }
 

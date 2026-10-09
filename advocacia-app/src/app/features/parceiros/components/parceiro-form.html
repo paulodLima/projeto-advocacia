@@ -1,0 +1,209 @@
+<form class="contatos-ui parceiros-ui parceiro-form" #formulario="ngForm" (ngSubmit)="salvar()">
+  @if (erro()) {
+    <p class="mensagem erro" role="alert">{{ erro() }}</p>
+  }
+  <fieldset class="cartao pilha" [disabled]="salvando() || preparandoFoto()">
+    <div class="alternancia">
+      <button type="button" [class.ativo]="!pj()" (click)="form.dados['tipo_pessoa'] = 'PF'">
+        Advogado (PF)
+      </button>
+      <button type="button" [class.ativo]="pj()" (click)="form.dados['tipo_pessoa'] = 'PJ'">
+        Escritório (PJ)
+      </button>
+    </div>
+    <div class="campos">
+      <label class="larga"
+        >{{ pj() ? 'Razão social' : 'Nome do advogado'
+        }}<input autofocus name="nome" [(ngModel)]="form.dados['nome']" maxlength="150" required
+      /></label>
+      <label
+        >OAB<input
+          name="oab"
+          [(ngModel)]="form.dados['oab']"
+          placeholder="000000/UF"
+          maxlength="150"
+      /></label>
+      @if (pj()) {
+        <label class="larga"
+          >Nome fantasia<input
+            name="nome_fantasia"
+            [(ngModel)]="form.dados['nome_fantasia']"
+            maxlength="150"
+        /></label>
+        <label
+          >Advogado responsável<input
+            name="advogado_responsavel"
+            [(ngModel)]="form.dados['advogado_responsavel']"
+            maxlength="150"
+        /></label>
+      }
+      <label
+        >{{ pj() ? 'CNPJ' : 'CPF'
+        }}<input
+          name="documento"
+          [ngModel]="form.dados['documento']"
+          (ngModelChange)="documento($event)"
+          inputmode="numeric"
+      /></label>
+      <label
+        >Telefone<input
+          name="telefone"
+          [ngModel]="form.dados['telefone']"
+          (ngModelChange)="telefone($event)"
+          placeholder="(61) 90000-0000"
+          inputmode="tel"
+      /></label>
+      <label
+        >E-mail<input name="email" [(ngModel)]="form.dados['email']" type="email" maxlength="254"
+      /></label>
+    </div>
+    <div class="linha foto-linha">
+      @if (form.dados['foto_propria']) {
+        <img class="avatar-parceiro" [src]="form.dados['foto_propria']" alt="Foto do parceiro" />
+      } @else {
+        <span class="avatar-parceiro">{{ iniciais(form.dados['nome']) || '?' }}</span>
+      }
+      <label class="enviar-foto"
+        >{{ preparandoFoto() ? 'Preparando…' : 'Enviar foto'
+        }}<input type="file" accept="image/png,image/jpeg,image/webp" (change)="foto($event)"
+      /></label>
+      @if (form.dados['foto_propria']) {
+        <button type="button" (click)="form.dados['foto_propria'] = ''">Remover foto</button>
+      }
+    </div>
+    <div class="campos dois">
+      <label
+        >Site<input
+          name="site"
+          [(ngModel)]="form.dados['site']"
+          placeholder="https://…"
+          maxlength="1000"
+      /></label>
+      <label
+        >Instagram<input
+          name="instagram"
+          [(ngModel)]="form.dados['instagram']"
+          placeholder="@usuario"
+          maxlength="150"
+      /></label>
+    </div>
+    <h3>Endereço</h3>
+    <div class="campos">
+      <label
+        >{{ buscandoCep() ? 'CEP (buscando…)' : 'CEP'
+        }}<input
+          name="cep"
+          [ngModel]="form.dados['cep']"
+          (ngModelChange)="cep($event)"
+          (blur)="buscarCep()"
+          placeholder="00000-000"
+          inputmode="numeric"
+      /></label>
+      <label class="larga"
+        >Logradouro<input name="logradouro" [(ngModel)]="form.dados['logradouro']" maxlength="150"
+      /></label>
+      @for (campo of enderecoCampos; track campo.k) {
+        <label
+          >{{ campo.r
+          }}<input
+            [name]="campo.k"
+            [attr.name]="campo.k"
+            [(ngModel)]="form.dados[campo.k]"
+            maxlength="150"
+        /></label>
+      }
+      <label class="larga"
+        >Cidade<input name="cidade" [(ngModel)]="form.dados['cidade']" maxlength="150"
+      /></label>
+      <label
+        >UF<select name="uf" [(ngModel)]="form.dados['uf']">
+          <option value="">—</option>
+          @for (uf of estados; track uf) {
+            <option>{{ uf }}</option>
+          }
+        </select></label
+      >
+    </div>
+    @if (erroCep()) {
+      <p class="mensagem" role="status">{{ erroCep() }}</p>
+    }
+    @if (pj()) {
+      <div class="linha entre">
+        <h3>Sócios</h3>
+        <button
+          type="button"
+          aria-label="Adicionar sócio"
+          [disabled]="form.socios.length >= 20"
+          (click)="adicionarSocio()"
+        >
+          + Adicionar
+        </button>
+      </div>
+      @for (socio of form.socios; track $index; let n = $index) {
+        <div class="socio-campos">
+          <input
+            aria-label="Nome do sócio"
+            [name]="'socio-nome-' + n"
+            [attr.name]="'socio-nome-' + n"
+            [(ngModel)]="socio.nome"
+            maxlength="150"
+            placeholder="Nome"
+            required
+          />
+          <div class="linha socio-oab">
+            <input
+              aria-label="OAB do sócio"
+              [name]="'socio-oab-' + n"
+              [attr.name]="'socio-oab-' + n"
+              [(ngModel)]="socio.oab"
+              maxlength="150"
+              placeholder="OAB"
+            />
+            <button
+              type="button"
+              [attr.aria-label]="'Remover sócio ' + (n + 1)"
+              (click)="removerSocio(n)"
+            >
+              remover
+            </button>
+          </div>
+        </div>
+      }
+      @if (!form.socios.length) {
+        <p class="sem-socios">Nenhum sócio ainda.</p>
+      }
+    }
+    <h3 class="titulo-areas">Áreas de atuação</h3>
+    <div class="areas">
+      <!-- As opções e sua ordem seguem a referência. -->
+      @for (area of areas; track area) {
+        <button
+          type="button"
+          [attr.aria-pressed]="form.areasAtuacao.includes(area)"
+          [class.ativo]="form.areasAtuacao.includes(area)"
+          (click)="alternarArea(area)"
+        >
+          {{ area }}
+        </button>
+      }
+    </div>
+    <label
+      >Observações<textarea
+        name="observacoes"
+        [(ngModel)]="form.dados['observacoes']"
+        maxlength="4000"
+        rows="2"
+      ></textarea>
+    </label>
+    <div class="linha fim">
+      <button type="button" (click)="cancelar.emit()">Cancelar</button
+      ><button
+        type="submit"
+        class="salvar"
+        [disabled]="formulario.invalid || !form.dados['nome'].trim()"
+      >
+        {{ salvando() ? 'Salvando…' : parceiro() ? 'Salvar alterações' : 'Salvar parceiro' }}
+      </button>
+    </div>
+  </fieldset>
+</form>

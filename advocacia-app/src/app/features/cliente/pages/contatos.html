@@ -1,0 +1,380 @@
+<div class="contatos-ui">
+  @if (erroOpcoes()) {
+    <div class="mensagem erro" role="alert">
+      {{ erroOpcoes() }} <button type="button" (click)="carregarOpcoes()">Tentar novamente</button>
+    </div>
+  }
+  @if (erro()) {
+    <div class="mensagem erro" role="alert">
+      {{ erro() }}
+      <button type="button" (click)="id ? abrirFicha() : carregar()">Tentar novamente</button>
+    </div>
+  }
+  @if (!id) {
+    <header class="linha entre cabecalho">
+      <div class="titulo">
+        <app-icone nome="folder" />
+        <h2>Contatos</h2>
+        <span>base unificada de pessoas</span>
+      </div>
+      <div class="linha">
+        <div class="alternancia">
+          <button
+            type="button"
+            aria-label="Visualizar em grade"
+            [attr.aria-pressed]="visual === 'grade'"
+            [class.ativo]="visual === 'grade'"
+            (click)="mudarVisual('grade')"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg></button
+          ><button
+            type="button"
+            aria-label="Visualizar em lista"
+            [attr.aria-pressed]="visual === 'lista'"
+            [class.ativo]="visual === 'lista'"
+            (click)="mudarVisual('lista')"
+          >
+            <app-icone nome="menu" />
+          </button>
+        </div>
+        @if (opcoes()?.podeEditar) {
+          <button class="primario linha" type="button" (click)="abrirNovo()">
+            <app-icone nome="plus" />Novo contato
+          </button>
+        }
+      </div>
+    </header>
+    <div class="cartao busca">
+      <app-icone nome="search" /><input
+        aria-label="Buscar contato"
+        name="busca"
+        [(ngModel)]="busca"
+        (ngModelChange)="filtrar()"
+        placeholder="Buscar contato…"
+        maxlength="150"
+      />
+    </div>
+    <div class="linha filtros">
+      @for (t of tiposFiltro; track t) {
+        <button
+          type="button"
+          [class.ativo]="tipo === (t === 'Todos' ? '' : t)"
+          [attr.aria-pressed]="tipo === (t === 'Todos' ? '' : t)"
+          (click)="mudarTipo(t === 'Todos' ? '' : t)"
+        >
+          {{ t }}
+        </button>
+      }
+    </div>
+    @if (opcoes()?.indicadores?.length) {
+      <div class="indicadores">
+        <span>Indicadores:</span>
+        @for (i of opcoes()!.indicadores; track i.id) {
+          <button
+            type="button"
+            class="indicador"
+            [class.selecionado]="indicador === i.id"
+            [style.--cor-indicador]="i.cor"
+            [attr.aria-pressed]="indicador === i.id"
+            (click)="mudarIndicador(i.id)"
+          >
+            {{ i.nome }}
+          </button>
+        }
+        @if (indicador) {
+          <button type="button" class="texto" (click)="mudarIndicador(indicador)">limpar</button>
+        }
+      </div>
+    }
+    @if (carregando()) {
+      <p class="contagem" role="status">Lendo os contatos…</p>
+    }
+    @if (resultado(); as dados) {
+      <p class="contagem">{{ dados.total }} contato(s)</p>
+      @if (!carregando() && !dados.itens.length) {
+        <div class="cartao vazio">
+          {{
+            busca || tipo || indicador
+              ? 'Nenhum contato com esses filtros.'
+              : 'Nenhum contato cadastrado ainda.'
+          }}
+        </div>
+      }
+      <div
+        [class]="visual === 'grade' ? 'grade-contatos' : 'cartao lista-contatos'"
+        [attr.aria-busy]="carregando()"
+      >
+        @for (c of dados.itens; track c.id) {
+          <a
+            [routerLink]="['/contatos', c.id]"
+            [queryParams]="filtros()"
+            [class]="visual === 'grade' ? 'cartao contato-card' : 'contato-linha'"
+          >
+            <span class="avatar" [style.background]="cor(c.dados['tipo'])">{{
+              iniciais(c.dados['nome'])
+            }}</span>
+            <div class="resumo">
+              <div class="linha entre nome">
+                <strong>{{ c.dados['nome'] }}</strong
+                ><span class="badge" [style.background]="cor(c.dados['tipo'])">{{
+                  c.dados['tipo']
+                }}</span>
+              </div>
+              @if (visual === 'grade') {
+                @if (c.dados['carteira'] === 'parceiro') {
+                  <p class="carteira">
+                    Carteira de {{ nomeParceiro(c.dados['carteira_parceiro_id']) || 'um parceiro' }}
+                  </p>
+                }
+                <div class="contato-dados">
+                  @if (c.dados['documento']) {
+                    <p><app-icone nome="folder" />{{ c.dados['documento'] }}</p>
+                  }
+                  @if (c.dados['telefone']) {
+                    <p>
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="12"
+                        height="12"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path d="M4 3h4l2 5-3 2c2 3 4 5 7 7l2-3 5 2v4c-9 2-20-9-17-17Z" /></svg
+                      >{{ c.dados['telefone'] }}
+                    </p>
+                  }
+                  @if (c.dados['email']) {
+                    <p>
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="12"
+                        height="12"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <rect x="3" y="5" width="18" height="14" rx="2" />
+                        <path d="m3 5 9 7 9-7" /></svg
+                      >{{ c.dados['email'] }}
+                    </p>
+                  }
+                </div>
+                <div class="indicadores">
+                  @for (id of c.indicadores; track id) {
+                    @if (nomeIndicador(id); as i) {
+                      <span class="badge indicador-card" [style.background]="i.cor">{{
+                        i.nome
+                      }}</span>
+                    }
+                  }
+                </div>
+              } @else {
+                <p class="contato-dados">
+                  {{
+                    [c.dados['documento'], c.dados['telefone'], c.dados['email']]
+                      .filter(Boolean)
+                      .join(' · ') || '—'
+                  }}
+                </p>
+              }
+            </div>
+          </a>
+        }
+      </div>
+      @if (dados.total > dados.tamanho) {
+        <nav class="linha fim paginacao" aria-label="Paginação dos contatos">
+          <button type="button" [disabled]="pagina === 0 || carregando()" (click)="mudarPagina(-1)">
+            Anterior</button
+          ><span>Página {{ pagina + 1 }}</span
+          ><button
+            type="button"
+            [disabled]="(pagina + 1) * dados.tamanho >= dados.total || carregando()"
+            (click)="mudarPagina(1)"
+          >
+            Próxima
+          </button>
+        </nav>
+      }
+    }
+  } @else {
+    @if (carregando()) {
+      <p role="status">Lendo o contato…</p>
+    }
+    @if (contato(); as c) {
+      @if (editar && opcoes(); as o) {
+        <div class="edicao">
+          <a class="voltar" [routerLink]="['/contatos', c.id]" queryParamsHandling="preserve"
+            >‹ Cancelar</a
+          >
+          <div class="titulo">
+            <app-icone nome="folder" />
+            <h2>Editar contato</h2>
+          </div>
+          @if (o.podeEditar) {
+            <app-contato-form
+              [contato]="c"
+              [opcoes]="o"
+              (salvo)="salvo($event)"
+              (cancelar)="salvo(c)"
+              (indicadorCriado)="novoIndicador($event)"
+            />
+          } @else {
+            <p class="mensagem">Seu perfil permite apenas consultar contatos.</p>
+          }
+        </div>
+      } @else {
+        <div class="ficha pilha">
+          <a class="voltar" routerLink="/contatos" queryParamsHandling="preserve"
+            >‹ Voltar para os contatos</a
+          >
+          <section class="cartao ficha-cartao">
+            <header class="ficha-cabecalho" [style.background]="cor(c.dados['tipo'])">
+              <span class="avatar">{{ iniciais(c.dados['nome']) }}</span>
+              <div class="cresce">
+                <h2>{{ c.dados['nome'] }}</h2>
+                <span class="badge">{{ c.dados['tipo'] }}</span>
+                @if (c.dados['carteira'] === 'parceiro') {
+                  <span class="badge"
+                    >Carteira de
+                    {{ nomeParceiro(c.dados['carteira_parceiro_id']) || 'um parceiro' }}</span
+                  >
+                }
+              </div>
+              @if (opcoes()?.podeEditar) {
+                <a
+                  class="botao-editar"
+                  [routerLink]="['/contatos', c.id, 'editar']"
+                  queryParamsHandling="preserve"
+                  >✎ Editar</a
+                >
+              }
+            </header>
+            <div class="ficha-dados campos">
+              @for (campo of camposFicha(c); track campo[0]) {
+                <div>
+                  <p class="rotulo">{{ campo[0] }}</p>
+                  <p class="valor" [class.sem-valor]="!campo[1]">
+                    {{
+                      campo[0] === 'Data de nascimento' && campo[1]
+                        ? (campo[1] | date: 'dd/MM/yyyy' : 'UTC')
+                        : campo[1] || '—'
+                    }}
+                  </p>
+                </div>
+              }
+              @if (c.representantes.length) {
+                <div class="toda">
+                  <p class="rotulo">Representantes</p>
+                  @for (r of c.representantes; track $index) {
+                    <p class="valor">
+                      {{
+                        [r['nome'], r['cargo'], r['cpf'], r['telefone']].filter(Boolean).join(' · ')
+                      }}
+                    </p>
+                  }
+                </div>
+              }
+              @if (c.indicadores.length) {
+                <div class="toda">
+                  <p class="rotulo">Indicadores</p>
+                  <div class="indicadores">
+                    @for (id of c.indicadores; track id) {
+                      @if (nomeIndicador(id); as i) {
+                        <span class="badge" [style.background]="i.cor">{{ i.nome }}</span>
+                      }
+                    }
+                  </div>
+                </div>
+              }
+              @if (c.dados['observacoes']) {
+                <div class="toda">
+                  <p class="rotulo">Observações</p>
+                  <p class="observacoes">{{ c.dados['observacoes'] }}</p>
+                </div>
+              }
+            </div>
+          </section>
+          <section class="cartao processos">
+            <div class="linha">
+              <app-icone nome="scale" />
+              <h3>Processos do contato</h3>
+              <span class="cresce"></span><span>—</span>
+            </div>
+            <p>
+              Gestão Processual ainda não implementada. Os vínculos aparecerão aqui quando o módulo
+              estiver disponível.
+            </p>
+          </section>
+          @if (opcoes()?.podeEditar) {
+            <div class="linha fim">
+              <button type="button" class="perigo" (click)="confirmarExclusao.set(true)">
+                Excluir contato
+              </button>
+            </div>
+            @if (confirmarExclusao()) {
+              <section class="cartao confirmar" role="alert">
+                <p>Excluir {{ c.dados['nome'] }}? Não há como desfazer.</p>
+                <div class="linha fim">
+                  <button
+                    type="button"
+                    [disabled]="excluindo()"
+                    (click)="confirmarExclusao.set(false)"
+                  >
+                    Cancelar</button
+                  ><button
+                    type="button"
+                    class="perigo"
+                    [disabled]="excluindo()"
+                    (click)="excluir()"
+                  >
+                    {{ excluindo() ? 'Excluindo…' : 'Confirmar exclusão' }}
+                  </button>
+                </div>
+              </section>
+            }
+          }
+        </div>
+      }
+    }
+  }
+  <dialog
+    #novo
+    class="painel-novo"
+    aria-labelledby="titulo-novo"
+    (cancel)="fecharNovo()"
+    (close)="novoAberto.set(false)"
+  >
+    <header class="painel-cabecalho">
+      <div>
+        <h2 id="titulo-novo">Novo contato</h2>
+        <p>cliente, parte, parceiro ou fornecedor</p>
+      </div>
+      <button type="button" aria-label="Fechar novo contato" (click)="fecharNovo()">
+        <app-icone nome="close" />
+      </button>
+    </header>
+    <div class="painel-corpo">
+      @if (novoAberto() && opcoes(); as o) {
+        <app-contato-form
+          [opcoes]="o"
+          (salvo)="salvo($event)"
+          (cancelar)="fecharNovo()"
+          (indicadorCriado)="novoIndicador($event)"
+        />
+      }
+    </div>
+  </dialog>
+</div>

@@ -1,7 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
-import { adminPlataformaGuard } from './core/guards/admin-plataforma.guard';
-import { escritorioGuard } from './core/guards/escritorio.guard';
+import { moduloGuard } from './core/guards/modulo.guard';
 import { ITENS_MENU } from './core/navigation/menu.model';
 
 export const routes: Routes = [
@@ -23,21 +22,48 @@ export const routes: Routes = [
   {
     path: '',
     canActivate: [authGuard],
-    canActivateChild: [authGuard, escritorioGuard],
-    loadComponent: () => import('./layouts/authenticated-layout/authenticated-layout').then((module) => module.AuthenticatedLayout),
+    canActivateChild: [authGuard, moduloGuard],
+    loadComponent: () =>
+      import('./layouts/authenticated-layout/authenticated-layout').then(
+        (module) => module.AuthenticatedLayout,
+      ),
     children: [
       {
-        path: 'escritorios', title: 'Escritórios — Gestão Advocacia',
-        loadComponent: () => import('./features/escritorio/escritorios').then((module) => module.Escritorios),
+        path: 'inicio',
+        title: 'Início — Gestão Advocacia',
+        loadComponent: () =>
+          import('./features/auth/pages/inicio/inicio').then((module) => module.Inicio),
       },
       {
-        path: 'inicio', title: 'Início — Gestão Advocacia',
-        loadComponent: () => import('./features/auth/pages/inicio/inicio').then((module) => module.Inicio),
+        path: 'config',
+        title: 'Configurações — Gestão Advocacia',
+        loadComponent: () =>
+          import('./features/configuracoes/pages/configuracoes/configuracoes').then(
+            (module) => module.Configuracoes,
+          ),
       },
-      ...ITENS_MENU.filter((item) => item.id !== 'inicio').map((item) => ({
-        path: item.id, title: item.label + ' — Gestão Advocacia', data: { label: item.label, icon: item.icon },
-        loadComponent: () => import('./shared/pages/modulo-em-breve/modulo-em-breve').then((module) => module.ModuloEmBreve),
-      })),
+      {
+        path: 'contatos',
+        data: { modulo: 'contatos' },
+        loadChildren: () =>
+          import('./features/cliente/cliente.routes').then((m) => m.clienteRoutes),
+      },
+      {
+        path: 'parceiros',
+        data: { modulo: 'parceiros' },
+        loadChildren: () => import('./features/parceiros/parceiros.routes').then(m=>m.parceirosRoutes),
+      },
+      ...ITENS_MENU.filter((item) => !['inicio', 'config', 'contatos', 'parceiros'].includes(item.id)).map(
+        (item) => ({
+          path: item.id,
+          title: item.label + ' — Gestão Advocacia',
+          data: { label: item.label, icon: item.icon },
+          loadComponent: () =>
+            import('./shared/pages/modulo-em-breve/modulo-em-breve').then(
+              (module) => module.ModuloEmBreve,
+            ),
+        }),
+      ),
     ],
   },
   { path: '**', redirectTo: 'login' },

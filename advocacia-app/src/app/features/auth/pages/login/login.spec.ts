@@ -1,3 +1,7 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { API_URL } from '../../../../core/config/api-url.token';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
@@ -16,8 +20,24 @@ describe('Login', () => {
     auth.solicitarCodigo.mockClear();
     await TestBed.configureTestingModule({
       imports: [Login],
-      providers: [provideRouter([]), { provide: AuthService, useValue: auth }],
+      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: API_URL, useValue: '' }, provideRouter([]), { provide: AuthService, useValue: auth }],
     }).compileComponents();
+  });
+
+  it('carrega a marca pública pelo link do escritório sem alterar o fluxo de autenticação', async () => {
+    const id = '00000000-0000-0000-0000-000000000001';
+    const params = convertToParamMap({ empresa: id });
+    TestBed.overrideProvider(ActivatedRoute, { useValue: { snapshot: { queryParamMap: params }, queryParamMap: of(params) } });
+    const fixture = TestBed.createComponent(Login);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/public/empresas/' + id + '/identidade').flush({ empresaId: id, nome: 'Escritório A',
+      identidade: { imagens: { foto_login: '/foto.jpg' }, usos: {}, zoom: 1.5, posX: 30, posY: 70 } });
+    fixture.detectChanges(); await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.marca-nome').textContent).toBe('Escritório A');
+    expect(fixture.nativeElement.querySelector('.tela-login-foto img').style.objectPosition).toBe('30% 70%');
+    expect(fixture.nativeElement.querySelector('.tela-login-foto img').style.transform).toBe('scale(1.5)');
+    expect(fixture.nativeElement.querySelector('input[type=email]')).not.toBeNull();
+    http.verify();
   });
 
   it('shows email as the main option without a fixed domain', async () => {

@@ -1,0 +1,26 @@
+<div class="config-ui">
+  <nav class="cfg-tabs" aria-label="Seções das configurações">
+    @for (item of abas(); track item.id) {
+      <button type="button" [class.ativo]="aba() === item.id" [attr.aria-current]="aba() === item.id ? 'page' : null" (click)="selecionar(item.id)">{{ item.label }}</button>
+    }
+  </nav>
+  <p class="modo-local">{{ aba() === 'perfil' ? 'Meu perfil · seus dados e sua foto são salvos no banco de dados.' : aba() === 'empresa' ? 'Empresa · dados, logos, imagem de login e recorte são salvos no banco de dados.' : aba() === 'equipe' ? 'Equipe · membros, convites e permissões são salvos no banco de dados.' : aba() === 'documentos' ? 'Documentos · papel timbrado e modelos são salvos no banco para toda a empresa.' : aba() === 'cadastros' ? 'Cadastros e sistemas · listas, rotinas e atalhos são salvos no banco para toda a empresa. Conexões externas continuam pendentes.' : aba() === 'workflows' ? 'Workflows · etapas, responsáveis, prazos e gatilhos são salvos no banco para toda a empresa.' : aba() === 'financeiro' ? 'Financeiro · contas, categorias, centros, URH, custos e capacidade são salvos no banco para toda a empresa.' : aba() === 'tema' ? 'Tema · sua preferência é salva no banco e acompanha seus acessos.' : aba() === 'senhas' ? 'Senhas · credenciais criptografadas no banco, compartilhadas conforme a visibilidade definida pelo MASTER.' : 'Prévia do frontend · os dados desta seção são salvos apenas neste navegador. Integrações ainda não alteram o servidor.' }}</p>
+  @if (store.aviso()) { <p class="retorno" role="status">{{ store.aviso() }}</p> }
+  @switch (aba()) {
+    @case ('perfil') { <app-perfil-config /> }
+    @case ('empresa') { <app-empresa-config /> }
+    @case ('equipe') { <app-equipe-config /> }
+    @case ('documentos') { <app-documentos-config /> }
+    @case ('cadastros') { <app-cadastros-config /> }
+    @case ('workflows') { <app-workflows-config /> }
+    @case ('financeiro') { <app-financeiro-config /> }
+    @case ('olivia') { <app-olivia-config /> }
+    @case ('senhas') { <app-senhas-config /> }
+    @case ('tema') { <app-tema-config /> }
+  }
+</div>
+
+
+
+
+

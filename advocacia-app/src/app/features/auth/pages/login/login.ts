@@ -1,4 +1,6 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { IdentidadeApiService } from '../../../../core/branding/identidade-api.service';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DOCUMENT } from '@angular/common';
@@ -26,7 +28,21 @@ export class Login {
   protected codigo = '';
 
   constructor() {
-    const erro = inject(ActivatedRoute).snapshot.queryParamMap.get('erro');
+    const route = inject(ActivatedRoute);
+    const destroyRef = inject(DestroyRef);
+    const api = inject(IdentidadeApiService);
+    route.queryParamMap.pipe(takeUntilDestroyed(destroyRef)).subscribe(params => {
+      this.marca.restaurar();
+      const empresa = params.get('empresa');
+      this.empresaLink = empresa;
+      if (empresa && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(empresa)) {
+        api.publica(empresa).pipe(takeUntilDestroyed(destroyRef)).subscribe({
+          next: resposta => { if (this.empresaLink === empresa) this.marca.receber(resposta); },
+          error: () => { /* O login continua disponível com a identidade padrão. */ },
+        });
+      }
+    });
+    const erro = route.snapshot.queryParamMap.get('erro');
     if (erro === 'google_acesso_negado') {
       this.aviso.set('Esta conta Google não está autorizada. Use o email cadastrado ou fale com o administrador.');
     } else if (erro === 'google_falhou') {
@@ -36,6 +52,7 @@ export class Login {
       this.aviso.set('O login Google ainda não está configurado. Use seu email para receber um código.');
     }
   }
+  private empresaLink: string | null = null;
 
   protected solicitarCodigo() {
     if (this.carregando()) return;
