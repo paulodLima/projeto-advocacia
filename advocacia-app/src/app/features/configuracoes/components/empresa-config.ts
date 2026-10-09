@@ -1,3 +1,4 @@
+import { MascaraDirective } from '../../../shared/directives/mascara.directive';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
@@ -9,7 +10,7 @@ import { FormsModule } from '@angular/forms';
 import { EMPRESA_SECOES } from '../models/referencia';
 import { ConfiguracoesLocalService } from '../services/configuracoes-local.service';
 
-@Component({ selector: 'app-empresa-config', imports: [FormsModule], template: `
+@Component({ selector: 'app-empresa-config', imports: [FormsModule, MascaraDirective], template: `
   <div class="cfg-dupla"><form class="cfg-principal cfg-pilha" #formEmpresa="ngForm" (ngSubmit)="salvar()">
     <div><h2>Empresa</h2><p>Os dados da sociedade. Recibo, fatura e demonstrativo importam tudo daqui — mudou aqui, muda em todos.</p></div>
     @if (carregando()) { <p role="status">Carregando sua empresa…</p> }
@@ -21,7 +22,7 @@ import { ConfiguracoesLocalService } from '../services/configuracoes-local.servi
     @for (secao of secoes; track secao.titulo) {
       <section class="cfg-card"><h3>{{ secao.titulo }}</h3>@if (secao.dica) { <p>{{ secao.dica }}</p> }
         <div class="cfg-grade tres" style="margin-top:12px">@for (campo of secao.campos; track campo.k) {
-          <label [class.cfg-largo]="campo.larga">{{ campo.r }}<input [name]="campo.k" [attr.name]="campo.k" [type]="campo.k === 'email' ? 'email' : campo.tipo || 'text'" [email]="campo.k === 'email'" [required]="!!campo.obrigatorio" [maxlength]="limites[campo.k]" [disabled]="!podeEditar || salvando()" [(ngModel)]="empresa[campo.k]" /></label>
+          <label [class.cfg-largo]="campo.larga">{{ campo.r }}<input [appMascara]="campo.k === 'cnpj' ? 'cnpj' : campo.k === 'titular_cpf' ? 'cpf' : (campo.k === 'telefone' || campo.k === 'whatsapp') ? 'telefone' : ''" [name]="campo.k" [attr.name]="campo.k" [type]="campo.k === 'email' ? 'email' : campo.tipo || 'text'" [email]="campo.k === 'email'" [required]="!!campo.obrigatorio" [maxlength]="limites[campo.k]" [disabled]="!podeEditar || salvando()" [(ngModel)]="empresa[campo.k]" /></label>
         }</div>
       </section>
     }

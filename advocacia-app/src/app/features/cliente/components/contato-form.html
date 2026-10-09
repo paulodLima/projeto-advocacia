@@ -45,7 +45,7 @@
           <span class="obrigatorio">*</span>
         }
         <input
-          name="documento"
+          name="documento" [appMascara]="form.dados['tipo_pessoa'] === 'PJ' ? 'cnpj' : 'cpf'"
           [ngModel]="form.dados['documento']"
           (ngModelChange)="mudar('documento', $event)"
           [required]="form.dados['tipo'] === 'Cliente'"
@@ -60,7 +60,7 @@
           <span class="obrigatorio">*</span>
         }
         <input
-          name="telefone"
+          name="telefone" appMascara="telefone"
           [ngModel]="form.dados['telefone']"
           (ngModelChange)="mudar('telefone', $event)"
           [required]="form.dados['tipo'] === 'Cliente'"
@@ -81,7 +81,7 @@
       /></label>
       <label
         >2º telefone<input
-          name="telefone2"
+          name="telefone2" appMascara="telefone"
           [ngModel]="form.dados['telefone2']"
           (ngModelChange)="mudar('telefone2', $event)"
           placeholder="(61) 90000-0000"
@@ -184,14 +184,8 @@
                   [name]="'rep-' + indice + '-' + c.k"
                   [attr.name]="'rep-' + indice + '-' + c.k"
                   [ngModel]="rep[c.k]"
-                  (ngModelChange)="
-                    rep[c.k] =
-                      c.k === 'cpf'
-                        ? documento($event)
-                        : c.k === 'telefone'
-                          ? telefone($event)
-                          : $event
-                  "
+                  (ngModelChange)="rep[c.k] = $event"
+                  [appMascara]="c.k === 'cpf' ? 'cpf' : c.k === 'telefone' ? 'telefone' : ''"
                   [type]="c.tipo || 'text'"
                   [required]="c.k === 'nome'"
                   maxlength="150"

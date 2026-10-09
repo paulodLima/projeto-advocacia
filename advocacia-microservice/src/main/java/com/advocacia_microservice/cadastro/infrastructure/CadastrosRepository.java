@@ -11,6 +11,13 @@ public class CadastrosRepository {
     private final JdbcTemplate jdbc;
     public CadastrosRepository(JdbcTemplate jdbc) { this.jdbc = jdbc; }
     public void bloquear(UUID empresa) { jdbc.queryForObject("SELECT id FROM empresa WHERE id = ? FOR UPDATE", UUID.class, empresa); }
+    public List<String> atalhos(UUID empresa) {
+        var valor = jdbc.queryForObject("SELECT atalhos_inicio FROM empresa WHERE id=?", String.class, empresa);
+        return valor.isEmpty() ? List.of() : List.of(valor.split(","));
+    }
+    public void salvarAtalhos(UUID empresa, List<String> atalhos) {
+        jdbc.update("UPDATE empresa SET atalhos_inicio=? WHERE id=?", String.join(",", atalhos), empresa);
+    }
     public List<CadastroRegistro> listar(UUID empresa) {
         var campos = new LinkedHashMap<UUID, Map<String, String>>();
         var tipos = new HashMap<UUID, String>(); var ativos = new HashMap<UUID, Boolean>();
@@ -25,9 +32,17 @@ public class CadastrosRepository {
         else jdbc.update("UPDATE cadastro_item SET nome=?,nome_chave=?,ativo=?,referencia_id=? WHERE empresa_id=? AND id=?", item.campos().get("nome"), item.campos().get("nome").toLowerCase(Locale.ROOT), item.ativo(), item.referenciaId(), empresa, item.id());
         jdbc.update("DELETE FROM cadastro_campo WHERE item_id=?", item.id());
         item.campos().forEach((campo, valor) -> jdbc.update("INSERT INTO cadastro_campo(item_id,campo,valor) VALUES (?,?,?)", item.id(), campo, valor));
+        if(item.tipo().equals("etiquetas")) jdbc.update("UPDATE contato_indicador SET nome=?,nome_chave=?,cor=? WHERE empresa_id=? AND etiqueta_id=?",item.campos().get("nome"),item.campos().get("nome").toLowerCase(Locale.ROOT),item.campos().get("cor"),empresa,item.id());
     }
     public boolean usado(UUID empresa, UUID id) { return jdbc.queryForObject("SELECT COUNT(*) FROM cadastro_item WHERE empresa_id=? AND referencia_id=?", Long.class, empresa, id) > 0 || jdbc.queryForObject("SELECT COUNT(*) FROM workflow_gatilho WHERE empresa_id=? AND tarefa_id=?",Long.class,empresa,id)>0; }
-    public void excluir(UUID empresa, UUID id) { jdbc.update("DELETE FROM cadastro_item WHERE empresa_id=? AND id=?", empresa, id); }
+    public void excluir(UUID empresa, UUID id) {
+        if(jdbc.queryForObject("SELECT COUNT(*) FROM crm_etiqueta WHERE empresa_id=? AND etiqueta_id=?",Long.class,empresa,id)>0 || jdbc.queryForObject("SELECT COUNT(*) FROM crm_campanha_tag WHERE empresa_id=? AND etiqueta_id=?",Long.class,empresa,id)>0)
+            throw new com.advocacia_microservice.shared.exception.ConflitoException("Etiqueta usada no CRM. Remova os vínculos antes de excluir.");
+        if(jdbc.queryForObject("SELECT COUNT(*) FROM contato_tag t JOIN contato_indicador i ON i.id=t.indicador_id WHERE t.empresa_id=? AND i.etiqueta_id=?",Long.class,empresa,id)>0)
+            throw new com.advocacia_microservice.shared.exception.ConflitoException("Etiqueta usada em Contatos. Remova os vínculos antes de excluir.");
+        jdbc.update("DELETE FROM contato_indicador WHERE empresa_id=? AND etiqueta_id=?",empresa,id);
+        jdbc.update("DELETE FROM cadastro_item WHERE empresa_id=? AND id=?", empresa, id);
+    }
     public List<Rotina> rotinas(UUID empresa) { return jdbc.query("SELECT id,nome,periodo FROM escritorio_rotina WHERE empresa_id=? ORDER BY periodo,nome_chave", (rs, n) -> new Rotina(rs.getObject("id", UUID.class), rs.getString("nome"), rs.getString("periodo")), empresa); }
     public Rotina criarRotina(UUID empresa, String nome, String periodo) {
         var rotina = new Rotina(UUID.randomUUID(), nome, periodo);

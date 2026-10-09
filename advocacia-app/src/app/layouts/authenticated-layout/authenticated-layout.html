@@ -63,7 +63,8 @@
             @if (acesso.permite('agenda')) { <a routerLink="/agenda" (click)="fecharMenu()"><app-icone nome="calendar" />Agenda</a> }
             @if (acesso.permite('processual')) { <a routerLink="/processual" (click)="fecharMenu()"><app-icone nome="scale" />Gestão Processual</a> }
             @if (acesso.permite('contatos')) { <a routerLink="/contatos" (click)="fecharMenu()"><app-icone nome="users" />Contatos</a> }
-          } @else { <p>{{ painel() === 'notificacoes' ? 'Nenhuma notificação por aqui.' : 'Seu assistente estará disponível em breve.' }}</p> }
+          } @else if (painel() === 'notificacoes' && acesso.permite('crm')) { <app-crm-notificacoes /> }
+          @else { <p>{{ painel() === 'notificacoes' ? 'Nenhuma notificação por aqui.' : 'Seu assistente estará disponível em breve.' }}</p> }
         </section>
       }
     </header>

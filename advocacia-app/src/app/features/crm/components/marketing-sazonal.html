@@ -1,0 +1,191 @@
+<div class="pilha">
+  <header class="titulo">
+    <app-icone nome="crm" />
+    <h2>Marketing Sazonal</h2>
+    <span>a mesma pessoa pode estar em várias campanhas</span>
+  </header>
+  <p class="texto-marketing">
+    Esta aba <strong>reúne</strong> leads e clientes, agrupados por assunto. Os grupos vêm das
+    etiquetas — do contato, do lead e do processo. Ninguém muda de lugar aqui.
+  </p>
+  @if (erro()) {
+    <p class="mensagem erro" role="alert">
+      {{ erro() }} <button type="button" (click)="carregar()">Tentar novamente</button>
+    </p>
+  }
+  @if (opcoes().podeEditar) {
+    <div>
+      <button type="button" [disabled]="ocupado()" (click)="criando.set(!criando())">
+        <app-icone nome="plus" />{{ criando() ? 'Cancelar' : 'Nova campanha' }}
+      </button>
+    </div>
+  }
+  @if (criando()) {
+    <form class="cartao crm-form pilha" #f="ngForm" (ngSubmit)="f.valid && criar()">
+      <fieldset [disabled]="ocupado()">
+        <div class="grade tres">
+          <label class="dupla"
+            >Nome da campanha<input
+              name="nome"
+              [(ngModel)]="campanha.nome"
+              required
+              maxlength="150"
+              placeholder="Ex.: Dia dos Pais" /></label
+          ><label
+            >Mês<select name="mes" [(ngModel)]="campanha.mes">
+              <option [ngValue]="null">Sem mês definido</option>
+              @for (mes of meses; track mes) {
+                <option [ngValue]="$index + 1">{{ mes }}</option>
+              }
+            </select></label
+          >
+        </div>
+        <div class="grade tres">
+          <label>Cor<input type="color" name="cor" [(ngModel)]="campanha.cor" /></label
+          ><label class="dupla"
+            >Descrição<input
+              name="descricao"
+              [(ngModel)]="campanha.descricao"
+              placeholder="Uma frase sobre a campanha"
+              maxlength="500"
+          /></label>
+        </div>
+        <div>
+          <p class="rotulo">Etiquetas vinculadas</p>
+          <div class="linha etiquetas">
+            @for (t of opcoes().etiquetas; track t.id) {
+              <button
+                type="button"
+                [class.selecionada]="campanha.etiquetas.includes(t.id)"
+                [style.--cor]="t.cor"
+                [attr.aria-pressed]="campanha.etiquetas.includes(t.id)"
+                (click)="etiqueta(t.id)"
+              >
+                {{ t.nome }}
+              </button>
+            }
+            @if (!opcoes().etiquetas.length) {
+              <p class="rotulo">
+                Nenhuma etiqueta cadastrada ainda — crie em Configurações → Cadastros e sistemas →
+                Listas do escritório → Etiquetas.
+              </p>
+            }
+          </div>
+        </div>
+        <div class="linha fim">
+          <button class="dourado" type="submit" [disabled]="f.invalid || ocupado()">
+            {{ ocupado() ? 'Salvando…' : 'Criar campanha' }}
+          </button>
+        </div>
+      </fieldset>
+    </form>
+  }
+  @if (carregando()) {
+    <p class="rotulo" role="status">Montando as campanhas…</p>
+  }
+  @if (dados(); as d) {
+    <div class="grade-campanhas">
+      @for (c of d.campanhas; track c.id) {
+        <section class="cartao campanha-cartao">
+          <header class="linha entre">
+            <div class="linha">
+              <span class="ponto-campanha" [style.background]="c.cor"></span>
+              <h3>{{ c.nome }}</h3>
+            </div>
+            @if (opcoes().podeEditar) {
+              <button
+                type="button"
+                aria-label="Excluir campanha"
+                [disabled]="ocupado()"
+                (click)="excluirId.set(excluirId() === c.id ? null : c.id)"
+              >
+                <app-icone nome="trash" />
+              </button>
+            }
+          </header>
+          <p class="rotulo">
+            {{ c.mes ? meses[c.mes - 1] + ' · ' : '' }}{{ c.destinatarios.length }} destinatário(s)
+          </p>
+          @if (c.descricao) {
+            <p class="texto-marketing">{{ c.descricao }}</p>
+          }
+          <p class="rotulo">{{ abordados(c) }} de {{ c.destinatarios.length }} em {{ d.ano }}</p>
+          <div class="progresso">
+            <span
+              [style.width.%]="
+                c.destinatarios.length ? (abordados(c) * 100) / c.destinatarios.length : 0
+              "
+              [style.background]="c.cor"
+            ></span>
+          </div>
+          @if (excluirId() === c.id) {
+            <div class="mensagem">
+              <p>Excluir esta campanha? Não há como desfazer.</p>
+              <div class="linha fim">
+                <button type="button" [disabled]="ocupado()" (click)="excluirId.set(null)">
+                  Cancelar</button
+                ><button class="perigo" type="button" [disabled]="ocupado()" (click)="excluir(c)">
+                  Excluir
+                </button>
+              </div>
+            </div>
+          }
+          <div class="destinatarios">
+            @for (p of c.destinatarios; track p.chave) {
+              <button
+                type="button"
+                class="destinatario"
+                [class.abordado]="p.abordado"
+                [disabled]="!opcoes().podeEditar || ocupado()"
+                [attr.aria-pressed]="p.abordado"
+                [attr.aria-label]="
+                  p.nome + (p.abordado ? ': contato registrado' : ': registrar contato')
+                "
+                (click)="abordar(c, p)"
+              >
+                <span class="marcador">{{ p.abordado ? '✓' : '' }}</span
+                ><span
+                  ><strong>{{ p.nome }}</strong
+                  ><small>{{ p.tipo }}{{ p.contato ? ' · ' + (p.contato.includes('@') ? p.contato : mascarar(p.contato, 'telefone')) : '' }}</small></span
+                >
+              </button>
+            }
+            @if (!c.destinatarios.length) {
+              <p class="rotulo">Ninguém com a etiqueta desta campanha ainda.</p>
+            }
+          </div>
+        </section>
+      }
+    </div>
+    @if (!d.campanhas.length) {
+      <div class="cartao vazio">Nenhuma campanha cadastrada ainda.</div>
+    }
+    <section class="pilha manutencao">
+      <div class="titulo">
+        <app-icone nome="calendar" />
+        <h2>Manutenção de planejamento</h2>
+        <span>revisão recorrente do serviço entregue</span>
+      </div>
+      @if (!d.manutencoes.length) {
+        <p class="rotulo">
+          Nenhum caso em manutenção. Marque a etiqueta correspondente na ficha do processo.
+        </p>
+      }
+      @for (m of d.manutencoes; track m.caso_id) {
+        <div class="cartao linha entre">
+          <div>
+            <h3>{{ m.titulo }}</h3>
+            <p class="rotulo">Conclusão: {{ data(m.data_entrega) }}</p>
+            <p>Próxima revisão {{ data(revisao(m)) }}{{ dias(m) === 0 ? ' · hoje' : '' }}</p>
+            <small>{{ m.momento || 'Aguardando ciclo' }}</small>
+          </div>
+          @if (opcoes().podeEditar) {
+            <button type="button" [disabled]="ocupado()" (click)="manutencao(m)">
+              Registrar contato
+            </button>
+          }
+        </div>
+      }
+    </section>
+  }
+</div>

@@ -40,6 +40,9 @@ class ContatosTests {
         var f=alterar(formulario("Empresa teste","Cliente",null),"tipo_pessoa","PJ");f=alterar(f,"documento","12.345.678/0001-99");f=alterar(f,"telefone","(61) 99999-9999");f=alterar(f,"email","TESTE@EXAMPLE.TEST");
         var c=service.salvar(master.id(),null,new Formulario(null,f.dados(),List.of(Map.of("nome","Representante","cpf","123.456.789-01","cargo","Sócio")),List.of(tag.id())));
         var salvo=service.buscar(master.id(),c.id());assertEquals("teste@example.test",salvo.dados().get("email"));assertEquals("Sócio",salvo.representantes().getFirst().get("cargo"));assertEquals(List.of(tag.id()),salvo.indicadores());
+        assertEquals("12345678000199",jdbc.queryForObject("SELECT valor FROM contato_dado WHERE contato_id=? AND campo='documento'",String.class,c.id()));
+        assertEquals("61999999999",jdbc.queryForObject("SELECT valor FROM contato_dado WHERE contato_id=? AND campo='telefone'",String.class,c.id()));
+        assertEquals("12345678901",jdbc.queryForObject("SELECT valor FROM contato_representante WHERE contato_id=? AND campo='cpf'",String.class,c.id()));
         service.salvar(master.id(),null,formulario("Alfa","Fornecedor",null));
         assertEquals(2,service.listar(master.id(),"","",null,0,1).total());assertEquals(1,service.listar(master.id(),"","",null,1,1).itens().size());
         assertEquals(1,service.listar(master.id(),"teste@example","Cliente",tag.id(),0,24).total());assertEquals(0,service.listar(master.id(),"%","",null,0,24).total());

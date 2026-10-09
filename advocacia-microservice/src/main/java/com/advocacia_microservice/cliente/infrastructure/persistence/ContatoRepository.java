@@ -17,7 +17,8 @@ public class ContatoRepository {
         var dados=new HashMap<String,String>(); jdbc.query("SELECT campo,valor FROM contato_dado WHERE contato_id=?",rs->{dados.put(rs.getString(1),rs.getString(2));},id);
         var reps=new TreeMap<Integer,Map<String,String>>();jdbc.query("SELECT ordem,campo,valor FROM contato_representante WHERE contato_id=?",rs->{reps.computeIfAbsent(rs.getInt(1),k->new HashMap<>()).put(rs.getString(2),rs.getString(3));},id);
         var tags=jdbc.queryForList("SELECT indicador_id FROM contato_tag WHERE empresa_id=? AND contato_id=? ORDER BY indicador_id",UUID.class,empresa,id);
-        return new Contato(id,empresa,versoes.getFirst(),dados,new ArrayList<>(reps.values()),tags);
+        var incompleto=jdbc.queryForObject("SELECT cadastro_incompleto FROM contato WHERE empresa_id=? AND id=?",Boolean.class,empresa,id);
+        return new Contato(id,empresa,versoes.getFirst(),dados,new ArrayList<>(reps.values()),tags,incompleto);
     }
     // Carrega a página em lotes: a quantidade de consultas não cresce com os contatos.
     public List<Contato> carregarPagina(UUID empresa,List<UUID> ids) {
@@ -30,7 +31,8 @@ public class ContatoRepository {
         jdbc.query("SELECT contato_id,campo,valor FROM contato_dado WHERE contato_id"+filtro,rs->{dados.computeIfAbsent(rs.getObject(1,UUID.class),k->new HashMap<>()).put(rs.getString(2),rs.getString(3));},parametros.toArray());
         jdbc.query("SELECT contato_id,ordem,campo,valor FROM contato_representante WHERE contato_id"+filtro,rs->{reps.computeIfAbsent(rs.getObject(1,UUID.class),k->new TreeMap<>()).computeIfAbsent(rs.getInt(2),k->new HashMap<>()).put(rs.getString(3),rs.getString(4));},parametros.toArray());
         jdbc.query("SELECT contato_id,indicador_id FROM contato_tag WHERE contato_id"+filtro+" ORDER BY indicador_id",rs->{tags.computeIfAbsent(rs.getObject(1,UUID.class),k->new ArrayList<>()).add(rs.getObject(2,UUID.class));},parametros.toArray());
-        return ids.stream().filter(versoes::containsKey).map(id->new Contato(id,empresa,versoes.get(id),dados.get(id),new ArrayList<>(reps.getOrDefault(id,new TreeMap<>()).values()),tags.getOrDefault(id,List.of()))).toList();
+        var incompletos=new HashSet<>(jdbc.queryForList("SELECT id FROM contato WHERE empresa_id=? AND cadastro_incompleto=true AND id IN ("+marcas+")",UUID.class,parametros.toArray()));
+        return ids.stream().filter(versoes::containsKey).map(id->new Contato(id,empresa,versoes.get(id),dados.get(id),new ArrayList<>(reps.getOrDefault(id,new TreeMap<>()).values()),tags.getOrDefault(id,List.of()),incompletos.contains(id))).toList();
     }
     public void salvar(Contato c,boolean novo) {
         var d=c.dados(); var doc=d.get("documento").replaceAll("\\D","");
@@ -42,6 +44,7 @@ public class ContatoRepository {
             jdbc.update("UPDATE contato SET nome=?,tipo=?,tipo_pessoa=?,documento_chave=?,origem_id=?,parceiro_id=?,versao=?,atualizado_em=CURRENT_TIMESTAMP WHERE empresa_id=? AND id=?",valores);
             jdbc.update("DELETE FROM contato_dado WHERE contato_id=?",c.id());jdbc.update("DELETE FROM contato_representante WHERE contato_id=?",c.id());jdbc.update("DELETE FROM contato_tag WHERE contato_id=?",c.id());
         }
+        jdbc.update("UPDATE contato SET cadastro_incompleto=? WHERE empresa_id=? AND id=?",c.cadastroIncompleto(),c.empresaId(),c.id());
         d.forEach((k,v)->jdbc.update("INSERT INTO contato_dado(contato_id,campo,valor) VALUES (?,?,?)",c.id(),k,v));
         for(int n=0;n<c.representantes().size();n++) {int ordem=n;c.representantes().get(n).forEach((k,v)->jdbc.update("INSERT INTO contato_representante(contato_id,ordem,campo,valor) VALUES (?,?,?,?)",c.id(),ordem,k,v));}
         c.indicadores().forEach(tag->jdbc.update("INSERT INTO contato_tag(empresa_id,contato_id,indicador_id) VALUES (?,?,?)",c.empresaId(),c.id(),tag));

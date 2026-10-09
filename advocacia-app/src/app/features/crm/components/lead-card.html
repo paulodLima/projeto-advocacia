@@ -1,0 +1,349 @@
+<article class="cartao lead-cartao" [class.destacado]="destacado()" [attr.id]="'lead-' + lead().id">
+  @if (erro()) {
+    <p class="mensagem erro" role="alert">
+      {{ erro() }}
+      @if (conflito()) {
+        <button type="button" [disabled]="ocupado()" (click)="recarregar()">Recarregar lead</button>
+      }
+    </p>
+  }
+  <div class="lead-caixa">
+    <div class="lead-colunas">
+      <div class="lead-principal">
+        <div class="resumo-lead">
+          <span class="avatar-lead" [style.background]="temperatura().cor">{{ iniciais() }}</span>
+          <div class="cresce">
+            <div class="linha badges">
+              <strong>{{ cadastro().nome }}</strong
+              ><span class="badge" [style.background]="temperatura().cor" style="color: white">{{
+                temperatura().nome
+              }}</span
+              ><span class="badge status-lead">{{ rotuloStatus() }}</span>
+              @if (estado().status === 'ativo') {
+                <span class="badge">{{ rotuloCadencia() }}</span>
+                @if (lead().proximo) {
+                  <span class="badge" [class.vencido]="dias()! <= 0">{{ rotuloRetorno() }}</span>
+                } @else if (!estado().cadenciaPausada && !passo()) {
+                  <span class="badge alerta">decidir: ganho ou perdido</span>
+                }
+              }
+            </div>
+            <p class="metadados">
+              {{ cadastro().origem }} · {{ cadastro().necessidade }} · {{ mascarar(cadastro().telefone, 'telefone')
+              }}{{ cadastro().email ? ' · ' + cadastro().email : '' }}
+            </p>
+            <div class="linha etiquetas">
+              @for (t of opcoes().etiquetas; track t.id) {
+                @if (cadastro().etiquetas.includes(t.id)) {
+                  <span class="badge" [style.background]="t.cor">{{ t.nome }}</span>
+                }
+              }
+            </div>
+            @if (cadastro().observacoes) {
+              <p class="metadados observacoes">{{ cadastro().observacoes }}</p>
+            }
+          </div>
+        </div>
+        @if (opcoes().podeEditar) {
+          <fieldset class="lead-controles" [disabled]="ocupado()">
+            <div class="lead-grupo">
+              <label class="linha"
+                ><input
+                  type="checkbox"
+                  class="interruptor"
+                  [ngModel]="estado().consultaAgendada"
+                  (ngModelChange)="
+                    atualizar({
+                      consultaAgendada: $event,
+                      consultaStatus: $event ? 'marcada' : null,
+                    })
+                  "
+                />Consulta</label
+              >
+              @if (estado().consultaAgendada) {
+                <input
+                  type="datetime-local"
+                  aria-label="Quando é a consulta"
+                  [ngModel]="estado().consultaEm"
+                  (ngModelChange)="atualizar({ consultaEm: $event || null })"
+                /><select
+                  aria-label="Situação da consulta"
+                  [ngModel]="estado().consultaStatus"
+                  (ngModelChange)="atualizar({ consultaStatus: $event })"
+                >
+                  @for (s of situacoesConsulta; track s.id) {
+                    <option [value]="s.id">{{ s.nome }}</option>
+                  }
+                </select>
+              }
+            </div>
+            <div class="lead-grupo">
+              <label class="linha"
+                ><input
+                  type="checkbox"
+                  class="interruptor"
+                  [ngModel]="estado().cadenciaPausada"
+                  (ngModelChange)="atualizar({ cadenciaPausada: $event })"
+                />Retorno marcado</label
+              >
+              @if (estado().cadenciaPausada) {
+                <input
+                  type="date"
+                  aria-label="Data do retorno"
+                  [ngModel]="estado().retornoEm"
+                  (ngModelChange)="atualizar({ retornoEm: $event || null })"
+                />
+                @if (!estado().retornoEm) {
+                  <small>sem data: fica na lista, sem cobrança</small>
+                }
+              }
+            </div>
+            <div class="lead-grupo">
+              <small>F.A.C.A.</small>
+              @for (f of faca; track f.campo) {
+                <button
+                  type="button"
+                  class="faca"
+                  [class.sim]="estado().qualificacao[f.campo] === true"
+                  [class.nao]="estado().qualificacao[f.campo] === false"
+                  [title]="f.dica"
+                  [attr.aria-label]="
+                    f.titulo +
+                    ': ' +
+                    (estado().qualificacao[f.campo] === true
+                      ? 'sim'
+                      : estado().qualificacao[f.campo] === false
+                        ? 'não'
+                        : 'não avaliado')
+                  "
+                  (click)="qualificar(f.campo)"
+                >
+                  {{ f.letra }}
+                </button>
+              }
+              @if (avaliacaoCompleta()) {
+                <span class="badge qualificacao">{{
+                  qualificado() === 4 ? 'Qualificado' : qualificado() + ' de 4'
+                }}</span>
+              }
+            </div>
+          </fieldset>
+        } @else if (estado().consultaAgendada) {
+          <p class="metadados">
+            Consulta: {{ data(estado().consultaEm) }} · {{ estado().consultaStatus }}
+          </p>
+        }
+        <div class="lead-acoes linha">
+          @if (opcoes().podeEditar) {
+            @if (estado().status === 'ativo') {
+              <button
+                class="ativo"
+                type="button"
+                [disabled]="ocupado()"
+                (click)="registrando.set(!registrando())"
+              >
+                <app-icone nome="phone" />Registrar contato
+              </button>
+            }
+            @if (estado().status !== 'ganho') {
+              <button class="ganho" type="button" [disabled]="ocupado()" (click)="abrirGanho()">
+                Ganho
+              </button>
+            }
+            @if (estado().status !== 'perdido') {
+              <button
+                class="perigo"
+                type="button"
+                [disabled]="ocupado()"
+                (click)="atualizar({ status: 'perdido' })"
+              >
+                Perdido
+              </button>
+            }
+            @if (estado().status !== 'ativo') {
+              <button type="button" [disabled]="ocupado()" (click)="atualizar({ status: 'ativo' })">
+                Reativar
+              </button>
+            }
+          }
+          <button
+            type="button"
+            [class.ativo]="comentariosAbertos()"
+            (click)="comentariosAbertos.set(!comentariosAbertos())"
+          >
+            Comentários{{ lead().comentarios.length ? ' (' + lead().comentarios.length + ')' : '' }}
+          </button>
+          @if (lead().dados.casoId) {
+            <span class="badge qualificacao">Caso criado · histórico preservado</span>
+          }
+        </div>
+      </div>
+      <aside class="lead-lateral">
+        @if (opcoes().podeEditar) {
+          <div class="linha fim">
+            <button
+              type="button"
+              aria-label="Editar lead"
+              title="Editar"
+              [disabled]="ocupado()"
+              (click)="editar.emit(lead())"
+            >
+              <app-icone nome="edit" /></button
+            ><button
+              type="button"
+              aria-label="Excluir lead"
+              title="Excluir"
+              [disabled]="ocupado()"
+              (click)="excluirAberto.set(!excluirAberto())"
+            >
+              <app-icone nome="trash" />
+            </button>
+          </div>
+        }
+        <div class="lead-historico">
+          <p class="historico-titulo">Histórico de contatos</p>
+          @for (
+            c of historicoCompleto() ? lead().contatos : lead().contatos.slice(0, 3);
+            track c.id
+          ) {
+            <p class="tratativa">
+              ● {{ data(c.data) }} · {{ c.canal }} · {{ c.resultado
+              }}{{ c.observacao ? ' — ' + c.observacao : '' }}
+            </p>
+          }
+          @if (!lead().contatos.length) {
+            <p class="rotulo">Nenhum contato registrado ainda.</p>
+          }
+          @if (lead().contatos.length > 3) {
+            <button
+              class="texto"
+              type="button"
+              (click)="historicoCompleto.set(!historicoCompleto())"
+            >
+              {{
+                historicoCompleto()
+                  ? 'Mostrar menos'
+                  : 'e mais ' + (lead().contatos.length - 3) + ' contato(s)'
+              }}
+            </button>
+          }
+        </div>
+      </aside>
+    </div>
+  </div>
+  @if (excluirAberto()) {
+    <div class="mensagem">
+      <p>Excluir o lead {{ cadastro().nome }}?</p>
+      <div class="linha fim">
+        <button type="button" [disabled]="ocupado()" (click)="excluirAberto.set(false)">
+          Cancelar</button
+        ><button class="perigo" type="button" [disabled]="ocupado()" (click)="excluir()">
+          Excluir
+        </button>
+      </div>
+    </div>
+  }
+  @if (registrando()) {
+    <form class="tentativa pilha" #f="ngForm" (ngSubmit)="f.valid && registrar()">
+      <h3>Registrar tentativa de contato</h3>
+      <fieldset [disabled]="ocupado()">
+        <div class="grade tres">
+          <label
+            >Data<input
+              type="date"
+              name="data"
+              [(ngModel)]="tentativa.data"
+              required
+              [min]="lead().dados.ultimoContato || lead().dados.entrada"
+              [max]="hoje"
+          /></label>
+          <label
+            >Canal<select name="canal" [(ngModel)]="tentativa.canal">
+              @for (c of canais; track c) {
+                <option>{{ c }}</option>
+              }
+            </select></label
+          >
+          <label
+            >Resultado<select name="resultado" [(ngModel)]="tentativa.resultado">
+              @for (r of resultados; track r) {
+                <option>{{ r }}</option>
+              }
+            </select></label
+          >
+        </div>
+        <label
+          >Observação<input name="observacao" [(ngModel)]="tentativa.observacao" maxlength="4000"
+        /></label>
+        <div class="linha fim">
+          <button type="button" (click)="registrando.set(false)">Cancelar</button
+          ><button class="dourado" type="submit" [disabled]="f.invalid || ocupado()">
+            Salvar contato
+          </button>
+        </div>
+      </fieldset>
+    </form>
+  }
+  @if (comentariosAbertos()) {
+    <section class="comentarios pilha">
+      <h3>Conversa interna sobre este lead</h3>
+      @for (c of lead().comentarios; track c.id) {
+        <div class="comentario">
+          <strong>{{ c.autor }}</strong
+          ><small>{{ data(c.criadoEm) }}</small>
+          <p>{{ c.texto }}</p>
+        </div>
+      }
+      @if (!lead().comentarios.length) {
+        <p class="rotulo">Nenhum comentário ainda.</p>
+      }
+      @if (opcoes().podeEditar) {
+        <form (ngSubmit)="comentar()">
+          <label
+            >Escreva @ para mencionar alguém da equipe<textarea
+              name="comentario"
+              [(ngModel)]="comentario"
+              required
+              maxlength="4000"
+              rows="2"
+              [disabled]="ocupado()"
+            ></textarea>
+          </label>
+          @if (membrosEncontrados().length) {
+            <div class="mencoes" aria-label="Membros para mencionar">
+              @for (m of membrosEncontrados(); track m.id) {
+                <button type="button" (click)="mencionar(m.id, m.nome)">{{ m.nome }}</button>
+              }
+            </div>
+          }
+          <div class="linha fim">
+            <button class="dourado" type="submit" [disabled]="!comentario.trim() || ocupado()">
+              Enviar comentário
+            </button>
+          </div>
+        </form>
+      }
+    </section>
+  }
+  <dialog #ganho class="ganho-dialog" (cancel)="fecharGanho($event)">
+    <h3>Converter este lead em caso?</h3>
+    <p>
+      Um cliente será criado automaticamente em Contatos, a partir dos dados de
+      {{ cadastro().nome }}, e um novo Caso será aberto já vinculado a ele.
+    </p>
+    @if (erro()) {
+      <p class="mensagem erro" role="alert">{{ erro() }}</p>
+    }
+    <div class="linha fim">
+      <button type="button" [disabled]="ocupado()" (click)="fecharGanho()">Cancelar</button
+      ><button type="button" [disabled]="ocupado()" (click)="converter(false)">
+        Só marcar ganho
+      </button>
+      @if (opcoes().podeConverter) {
+        <button class="dourado" type="button" [disabled]="ocupado()" (click)="converter(true)">
+          {{ ocupado() ? 'Convertendo…' : 'Criar caso' }}
+        </button>
+      }
+    </div>
+  </dialog>
+</article>

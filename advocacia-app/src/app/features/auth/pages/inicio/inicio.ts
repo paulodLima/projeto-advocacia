@@ -3,6 +3,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CadastrosInicio, CadastrosApiService } from '../../../configuracoes/services/cadastros-api.service';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { AcessoService } from '../../../../core/auth/acesso.service';
+import { GRUPOS_MENU } from '../../../../core/navigation/menu.model';
 import { Icone } from '../../../../shared/components/icone/icone';
 import { PainelInicio } from '../../../../shared/components/painel-inicio/painel-inicio';
 
@@ -41,10 +43,12 @@ export class Inicio {
     { label: 'Leads em cadência', apoio: 'oportunidades em acompanhamento', icon: 'crm', destino: 'crm', cor: 'dourado' },
     { label: 'Casos em andamento', apoio: 'trabalho que ainda não virou processo', icon: 'folder-open', destino: 'casos', cor: 'verde' },
   ];
-  protected readonly atalhos = [
-    { label: 'Agenda', icon: 'calendar', destino: 'agenda' },
-    { label: 'Casos', icon: 'folder-open', destino: 'casos' },
-    { label: 'Contatos', icon: 'users', destino: 'contatos' },
-    { label: 'Documentos', icon: 'file', destino: 'documentos' },
-  ];
+  protected readonly acesso = inject(AcessoService);
+  protected readonly atalhos = computed(() => {
+    const selecionados = this.cadastros()?.atalhos ?? [];
+    return selecionados.flatMap(id => {
+      const pagina = GRUPOS_MENU.flatMap(g => g.itens).find(p => p.id === id);
+      return pagina && this.acesso.permite(id) ? [{ ...pagina, destino: id }] : [];
+    });
+  });
 }

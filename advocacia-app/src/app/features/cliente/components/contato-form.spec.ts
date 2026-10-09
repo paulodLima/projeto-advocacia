@@ -56,7 +56,7 @@ describe('Formulário de contatos', () => {
       new Event('submit', { bubbles: true, cancelable: true }),
     );
     const r = http.expectOne('/api/contatos');
-    expect(r.request.body.dados.documento).toBe('123.456.789-01');
+    expect(r.request.body.dados.documento).toBe('12345678901');
     expect(r.request.body.versao).toBeNull();
     r.flush(
       { detail: 'Já existe um contato com esse CPF/CNPJ.' },

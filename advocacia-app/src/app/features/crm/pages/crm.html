@@ -1,0 +1,192 @@
+<div class="contatos-ui crm-ui pilha">
+  <nav class="abas-crm" aria-label="Abas do CRM">
+    <button
+      type="button"
+      [class.ativa]="aba === 'leads'"
+      [attr.aria-pressed]="aba === 'leads'"
+      (click)="mudarAba('leads')"
+    >
+      Leads</button
+    ><button
+      type="button"
+      [class.ativa]="aba === 'sazonal'"
+      [attr.aria-pressed]="aba === 'sazonal'"
+      (click)="mudarAba('sazonal')"
+    >
+      Marketing Sazonal
+    </button>
+  </nav>
+  @if (erroOpcoes()) {
+    <p class="mensagem erro" role="alert">
+      {{ erroOpcoes() }} <button type="button" (click)="carregarOpcoes()">Tentar novamente</button>
+    </p>
+  }
+  @if (opcoes(); as o) {
+    @if (aba === 'sazonal') {
+      <app-marketing-sazonal [opcoes]="o" />
+    } @else if (editando(); as l) {
+      <div class="edicao-lead pilha">
+        <button type="button" class="voltar" (click)="editando.set(null)">‹ Cancelar</button>
+        <div class="titulo">
+          <app-icone nome="crm" />
+          <h2>Editar lead</h2>
+        </div>
+        <app-lead-form
+          [opcoes]="o"
+          [lead]="l"
+          (salvo)="salvo($event)"
+          (cancelar)="editando.set(null)"
+        />
+      </div>
+    } @else {
+      <header class="linha entre">
+        <div class="titulo">
+          <app-icone nome="crm" />
+          <h2>Leads</h2>
+          <span>captação e régua de retomada</span>
+        </div>
+        @if (o.podeEditar) {
+          <button type="button" class="dourado linha" (click)="abrirNovo()">
+            <app-icone nome="plus" />Novo lead
+          </button>
+        }
+      </header>
+      @if (resultado()) {
+        <div class="indicadores-crm">
+          @for (i of indicadores(); track i.nome) {
+            <div class="cartao indicador-crm" [class.alerta]="i.alerta">
+              <span class="icone-indicador"><app-icone [nome]="i.icon" /></span>
+              <div>
+                <strong>{{ i.valor }}</strong>
+                <h3>{{ i.nome }}</h3>
+                <p>{{ i.apoio }}</p>
+              </div>
+            </div>
+          }
+        </div>
+      }
+      <div class="cartao busca">
+        <app-icone nome="search" /><input
+          aria-label="Buscar lead"
+          [(ngModel)]="filtros.busca"
+          (ngModelChange)="filtrar()"
+          placeholder="Buscar lead…"
+          maxlength="150"
+        />
+      </div>
+      <div class="linha filtros-crm">
+        <select
+          aria-label="Filtrar por temperatura"
+          [(ngModel)]="filtros.temperatura"
+          (ngModelChange)="filtrar()"
+        >
+          <option value="">Todas temperaturas</option>
+          @for (t of temperaturas; track t.id) {
+            <option [value]="t.id">{{ t.nome }}</option>
+          }</select
+        ><select
+          aria-label="Filtrar por origem"
+          [(ngModel)]="filtros.origem"
+          (ngModelChange)="filtrar()"
+        >
+          <option value="">Todas as origens</option>
+          @for (o of resultado()?.origens || []; track o) {
+            <option>{{ o }}</option>
+          }
+        </select>
+        @for (s of status; track s.id) {
+          <button
+            type="button"
+            [class.ativo]="filtros.status === s.id"
+            [attr.aria-pressed]="filtros.status === s.id"
+            (click)="filtros.status = s.id; filtrar()"
+          >
+            {{ s.nome }}
+          </button>
+        }
+        <button
+          type="button"
+          [class.vencido]="filtros.atrasados"
+          [attr.aria-pressed]="filtros.atrasados"
+          (click)="filtros.atrasados = !filtros.atrasados; filtrar()"
+        >
+          <app-icone nome="bell" />Só atrasados
+        </button>
+      </div>
+      @if (carregando()) {
+        <p role="status" class="rotulo">Lendo os leads…</p>
+      }
+      @if (erro()) {
+        <p class="mensagem erro" role="alert">
+          {{ erro() }} <button type="button" (click)="carregar()">Tentar novamente</button>
+        </p>
+      }
+      @if (resultado(); as r) {
+        <p class="rotulo">{{ r.total }} lead(s)</p>
+        <div class="lista-leads">
+          @for (l of r.itens; track l.id) {
+            <app-lead-card
+              [lead]="l"
+              [opcoes]="o"
+              [destacado]="destaque === l.id"
+              (editar)="editando.set($event)"
+              (mudou)="mudou($event)"
+              (excluido)="carregar()"
+            />
+          }
+        </div>
+        @if (!r.itens.length && !carregando()) {
+          <div class="cartao vazio">
+            {{
+              filtros.busca || filtros.temperatura || filtros.origem || filtros.atrasados
+                ? 'Nenhum lead com esses filtros.'
+                : 'Nenhum lead cadastrado ainda.'
+            }}
+          </div>
+        }
+        @if (r.total > r.tamanho) {
+          <div class="linha fim">
+            <button
+              type="button"
+              [disabled]="carregando() || filtros.pagina === 0"
+              (click)="mudarPagina(-1)"
+            >
+              Anterior</button
+            ><span>Página {{ filtros.pagina + 1 }}</span
+            ><button
+              type="button"
+              [disabled]="carregando() || (filtros.pagina + 1) * r.tamanho >= r.total"
+              (click)="mudarPagina(1)"
+            >
+              Próxima
+            </button>
+          </div>
+        }
+      }
+    }
+    <dialog #novo class="novo-lead-dialog" (cancel)="fecharNovo($event)">
+      <header class="linha entre">
+        <div>
+          <h2>Novo lead</h2>
+          <p class="rotulo">quem procurou o escritório</p>
+        </div>
+        <button
+          type="button"
+          aria-label="Fechar novo lead"
+          [disabled]="ocupado()"
+          (click)="fecharNovo()"
+        >
+          <app-icone nome="close" />
+        </button>
+      </header>
+      @if (novoAberto()) {
+        <app-lead-form
+          [opcoes]="o"
+          (salvo)="salvo($event)"
+          (cancelar)="fecharNovo()"
+          (ocupadoChange)="ocupado.set($event)"
+        />
+      }
+    </dialog>
+  }
+</div>

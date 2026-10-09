@@ -1,3 +1,4 @@
+import { formatarNumero } from '../../../shared/directives/mascara.directive';
 import { Component, DestroyRef, ElementRef, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
@@ -25,6 +26,7 @@ import {
   styles: ':host{display:block;min-width:0}',
 })
 export class Contatos {
+  protected readonly mascarar = formatarNumero;
   private readonly api = inject(ContatosApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -213,7 +215,7 @@ export class Contatos {
     const d = c.dados;
     return [
       ...(d['tipo_pessoa'] === 'PJ' ? [['Nome fantasia', d['nome_fantasia']]] : []),
-      [d['tipo_pessoa'] === 'PJ' ? 'CNPJ' : 'CPF', d['documento']],
+      [d['tipo_pessoa'] === 'PJ' ? 'CNPJ' : 'CPF', this.mascarar(d['documento'], d['tipo_pessoa'] === 'PJ' ? 'cnpj' : 'cpf')],
       ...(d['tipo_pessoa'] === 'PF'
         ? [
             ['RG', [d['rg'], d['rg_orgao_emissor']].filter(Boolean).join(' ')],
@@ -225,10 +227,10 @@ export class Contatos {
         : []),
       [
         'Telefone',
-        d['telefone'] + (d['telefone'] && d['whatsapp'] === 'telefone' ? ' (WhatsApp)' : ''),
+        this.mascarar(d['telefone'], 'telefone') + (d['telefone'] && d['whatsapp'] === 'telefone' ? ' (WhatsApp)' : ''),
       ],
       ...(d['telefone2']
-        ? [['2º telefone', d['telefone2'] + (d['whatsapp'] === 'telefone2' ? ' (WhatsApp)' : '')]]
+        ? [['2º telefone', this.mascarar(d['telefone2'], 'telefone') + (d['whatsapp'] === 'telefone2' ? ' (WhatsApp)' : '')]]
         : []),
       ['E-mail', d['email']],
       ['Endereço', enderecoContato(d)],

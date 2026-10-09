@@ -1,3 +1,4 @@
+import { MascaraDirective } from '../../../shared/directives/mascara.directive';
 import { Component, DestroyRef, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -13,7 +14,7 @@ import { ContatosApiService } from '../services/contatos-api.service';
 
 @Component({
   selector: 'app-contato-form',
-  imports: [FormsModule],
+  imports: [FormsModule, MascaraDirective],
   templateUrl: './contato-form.html',
   styles: ':host{display:block;min-width:0}',
 })
@@ -85,30 +86,7 @@ export class ContatoForm {
   protected tipoPessoa(tipo: string) {
     this.form.dados['tipo_pessoa'] = tipo;
   }
-  protected documento(valor: string, pj = false) {
-    const n = valor.replace(/\D/g, '').slice(0, pj ? 14 : 11);
-    return pj
-      ? n
-          .replace(/^(\d{2})(\d)/, '$1.$2')
-          .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-          .replace(/\.(\d{3})(\d)/, '.$1/$2')
-          .replace(/(\d{4})(\d)/, '$1-$2')
-      : n
-          .replace(/^(\d{3})(\d)/, '$1.$2')
-          .replace(/\.(\d{3})(\d)/, '.$1.$2')
-          .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-  }
-  protected telefone(valor: string) {
-    return valor
-      .replace(/\D/g, '')
-      .slice(0, 11)
-      .replace(/^(\d{2})(\d)/, '($1) $2')
-      .replace(/(\d{4,5})(\d{4})$/, '$1-$2');
-  }
   protected mudar(campo: string, valor: string) {
-    if (campo === 'documento')
-      valor = this.documento(valor, this.form.dados['tipo_pessoa'] === 'PJ');
-    if (campo.startsWith('telefone')) valor = this.telefone(valor);
     if (campo === 'cep') {
       valor = valor
         .replace(/\D/g, '')

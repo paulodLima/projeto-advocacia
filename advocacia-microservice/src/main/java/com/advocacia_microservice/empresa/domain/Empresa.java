@@ -23,6 +23,7 @@ public record Empresa(UUID id, Map<String, String> dados) {
         var cnpj = normalizados.get("cnpj").replaceAll("[./\\-\\s]", "").toUpperCase(Locale.ROOT);
         if (cnpj.isBlank()) throw new IllegalArgumentException("CNPJ é obrigatório.");
         normalizados.put("cnpj", cnpj);
+        for (var campo : List.of("titular_cpf", "telefone", "whatsapp")) normalizados.put(campo, normalizados.getOrDefault(campo, "").replaceAll("\\D", ""));
         var email = normalizados.get("email").toLowerCase(Locale.ROOT);
         if (!email.isEmpty() && !email.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+")) throw new IllegalArgumentException("E-mail da empresa inválido.");
         normalizados.put("email", email);

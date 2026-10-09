@@ -58,6 +58,15 @@ public class ContatosService {
         var chave=nome.strip().toLowerCase(Locale.ROOT);var atuais=indicadores(empresa);var existente=atuais.stream().filter(i->i.nome().toLowerCase(Locale.ROOT).equals(chave)).findFirst();if(existente.isPresent()) return existente.get();
         if(atuais.size()>=100) throw new IllegalArgumentException("Limite de 100 indicadores por empresa.");
         var cores=List.of("#6A7662","#9A8271","#B0B796","#C9A66B","#8a8275","#7d8f6f");var i=new Indicador(UUID.randomUUID(),nome.strip(),cores.get(atuais.size()%cores.size()));
-        jdbc.update("INSERT INTO contato_indicador(id,empresa_id,nome,nome_chave,cor) VALUES (?,?,?,?,?)",i.id(),empresa,i.nome(),chave,i.cor());return i;
+        var etiquetas=jdbc.queryForList("SELECT id FROM cadastro_item WHERE empresa_id=? AND tipo='etiquetas' AND nome_chave=?",UUID.class,empresa,chave);
+        UUID etiqueta=etiquetas.isEmpty()?UUID.randomUUID():etiquetas.getFirst();
+        if(etiquetas.isEmpty()) {
+            jdbc.update("INSERT INTO cadastro_item(id,empresa_id,tipo,nome,nome_chave,ativo) VALUES (?,?,'etiquetas',?,?,true)",etiqueta,empresa,i.nome(),chave);
+            jdbc.update("INSERT INTO cadastro_campo(item_id,campo,valor) VALUES (?,'nome',?)",etiqueta,i.nome());
+            jdbc.update("INSERT INTO cadastro_campo(item_id,campo,valor) VALUES (?,'cor',?)",etiqueta,i.cor());
+        }
+        var cor=jdbc.queryForList("SELECT valor FROM cadastro_campo WHERE item_id=? AND campo='cor'",String.class,etiqueta).stream().findFirst().orElse(i.cor());
+        i=new Indicador(i.id(),i.nome(),cor);
+        jdbc.update("INSERT INTO contato_indicador(id,empresa_id,nome,nome_chave,cor,etiqueta_id) VALUES (?,?,?,?,?,?)",i.id(),empresa,i.nome(),chave,i.cor(),etiqueta);return i;
     }
 }

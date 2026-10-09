@@ -1,3 +1,4 @@
+import { MascaraDirective } from '../../../shared/directives/mascara.directive';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize, Observable } from 'rxjs';
@@ -7,7 +8,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { ConfiguracoesLocalService } from '../services/configuracoes-local.service';
 import { Icone } from '../../../shared/components/icone/icone';
 
-@Component({ selector: 'app-perfil-config', imports: [FormsModule, Icone], template: `
+@Component({ selector: 'app-perfil-config', imports: [FormsModule, Icone, MascaraDirective], template: `
   <div class="cfg-titulo"><app-icone nome="users" /><div><h2>Meu perfil</h2><p>seus dados e sua foto na intranet</p></div></div>
   <div class="cfg-card cfg-linha" style="padding:12px 16px;margin-bottom:20px">
     <div class="cfg-avatar" style="width:44px;height:44px;font-size:18px">@if (api.perfil()?.foto) { <img [src]="api.perfil()!.foto" alt="Sua foto" /> } @else { {{ iniciais }} }</div>
@@ -24,7 +25,7 @@ import { Icone } from '../../../shared/components/icone/icone';
       </div>
     </section>
     <form class="cfg-card cfg-pilha" (ngSubmit)="salvar()"><div><h3>Meus dados</h3><p>O que você escrever aqui aparece na sua ficha da equipe. É o mesmo registro — não há cópia a atualizar.</p></div>
-      <div class="cfg-grade"><label>Telefone<input name="telefone" [(ngModel)]="perfil.telefone" maxlength="30" [disabled]="!pronto() || salvando()" placeholder="(61) 90000-0000" type="tel" /></label>
+      <div class="cfg-grade"><label>Telefone<input name="telefone" appMascara="telefone" [(ngModel)]="perfil.telefone" maxlength="30" [disabled]="!pronto() || salvando()" placeholder="(61) 90000-0000" type="tel" /></label>
         <label>E-mail de contato<input name="email" [(ngModel)]="perfil.emailPessoal" type="email" maxlength="254" [disabled]="!pronto() || salvando()" placeholder="para fora do institucional" /></label>
         <label class="cfg-largo">Endereço<input name="endereco" [(ngModel)]="perfil.endereco" maxlength="500" [disabled]="!pronto() || salvando()" placeholder="Rua, número, complemento — cidade/UF" /></label></div>
       <div class="cfg-linha"><button class="cfg-primario" type="submit" [disabled]="!pronto() || salvando()">{{ salvando() ? 'Salvando…' : 'Salvar meus dados' }}</button></div>

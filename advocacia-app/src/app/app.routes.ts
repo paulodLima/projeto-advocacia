@@ -43,7 +43,8 @@ export const routes: Routes = [
         data: { modulo: 'parceiros' },
         loadChildren: () => import('./features/parceiros/parceiros.routes').then(m=>m.parceirosRoutes),
       },
-      ...ITENS_MENU.filter((item) => !['inicio', 'config', 'contatos', 'parceiros'].includes(item.id)).map(
+      { path: 'crm', title: 'CRM — Gestão Advocacia', data: { modulo: 'crm' }, loadComponent: () => import('./features/crm/pages/crm').then(m => m.Crm) },
+      ...ITENS_MENU.filter((item) => !['inicio', 'config', 'contatos', 'parceiros', 'crm'].includes(item.id)).map(
         (item) => ({
           path: item.id,
           title: item.label + ' — Gestão Advocacia',

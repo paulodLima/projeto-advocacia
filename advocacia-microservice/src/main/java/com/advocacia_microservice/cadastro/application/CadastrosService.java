@@ -12,23 +12,30 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service @Transactional(readOnly = true)
 public class CadastrosService {
-    public record Resposta(UUID empresaId, PapelEmpresa papel, Map<String, List<CadastroRegistro>> listas, List<CadastrosRepository.Rotina> rotinas, List<Sistema> sistemas) {}
-    public record Inicio(UUID empresaId, List<CadastrosRepository.Rotina> rotinas, List<Sistema> sistemas) {}
+    public record Resposta(UUID empresaId, PapelEmpresa papel, Map<String, List<CadastroRegistro>> listas, List<CadastrosRepository.Rotina> rotinas, List<Sistema> sistemas, List<String> atalhos) {}
+    public record Inicio(UUID empresaId, List<CadastrosRepository.Rotina> rotinas, List<Sistema> sistemas, List<String> atalhos) {}
     private final EmpresaService empresas;
     private final CadastrosRepository repository;
     public CadastrosService(EmpresaService empresas, CadastrosRepository repository) { this.empresas = empresas; this.repository = repository; }
     public Resposta buscar(UUID usuario) {
         var empresa = empresas.buscar(usuario); var listas = new HashMap<String, List<CadastroRegistro>>();
         CadastroRegistro.CAMPOS.keySet().forEach(tipo -> listas.put(tipo, new ArrayList<>()));
-        if (empresa.id() == null) return new Resposta(null, null, listas, List.of(), List.of());
+        if (empresa.id() == null) return new Resposta(null, null, listas, List.of(), List.of(), List.of());
         repository.listar(empresa.id()).forEach(item -> listas.get(item.tipo()).add(item));
-        return new Resposta(empresa.id(), empresa.papel(), listas, repository.rotinas(empresa.id()), repository.sistemas(empresa.id()));
+        return new Resposta(empresa.id(), empresa.papel(), listas, repository.rotinas(empresa.id()), repository.sistemas(empresa.id()), repository.atalhos(empresa.id()));
     }
     private UUID editar(UUID usuario) { var empresa = empresas.exigirMaster(usuario).empresaId(); repository.bloquear(empresa); return empresa; }
     public Inicio inicio(UUID usuario) {
         var empresa = empresas.buscar(usuario);
-        if (empresa.id() == null) return new Inicio(null, List.of(), List.of());
-        return new Inicio(empresa.id(), repository.rotinas(empresa.id()), repository.sistemasAtivos(empresa.id()));
+        if (empresa.id() == null) return new Inicio(null, List.of(), List.of(), List.of());
+        return new Inicio(empresa.id(), repository.rotinas(empresa.id()), repository.sistemasAtivos(empresa.id()), repository.atalhos(empresa.id()));
+    }
+    @Transactional public List<String> salvarAtalhos(UUID usuario, List<String> atalhos) {
+        UUID empresa = editar(usuario);
+        if (atalhos == null || atalhos.size() > 14 || new HashSet<>(atalhos).size() != atalhos.size()
+            || atalhos.stream().anyMatch(id -> id == null || !com.advocacia_microservice.equipe.domain.PermissoesEquipe.TODOS.contains(id) || Set.of("inicio", "config").contains(id)))
+            throw new IllegalArgumentException("Selecione páginas válidas, sem duplicações.");
+        repository.salvarAtalhos(empresa, atalhos); return List.copyOf(atalhos);
     }
     private CadastroRegistro exigir(UUID empresa, String tipo, UUID id) {
         return repository.listar(empresa).stream().filter(i -> i.id().equals(id) && i.tipo().equals(tipo)).findFirst().orElseThrow(() -> new RecursoNaoEncontradoException("Cadastro não encontrado na sua empresa."));

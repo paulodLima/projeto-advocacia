@@ -13,10 +13,11 @@ import { IdentidadeApiService } from '../../core/branding/identidade-api.service
 import { CONFIGURACOES, GRUPOS_MENU, INICIO, ITENS_MENU } from '../../core/navigation/menu.model';
 import { TemaService } from '../../core/theme/tema.service';
 import { Icone } from '../../shared/components/icone/icone';
+import { CrmNotificacoes } from '../../features/crm/components/crm-notificacoes';
 
 @Component({
   selector: 'app-authenticated-layout',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, FormsModule, Icone],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, FormsModule, Icone, CrmNotificacoes],
   templateUrl: './authenticated-layout.html',
   styleUrls: ['./authenticated-layout.scss', './menu-lateral.scss', './cabecalho.scss', './responsive.scss'],
 })
