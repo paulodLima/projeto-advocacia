@@ -1,0 +1,48 @@
+<section aria-labelledby="titulo-empresas">
+  <h2 id="titulo-empresas">Gerenciamento de empresas</h2>
+  <p>Controle o serviço contratado por cada escritório. Suspender ou encerrar bloqueia seus usuários e preserva os dados.</p>
+  @if (erro()) { <p role="alert">{{ erro() }}</p> }
+  @if (aviso()) { <p role="status">{{ aviso() }}</p> }
+  <form class="filtros" (ngSubmit)="carregar()">
+    <label>Nome ou CNPJ<input name="busca" [(ngModel)]="busca" maxlength="150"></label>
+    <label>Situação<select name="filtro" [(ngModel)]="filtro"><option value="">Todas</option><option value="ATIVA">Ativas</option><option value="SUSPENSA">Suspensas</option><option value="ENCERRADA">Contratos encerrados</option></select></label>
+    <button [disabled]="carregando() || salvando()">Buscar</button>
+  </form>
+  @if (carregando()) { <p role="status">Carregando empresas…</p> }
+  <div class="empresas">
+    @for (empresa of empresas(); track empresa.id) {
+      <article><h3>{{ empresa.nome }}</h3><p>{{ empresa.cnpj || 'CNPJ não informado' }}</p>
+        <p>{{ empresa.responsavel || 'Responsável não identificado' }} · {{ empresa.usuariosAtivos }} usuários ativos</p>
+        <p>{{ nomeSituacao(empresa.situacao) }} · Financeiro: {{ nomeSituacao(empresa.financeiro) }}</p>
+        <button type="button" (click)="abrir(empresa.id)" [disabled]="carregando() || salvando()" [attr.aria-label]="'Gerenciar ' + empresa.nome">Gerenciar</button></article>
+    } @empty { @if (!carregando()) { <p>Nenhuma empresa encontrada.</p> } }
+  </div>
+  <div class="paginacao"><button type="button" (click)="carregar(pagina - 1)" [disabled]="pagina === 0 || carregando() || salvando()">Anterior</button><span>Página {{ pagina + 1 }}</span><button type="button" (click)="carregar(pagina + 1)" [disabled]="empresas().length < 20 || carregando() || salvando()">Próxima</button></div>
+  @if (ficha(); as empresa) {
+    <section class="ficha" aria-labelledby="titulo-ficha">
+      <h2 id="titulo-ficha">{{ empresa.nome }}</h2>
+      <p>Responsável: {{ empresa.responsavel || 'Não identificado' }} · {{ empresa.emailResponsavel || 'Email não informado' }}</p>
+      <button type="button" (click)="abrir(empresa.id)" [disabled]="carregando() || salvando()">Recarregar ficha</button>
+      <form #contrato="ngForm" (ngSubmit)="salvar()">
+        <fieldset [disabled]="salvando() || carregando()">
+          <legend>Contrato e disponibilidade do serviço</legend>
+          <label>Situação do serviço<select name="situacao" [(ngModel)]="situacao" (ngModelChange)="confirmado = false"><option value="ATIVA">Ativa</option><option value="SUSPENSA">Suspensa</option><option value="ENCERRADA">Contrato encerrado</option></select></label>
+          <label>Situação financeira<select name="financeiro" [(ngModel)]="financeiro"><option value="NAO_INFORMADO">Não informado</option><option value="REGULAR">Regular</option><option value="INADIMPLENTE">Inadimplente</option></select></label>
+          <p>A situação financeira é registrada manualmente. Alterá-la não suspende o serviço automaticamente.</p>
+          <label>Início do contrato<input name="inicio" type="date" [(ngModel)]="inicio"></label>
+          <h3>Módulos liberados</h3><p>Início e Configurações mantêm o acesso básico à conta. A liberação não implementa módulos ainda em desenvolvimento.</p>
+          <div class="modulos">@for (modulo of empresa.modulos; track modulo.codigo) {
+            <label class="check"><input type="checkbox" [name]="'modulo-' + modulo.codigo" [(ngModel)]="modulos[modulo.codigo]" [disabled]="['inicio', 'config'].includes(modulo.codigo)">{{ modulo.nome }}</label>
+          }</div>
+          <label>Motivo da alteração<textarea name="motivo" [(ngModel)]="motivo" required maxlength="1000" rows="3"></textarea></label>
+          @if (situacao !== 'ATIVA') { <p class="impacto">Ao confirmar, o responsável e todos os funcionários terão o acesso bloqueado no próximo pedido ao servidor. Os dados serão preservados.</p> }
+          @if (situacao === 'ATIVA' && empresa.situacao !== 'ATIVA') { <p class="impacto">A reativação restaura apenas os usuários ativos e as permissões e módulos autorizados.</p> }
+          <label class="check"><input name="confirmado" type="checkbox" [(ngModel)]="confirmado">Confirmo as alterações e o efeito sobre o serviço desta empresa.</label>
+          <button [disabled]="contrato.invalid || !motivo.trim() || !confirmado">{{ salvando() ? 'Salvando…' : 'Salvar medidas administrativas' }}</button>
+        </fieldset>
+      </form>
+      <h3>Histórico administrativo</h3>
+      @for (evento of empresa.historico; track evento.id) { <article class="evento"><p>{{ evento.criadoEm | date:'dd/MM/yyyy HH:mm' }} · {{ evento.autor }}</p><strong>{{ nomeAcao(evento.acao) }}</strong><p>{{ nomeSituacao(evento.anterior) }} → {{ nomeSituacao(evento.atual) }}</p><p>{{ evento.motivo }}</p></article> } @empty { <p>Nenhuma medida registrada.</p> }
+    </section>
+  }
+</section>

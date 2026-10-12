@@ -2,13 +2,12 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { adminPlataformaGuard } from './core/guards/admin-plataforma.guard';
 import { moduloGuard } from './core/guards/modulo.guard';
+import { entradaGuard } from './core/guards/entrada.guard';
 import { ITENS_MENU } from './core/navigation/menu.model';
 
 export const routes: Routes = [
   {
-    path: 'administracao/empresas', title: 'Empresas — Administração da plataforma',
-    canActivate: [authGuard, adminPlataformaGuard],
-    loadComponent: () => import('./features/plataforma/admin-empresas').then((module) => module.AdminEmpresas),
+    path: 'administracao/empresas', redirectTo: 'administracao', pathMatch: 'full',
   },
   {
     path: 'administracao', title: 'Administração da plataforma — Gestão Advocacia',
@@ -31,6 +30,7 @@ export const routes: Routes = [
     children: [
       {
         path: 'inicio',
+        canActivate: [entradaGuard],
         title: 'Início — Gestão Advocacia',
         loadComponent: () =>
           import('./features/auth/pages/inicio/inicio').then((module) => module.Inicio),

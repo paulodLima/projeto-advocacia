@@ -28,4 +28,19 @@ article span { display: inline-block; font-size: 11px; color: #4f5a49; backgroun
 .empresas:hover { background: #414c3c; }
 [role=alert] { color: #b4442f; font-size: 13px; margin-bottom: 16px; }
 [role=status] { color: #7d6c5e; font-size: 13px; }
+form { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+label { display: grid; gap: 8px; font-size: 13px; flex: 1 1 240px; }
+input { font: inherit; width: 100%; box-sizing: border-box; padding: 12px; background: #fff; border: 1px solid #d8d0c7; border-radius: 10px; }
+input:focus-visible { outline: 2px solid #b8935a; outline-offset: 2px; }
+.primario { background: #4f5a49; color: white; padding: 13px 18px; }
+.nota { min-height: auto; margin: 18px 0 0; }
+.convites { margin-top: 32px; }
+.titulo-lista { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.titulo-lista h2 { margin: 0; }
+.lista-convites { display: grid; gap: 12px; }
+.convite { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; }
+.convite h3 { margin: 0 0 8px; font-size: 15px; font-weight: 500; }
+.convite p { min-height: auto; margin: 0 0 10px; overflow-wrap: anywhere; }
+.convite .validade { margin: 10px 0 0; font-size: 12px; }
+.acoes-convite { display: flex; gap: 8px; }
 @media (max-width: 600px) { .pagina-admin { padding: 12px; } header { align-items: flex-start; flex-direction: column; padding: 14px 16px; } .conta { width: 100%; justify-content: space-between; } main { padding: 24px 4px; } article { padding: 20px; } article p { min-height: 0; } }

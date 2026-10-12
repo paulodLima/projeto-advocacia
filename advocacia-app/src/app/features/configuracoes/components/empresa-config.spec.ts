@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { API_URL } from '../../../core/config/api-url.token';
 import { AuthService } from '../../../core/auth/auth.service';
 import { EmpresaConfig } from './empresa-config';
+import { provideRouter } from '@angular/router';
 
 describe('Empresa no servidor', () => {
   const url = '/api/empresas';
@@ -16,12 +17,13 @@ describe('Empresa no servidor', () => {
   beforeEach(() => {
     localStorage.setItem('configuracoes-front:empresa-teste', JSON.stringify({ versao: 1, empresa: { razao_social: 'Rascunho antigo' } }));
     TestBed.configureTestingModule({ imports: [EmpresaConfig], providers: [{ provide: IdentidadeApiService, useValue: { carregar: () => of({ empresaId: 'empresa-a', nome: 'Sociedade A', identidade: { imagens: {}, usos: {}, zoom: 1, posX: 50, posY: 50 } }) } }, provideHttpClient(), provideHttpClientTesting(), { provide: API_URL, useValue: '' }, { provide: AuthService, useValue: { usuario: signal({ id: 'empresa-teste', nome: 'Teste', email: 'teste@example.test' }) } }] });
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => { http.verify(); localStorage.removeItem('configuracoes-front:empresa-teste'); TestBed.resetTestingModule(); });
   async function abrir(papel: 'MASTER' | 'MEMBRO' | null, valores = dados) {
     const fixture = TestBed.createComponent(EmpresaConfig);
-    http.expectOne(url + '/minha').flush({ id: papel ? 'empresa-a' : null, papel, dados: valores });
+    http.expectOne(url + '/minha').flush({ id: papel ? 'empresa-a' : null, papel, dados: valores, podeCadastrar: papel === null });
     await fixture.whenStable();
     return fixture;
   }
@@ -67,10 +69,18 @@ describe('Empresa no servidor', () => {
     expect(fixture.nativeElement.querySelector('input[name=razao_social]').disabled).toBe(true);
     const retry = Array.from(fixture.nativeElement.querySelectorAll('button')).find((b: any) => b.textContent.includes('Tentar novamente')) as HTMLButtonElement;
     retry.click();
-    http.expectOne(url + '/minha').flush({ id: null, papel: null, dados: {} });
+    http.expectOne(url + '/minha').flush({ id: null, papel: null, dados: {}, podeCadastrar: true });
     await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('input[name=razao_social]').disabled).toBe(false);
     expect(fixture.nativeElement.querySelector('button[type=submit]').disabled).toBe(true);
+  });
+  it('não oferece criação a uma conta sem convite confirmado', async () => {
+    const fixture = TestBed.createComponent(EmpresaConfig);
+    http.expectOne(url + '/minha').flush({ id: null, papel: null, dados: {}, podeCadastrar: false });
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('button[type=submit]')).toBeNull();
+    fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true }));
+    http.expectNone(req => req.method === 'POST');
   });
 });
 

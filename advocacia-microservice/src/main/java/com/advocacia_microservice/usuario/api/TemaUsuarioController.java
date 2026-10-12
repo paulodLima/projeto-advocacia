@@ -1,4 +1,5 @@
 package com.advocacia_microservice.usuario.api;
+import com.advocacia_microservice.usuario.api.request.Alterar;
 
 import com.advocacia_microservice.usuario.application.TemaUsuarioService;
 import jakarta.validation.Valid;
@@ -9,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController @RequestMapping("/api/usuarios/me/tema")
 public class TemaUsuarioController {
-    public record Alterar(@NotBlank @Size(max=10) String tema) {}
+
     private final TemaUsuarioService service;
     public TemaUsuarioController(TemaUsuarioService service) { this.service=service; }
     @GetMapping public TemaUsuarioService.Preferencia buscar(Principal principal) { return service.buscar(UUID.fromString(principal.getName())); }

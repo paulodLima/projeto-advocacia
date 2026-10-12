@@ -27,6 +27,7 @@ export class AuthenticatedLayout {
   protected readonly meuPerfil = inject(MeuPerfilApiService);
   protected readonly minhaEmpresa = inject(EmpresaApiService);
   protected readonly acesso = inject(AcessoService);
+  protected readonly plataforma = inject(PlataformaService);
   private readonly identidadeApi = inject(IdentidadeApiService);
   constructor() {
     effect(onCleanup => {

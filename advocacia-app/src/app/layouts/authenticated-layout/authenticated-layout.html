@@ -42,7 +42,7 @@
     <header class="cabecalho">
       <button class="abrir-mobile botao-icone" type="button" aria-label="Abrir menu" [attr.aria-expanded]="menuMobile()" (click)="menuMobile.set(true)"><app-icone nome="menu" /></button>
       <h1>{{ titulo() }}</h1>
-      <a routerLink="/escritorios" (click)="fecharMenu()" aria-label="Selecionar escritório">{{ escritorios.ativo()?.nome || 'Selecionar escritório' }}</a>
+      <a routerLink="/config" [queryParams]="{ secao: 'empresa' }" (click)="fecharMenu()" aria-label="Dados do escritório">{{ minhaEmpresa.empresa()?.dados?.['nome_fantasia'] || minhaEmpresa.empresa()?.dados?.['razao_social'] || 'Cadastrar escritório' }}</a>
       <div class="busca">
         <label><app-icone nome="search" /><input aria-label="Buscar em tudo" placeholder="Buscar em tudo" [(ngModel)]="busca" autocomplete="off"></label>
         @if (busca.trim()) {

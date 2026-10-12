@@ -1,7 +1,7 @@
 package com.advocacia_microservice.cliente.application;
 
 import com.advocacia_microservice.cliente.domain.Contato;
-import com.advocacia_microservice.cliente.infrastructure.persistence.ContatoRepository;
+import com.advocacia_microservice.cliente.infrastructure.persistence.repository.ContatoRepository;
 import com.advocacia_microservice.equipe.application.EquipeService;
 import com.advocacia_microservice.equipe.domain.PerfilEquipe;
 import com.advocacia_microservice.empresa.domain.PapelEmpresa;

@@ -1,12 +1,12 @@
 package com.advocacia_microservice.parceiro.application;
 
 import com.advocacia_microservice.cliente.domain.Contato;
-import com.advocacia_microservice.cliente.infrastructure.persistence.ContatoRepository;
+import com.advocacia_microservice.cliente.infrastructure.persistence.repository.ContatoRepository;
 import com.advocacia_microservice.equipe.application.EquipeService;
 import com.advocacia_microservice.equipe.domain.PerfilEquipe;
 import com.advocacia_microservice.empresa.domain.PapelEmpresa;
 import com.advocacia_microservice.parceiro.domain.Parceiro;
-import com.advocacia_microservice.parceiro.infrastructure.persistence.ParceiroRepository;
+import com.advocacia_microservice.parceiro.infrastructure.persistence.repository.ParceiroRepository;
 import com.advocacia_microservice.shared.exception.ConflitoException;
 import java.util.*;
 import org.springframework.jdbc.core.JdbcTemplate;

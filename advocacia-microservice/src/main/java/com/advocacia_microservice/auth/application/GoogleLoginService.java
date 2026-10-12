@@ -1,4 +1,5 @@
 package com.advocacia_microservice.auth.application;
+import com.advocacia_microservice.usuario.infrastructure.persistence.repository.JpaUsuarioRepository;
 
 import com.advocacia_microservice.auth.infrastructure.persistence.entity.*;
 import com.advocacia_microservice.auth.infrastructure.persistence.repository.*;
@@ -15,12 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class GoogleLoginService {
     private final UsuarioRepository usuarios;
     private final GoogleIdentityRepository identities;
-    private final com.advocacia_microservice.equipe.application.EquipeService equipe;
+    private final CadastroAutorizadoService autorizacao;
 
-    public GoogleLoginService(JpaUsuarioRepository usuarios, GoogleIdentityRepository identities, com.advocacia_microservice.equipe.application.EquipeService equipe) {
+    public GoogleLoginService(UsuarioRepository usuarios, GoogleIdentityRepository identities, CadastroAutorizadoService autorizacao) {
         this.usuarios = usuarios;
         this.identities = identities;
-        this.equipe = equipe;
+        this.autorizacao = autorizacao;
     }
 
     @Transactional
@@ -30,11 +31,11 @@ public class GoogleLoginService {
         }
         var vinculo = identities.findBySubject(google.getSubject()).orElse(null);
         if (vinculo != null) {
-            var usuario = usuarios.findById(vinculo.usuarioId).map(item -> item.paraDominio())
+            var usuario = usuarios.buscarPorId(vinculo.usuarioId)
                     .filter(item -> item.status() == StatusUsuario.ATIVO).orElseThrow(this::negado);
             // O sub continua autenticando a conta, mas um convite exige o e-mail atual verificado.
             if (google.getEmail() != null && usuario.email().equals(google.getEmail().strip().toLowerCase(Locale.ROOT))) {
-                equipe.aceitarConvite(usuario);
+                autorizacao.aceitar(usuario);
             }
             return usuario;
         }
@@ -48,7 +49,10 @@ public class GoogleLoginService {
                 && email.endsWith("@" + hostedDomain.toLowerCase(Locale.ROOT));
         if (!email.endsWith("@gmail.com") && !workspace) throw negado();
         var usuario = usuarios.buscarPorEmail(email).orElse(null);
-        if (usuario == null) throw negado(); // Autenticação externa não provisiona acesso à plataforma.
+        if (usuario == null) {
+            if (!autorizacao.permitido(email)) throw negado();
+            return null; // Somente o handler inicia o cadastro pendente do convidado verificado.
+        }
         if (usuario.status() != StatusUsuario.ATIVO) throw negado();
         var existente = identities.findById(usuario.id()).orElse(null);
         if (existente != null && !existente.subject.equals(google.getSubject())) throw negado();
@@ -56,7 +60,7 @@ public class GoogleLoginService {
         identidade.usuarioId = usuario.id();
         identidade.subject = google.getSubject();
         identities.saveAndFlush(identidade);
-        equipe.aceitarConvite(usuario);
+        autorizacao.aceitar(usuario);
         return usuario;
     }
 

@@ -1,4 +1,6 @@
 package com.advocacia_microservice.plataforma;
+import com.advocacia_microservice.usuario.infrastructure.persistence.repository.JpaUsuarioRepository;
+import com.advocacia_microservice.usuario.infrastructure.persistence.entity.UsuarioEntity;
 
 import com.advocacia_microservice.plataforma.application.ProvisionarAdministradorService;
 import com.advocacia_microservice.plataforma.infrastructure.persistence.entity.*;

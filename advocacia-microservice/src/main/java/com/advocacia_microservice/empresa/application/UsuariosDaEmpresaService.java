@@ -1,4 +1,6 @@
 package com.advocacia_microservice.empresa.application;
+import com.advocacia_microservice.equipe.infrastructure.persistence.entity.MembroEquipeEntity;
+import com.advocacia_microservice.equipe.infrastructure.persistence.repository.MembroEquipeRepository;
 
 import com.advocacia_microservice.empresa.domain.*;
 import com.advocacia_microservice.usuario.application.*;
@@ -16,10 +18,10 @@ public class UsuariosDaEmpresaService {
     private final BuscarUsuarioUseCase buscar;
     private final AtualizarUsuarioUseCase atualizar;
     private final ExcluirUsuarioUseCase excluir;
-    private final com.advocacia_microservice.equipe.infrastructure.persistence.MembroEquipeRepository membros;
+    private final com.advocacia_microservice.equipe.infrastructure.persistence.repository.MembroEquipeRepository membros;
     public UsuariosDaEmpresaService(EmpresaService empresas, EmpresaRepository vinculos,
             CriarUsuarioUseCase criar, BuscarUsuarioUseCase buscar,
-            AtualizarUsuarioUseCase atualizar, ExcluirUsuarioUseCase excluir, com.advocacia_microservice.equipe.infrastructure.persistence.MembroEquipeRepository membros) {
+            AtualizarUsuarioUseCase atualizar, ExcluirUsuarioUseCase excluir, com.advocacia_microservice.equipe.infrastructure.persistence.repository.MembroEquipeRepository membros) {
         this.empresas = empresas; this.vinculos = vinculos; this.criar = criar;
         this.buscar = buscar; this.atualizar = atualizar; this.excluir = excluir;
         this.membros = membros;
@@ -29,7 +31,7 @@ public class UsuariosDaEmpresaService {
         var master = empresas.exigirMaster(solicitante);
         var usuario = criar.executar(nome, email);
         vinculos.vincular(new VinculoEmpresa(usuario.id(), master.empresaId(), PapelEmpresa.MEMBRO));
-        var membro = new com.advocacia_microservice.equipe.infrastructure.persistence.MembroEquipeEntity();
+        var membro = new com.advocacia_microservice.equipe.infrastructure.persistence.entity.MembroEquipeEntity();
         membro.usuarioId = usuario.id(); membros.saveAndFlush(membro);
         return usuario;
     }

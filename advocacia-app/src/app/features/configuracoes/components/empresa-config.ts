@@ -8,14 +8,16 @@ import { IdentidadeEmpresaService } from '../../../core/branding/identidade-empr
 import { FormsModule } from '@angular/forms';
 import { EMPRESA_SECOES } from '../models/referencia';
 import { ConfiguracoesLocalService } from '../services/configuracoes-local.service';
+import { RouterLink } from '@angular/router';
 
-@Component({ selector: 'app-empresa-config', imports: [FormsModule], template: `
+@Component({ selector: 'app-empresa-config', imports: [FormsModule, RouterLink], template: `
   <div class="cfg-dupla"><form class="cfg-principal cfg-pilha" #formEmpresa="ngForm" (ngSubmit)="salvar()">
     <div><h2>Empresa</h2><p>Os dados da sociedade. Recibo, fatura e demonstrativo importam tudo daqui — mudou aqui, muda em todos.</p></div>
     @if (carregando()) { <p role="status">Carregando sua empresa…</p> }
     @if (mensagem()) { <p class="cfg-info" [class.cfg-erro]="erro()" [attr.role]="erro() ? 'alert' : 'status'">{{ mensagem() }}</p> }
     @if (!pronto() && !carregando()) { <button type="button" (click)="carregar()">Tentar novamente</button> }
-    @if (pronto() && !registro()?.id) { <p class="cfg-info">Sua conta ainda não está vinculada a uma empresa. Ao cadastrar os dados, você será o usuário master desse escritório.</p> }
+    @if (pronto() && !registro()?.id) { <p class="cfg-info">{{ registro()?.podeCadastrar ? 'Seu convite foi confirmado. Cadastre o escritório para começar e convidar seus funcionários.' : 'Você precisa de um convite válido para cadastrar um escritório. Solicite ao administrador da plataforma ou fale com o responsável pela sua equipe.' }}</p> }
+    @if (registro()?.papel === 'MASTER') { <p class="cfg-info">Escritório cadastrado. <a routerLink="/config" [queryParams]="{ secao: 'equipe' }">Cadastre e convide os funcionários na seção Equipe</a>.</p> }
     @if (pronto() && registro()?.papel === 'MEMBRO') { <p class="cfg-info">Você pode consultar os dados da sua empresa. Para alterá-los, fale com o usuário master.</p> }
     @if (pronto() && faltam.length) { <p class="cfg-info">Falta preencher: {{ faltam.join(', ') }}. Sem isso o timbrado sai incompleto.</p> }
     @for (secao of secoes; track secao.titulo) {
@@ -95,7 +97,7 @@ export class EmpresaConfig {
   private arraste: { x: number; y: number; posX: number; posY: number } | null = null;
   protected get faltam() { return this.secoes.flatMap(s => s.campos).filter(c => c.obrigatorio && !this.empresa[c.k]?.trim()).map(c => c.r); }
   constructor() { this.store.aviso.set(''); this.carregar(); }
-  protected get podeEditar() { return this.pronto() && (!this.registro()?.id || this.registro()?.papel === 'MASTER'); }
+  protected get podeEditar() { return this.pronto() && (this.registro()?.podeCadastrar || this.registro()?.papel === 'MASTER'); }
   protected carregar() {
     this.carregando.set(true); this.mensagem.set('');
     this.api.carregar().pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.carregando.set(false))).subscribe({

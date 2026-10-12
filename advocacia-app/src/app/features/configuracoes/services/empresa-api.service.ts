@@ -8,6 +8,7 @@ export interface MinhaEmpresa {
   id: string | null;
   papel: 'MASTER' | 'MEMBRO' | null;
   dados: Record<string, string>;
+  podeCadastrar: boolean;
 }
 export const LIMITES_EMPRESA: Record<string, number> = {
   razao_social: 150, nome_fantasia: 150, cnpj: 32, oab_sociedade: 50, inscricao_municipal: 50,

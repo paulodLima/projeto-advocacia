@@ -78,7 +78,7 @@ export class Login {
     this.erroAviso.set(true);
     this.carregando.set(true);
     this.auth.validarCodigo(desafioId, this.codigo).pipe(finalize(() => this.carregando.set(false))).subscribe({
-      next: () => { void this.router.navigateByUrl('/inicio'); },
+      next: (resposta) => { void this.router.navigateByUrl('cadastroPendente' in resposta ? '/cadastro' : '/inicio'); },
       error: (erro) => this.aviso.set(erro.error?.detail || 'Não foi possível validar o código. Tente novamente.'),
     });
   }

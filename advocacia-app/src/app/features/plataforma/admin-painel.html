@@ -1,0 +1,42 @@
+<div class="pagina-admin">
+  <header>
+    <a class="marca" routerLink="/administracao">Gestão Advocacia <span>Administração da plataforma</span></a>
+    <div class="conta"><span>{{ auth.usuario()?.nome }}</span><button type="button" (click)="sair()" [disabled]="saindo()">Sair</button></div>
+  </header>
+  <main>
+    <p class="contexto">PLATAFORMA</p>
+    <nav aria-label="Administração"><button type="button" (click)="aba.set('convites')" [attr.aria-pressed]="aba() === 'convites'">Convites</button> <button type="button" (click)="aba.set('empresas')" [attr.aria-pressed]="aba() === 'empresas'">Empresas e contratos</button></nav>
+    @if (aba() === 'empresas') { <app-gestao-empresas /> } @else {
+    <h1>Convide o responsável pelo escritório</h1>
+    <p class="introducao">Após confirmar o email, o convidado completa seu cadastro, cadastra o escritório e gerencia sua equipe.</p>
+    @if (erro()) { <p role="alert">{{ erro() }}</p> }
+    @if (aviso()) { <p role="status">{{ aviso() }}</p> }
+    <article>
+      <h2>Primeiro convite</h2>
+      <form #form="ngForm" (ngSubmit)="enviar()">
+        <label for="nome">Nome do responsável<input id="nome" name="nome" [(ngModel)]="nome" required maxlength="150" pattern=".*\S.*" autocomplete="name" [disabled]="enviando()"></label>
+        <label for="email">Email do responsável<input id="email" name="email" [(ngModel)]="email" type="email" required email maxlength="254" autocomplete="email" [disabled]="enviando()"></label>
+        <button type="submit" class="primario" [disabled]="form.invalid || enviando()">{{ enviando() ? 'Enviando…' : 'Enviar convite' }}</button>
+      </form>
+      <p class="nota">Convite pessoal, válido por sete dias. O responsável gerencia apenas o próprio escritório.</p>
+    </article>
+    <section class="convites" aria-labelledby="titulo-convites">
+      <div class="titulo-lista"><h2 id="titulo-convites">Convites enviados</h2><button type="button" (click)="carregar()" [disabled]="carregando()">Atualizar</button></div>
+      @if (carregando()) { <p role="status">Carregando convites…</p> }
+      <div class="lista-convites">
+        @for (convite of convites(); track convite.id) {
+          <article class="convite">
+            <div><h3>{{ convite.nome }}</h3><p>{{ convite.email }}</p><span>{{ situacao(convite.status) }}</span>
+              @if (editavel(convite)) { <p class="validade">Válido até {{ convite.expiraEm | date:'dd/MM/yyyy HH:mm' }}</p> }
+            </div>
+            @if (editavel(convite)) {
+              <div class="acoes-convite"><button type="button" (click)="reenviar(convite)" [disabled]="!!operando()" [attr.aria-label]="'Reenviar convite para ' + convite.email">Reenviar</button>
+                <button type="button" (click)="cancelar(convite)" [disabled]="!!operando()" [attr.aria-label]="'Cancelar convite para ' + convite.email">Cancelar</button></div>
+            }
+          </article>
+        } @empty { @if (!carregando()) { <p>Nenhum convite enviado.</p> } }
+      </div>
+    </section>
+    }
+  </main>
+</div>

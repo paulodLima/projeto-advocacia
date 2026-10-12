@@ -1,4 +1,5 @@
 package com.advocacia_microservice.usuario.infrastructure.persistence.repository;
+import com.advocacia_microservice.usuario.infrastructure.persistence.entity.UsuarioEntity;
 
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -1,4 +1,6 @@
 package com.advocacia_microservice.auth;
+import com.advocacia_microservice.usuario.infrastructure.persistence.repository.JpaUsuarioRepository;
+import com.advocacia_microservice.usuario.infrastructure.persistence.entity.UsuarioEntity;
 
 import com.advocacia_microservice.auth.application.GoogleLoginService;
 import com.advocacia_microservice.auth.infrastructure.persistence.entity.*;

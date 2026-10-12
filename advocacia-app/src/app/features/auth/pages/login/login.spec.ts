@@ -16,6 +16,15 @@ describe('Login', () => {
     provedores: vi.fn(() => of({ google: false })),
   };
 
+  it('encaminha o email convidado e verificado ao cadastro pendente', async () => {
+    auth.validarCodigo.mockReturnValue(of({ cadastroPendente: true }));
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const fixture = TestBed.createComponent(Login);
+    const componente = fixture.componentInstance as any;
+    componente.desafio.set('desafio'); componente.codigo = '123456'; componente.validarCodigo();
+    expect(navigate).toHaveBeenCalledWith('/cadastro');
+  });
+
   beforeEach(async () => {
     auth.solicitarCodigo.mockClear();
     await TestBed.configureTestingModule({

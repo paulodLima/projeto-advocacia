@@ -21,13 +21,4 @@ public class EmpresasController {
     }
     @GetMapping("/{id}")
     public EmpresaResponse ficha(@PathVariable UUID id) { return EmpresaResponse.de(empresas.buscar(id)); }
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public EmpresaResponse criar(@Valid @RequestBody SalvarEmpresaRequest dados, Principal autor) {
-        return EmpresaResponse.de(empresas.criar(dados.paraComando(), UUID.fromString(autor.getName())));
-    }
-    @PutMapping("/{id}")
-    public EmpresaResponse editar(@PathVariable UUID id, @Valid @RequestBody SalvarEmpresaRequest dados, Principal autor) {
-        return EmpresaResponse.de(empresas.editar(id, dados.paraComando(), UUID.fromString(autor.getName())));
-    }
 }

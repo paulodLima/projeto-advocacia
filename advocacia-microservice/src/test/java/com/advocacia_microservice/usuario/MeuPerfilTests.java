@@ -1,9 +1,13 @@
 package com.advocacia_microservice.usuario;
+import com.advocacia_microservice.usuario.infrastructure.persistence.repository.JpaUsuarioPerfilRepository;
+import com.advocacia_microservice.usuario.infrastructure.persistence.repository.JpaUsuarioRepository;
+import com.advocacia_microservice.usuario.infrastructure.persistence.entity.UsuarioEntity;
 
 import com.advocacia_microservice.usuario.application.CriarUsuarioUseCase;
 import com.advocacia_microservice.usuario.domain.StatusUsuario;
 import com.advocacia_microservice.usuario.domain.Usuario;
-import com.advocacia_microservice.usuario.infrastructure.persistence.*;
+import com.advocacia_microservice.usuario.infrastructure.persistence.entity.*;
+import com.advocacia_microservice.usuario.infrastructure.persistence.repository.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.util.Base64;

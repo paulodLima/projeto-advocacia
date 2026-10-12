@@ -2,7 +2,7 @@ package com.advocacia_microservice.usuario.application;
 
 import com.advocacia_microservice.shared.exception.RecursoNaoEncontradoException;
 import com.advocacia_microservice.usuario.domain.*;
-import com.advocacia_microservice.usuario.infrastructure.persistence.JpaUsuarioRepository;
+import com.advocacia_microservice.usuario.infrastructure.persistence.repository.JpaUsuarioRepository;
 import java.io.ByteArrayInputStream;
 import java.util.Base64;
 import java.util.Locale;

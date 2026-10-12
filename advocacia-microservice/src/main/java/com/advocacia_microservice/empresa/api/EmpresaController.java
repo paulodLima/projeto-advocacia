@@ -1,4 +1,5 @@
 package com.advocacia_microservice.empresa.api;
+import com.advocacia_microservice.empresa.api.request.EmpresaRequest;
 
 import com.advocacia_microservice.empresa.application.EmpresaService;
 import jakarta.validation.Valid;
@@ -11,8 +12,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/empresas")
 public class EmpresaController {
-    public record EmpresaRequest(@NotNull @Size(max = 24)
-            Map<@NotNull @Size(max = 40) String, @NotNull @Size(max = 1000) String> dados) {}
+
     private final EmpresaService service;
     public EmpresaController(EmpresaService service) { this.service = service; }
     @GetMapping("/minha")

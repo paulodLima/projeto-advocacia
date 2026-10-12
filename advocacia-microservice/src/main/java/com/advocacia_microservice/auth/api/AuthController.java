@@ -1,6 +1,9 @@
 package com.advocacia_microservice.auth.api;
+import com.advocacia_microservice.auth.api.request.CadastroRequest;
 
 import com.advocacia_microservice.auth.application.CodigoAcessoService;
+import com.advocacia_microservice.auth.application.ConcluirCadastroService;
+import com.advocacia_microservice.auth.application.CadastroAutorizadoService;
 import com.advocacia_microservice.auth.api.request.*;
 import com.advocacia_microservice.auth.api.response.*;
 import com.advocacia_microservice.auth.infrastructure.SessaoCadastro;
@@ -25,15 +28,15 @@ public class AuthController {
     private final ContaAutenticadaService contas;
     private final LoginRateLimiter limite;
     private final ConcluirCadastroService cadastro;
-    private final com.advocacia_microservice.equipe.application.EquipeService equipe;
-    public record CadastroRequest(@NotBlank @Size(max = 150) String nome) {}
+    private final CadastroAutorizadoService autorizacao;
 
-    public AuthController(CodigoAcessoService codigos, JpaUsuarioRepository usuarios, LoginRateLimiter limite, ConcluirCadastroService cadastro, com.advocacia_microservice.equipe.application.EquipeService equipe) {
+
+    public AuthController(CodigoAcessoService codigos, ContaAutenticadaService contas, LoginRateLimiter limite, ConcluirCadastroService cadastro, CadastroAutorizadoService autorizacao) {
         this.codigos = codigos;
         this.contas = contas;
         this.limite = limite;
         this.cadastro = cadastro;
-        this.equipe = equipe;
+        this.autorizacao = autorizacao;
     }
 
     @GetMapping("/csrf")
@@ -66,23 +69,32 @@ public class AuthController {
         }
         var conta = contas.buscarPorEmail(emailValidado.get());
         if (conta.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(java.util.Map.of("detail", "Acesso não liberado. Solicite seu cadastro ao administrador da plataforma."));
+            autorizacao.exigirConvite(emailValidado.get());
+            SessaoCadastro.iniciar(request, response, emailValidado.get(), null);
+            return ResponseEntity.ok(java.util.Map.of("cadastroPendente", true));
         }
-        equipe.aceitarConvite(conta.get());
+        if (conta.get().status() != com.advocacia_microservice.usuario.domain.StatusUsuario.ATIVO) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(java.util.Map.of("detail", "Sua conta está desativada. Fale com o responsável pelo escritório."));
+        }
+        autorizacao.aceitar(conta.get());
         SessaoCadastro.autenticar(request, response, conta.get());
         return ResponseEntity.ok(UsuarioResponse.de(conta.get()));
     }
 
     @GetMapping("/cadastro")
     public java.util.Map<String, String> cadastroPendente(HttpServletRequest request) {
-        throw new org.springframework.security.access.AccessDeniedException("Cadastro disponível somente por convite autorizado.");
+        var pendente = SessaoCadastro.obter(request);
+        autorizacao.exigirConvite(pendente.email());
+        return java.util.Map.of("email", pendente.email());
     }
 
     @PostMapping("/cadastro")
     public UsuarioResponse cadastrar(@Valid @RequestBody CadastroRequest body,
                                      HttpServletRequest request, HttpServletResponse response) {
-        throw new org.springframework.security.access.AccessDeniedException("Cadastro disponível somente por convite autorizado.");
+        var usuario = cadastro.executar(body.nome(), SessaoCadastro.obter(request));
+        SessaoCadastro.autenticar(request, response, usuario);
+        return UsuarioResponse.de(usuario);
     }
 
     @GetMapping("/me")

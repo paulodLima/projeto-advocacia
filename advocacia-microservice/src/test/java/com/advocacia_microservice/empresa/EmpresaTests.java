@@ -1,10 +1,13 @@
 package com.advocacia_microservice.empresa;
+import com.advocacia_microservice.usuario.infrastructure.persistence.repository.JpaUsuarioRepository;
+import com.advocacia_microservice.usuario.infrastructure.persistence.entity.UsuarioEntity;
 
 import com.advocacia_microservice.empresa.application.EmpresaService;
 import com.advocacia_microservice.empresa.domain.*;
 import com.advocacia_microservice.usuario.application.CriarUsuarioUseCase;
 import com.advocacia_microservice.usuario.domain.*;
-import com.advocacia_microservice.usuario.infrastructure.persistence.*;
+import com.advocacia_microservice.usuario.infrastructure.persistence.entity.*;
+import com.advocacia_microservice.usuario.infrastructure.persistence.repository.*;
 import java.util.*;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +31,7 @@ class EmpresaTests {
     @Autowired EmpresaRepository repository;
     @Autowired JpaUsuarioRepository usuarios;
     @Autowired WebApplicationContext context;
+    @Autowired com.advocacia_microservice.plataforma.domain.repository.ConviteInicialRepository convites;
     MockMvc mvc;
     Usuario master;
     String cnpj;
@@ -36,7 +40,12 @@ class EmpresaTests {
         master = novoUsuario(); cnpj = UUID.randomUUID().toString().replace("-", "").substring(0, 14);
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
     }
-    Usuario novoUsuario() { return criarUsuario.executar("Teste", UUID.randomUUID() + "@example.test"); }
+    Usuario novoUsuario() {
+        var usuario = criarUsuario.executar("Teste", UUID.randomUUID() + "@example.test");
+        convites.salvar(new com.advocacia_microservice.plataforma.domain.ConviteInicial(UUID.randomUUID(), usuario.nome(), usuario.email(), "ACEITO",
+                java.time.Instant.now().plusSeconds(86400), usuario.id(), null));
+        return usuario;
+    }
     Map<String, String> dados(String cnpj) {
         return Map.of("razao_social", " Sociedade Teste ", "cnpj", cnpj, "endereco", "Rua A", "cidade", "São Paulo", "uf", "sp", "email", "CONTATO@example.test");
     }

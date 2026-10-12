@@ -1,4 +1,7 @@
 package com.advocacia_microservice.cadastro;
+import com.advocacia_microservice.empresa.EmpresaTestSupport;
+import com.advocacia_microservice.plataforma.domain.repository.ConviteInicialRepository;
+import com.advocacia_microservice.usuario.domain.UsuarioRepository;
 
 import com.advocacia_microservice.cadastro.application.CadastrosService;
 import com.advocacia_microservice.cadastro.domain.*;
@@ -23,6 +26,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest @ActiveProfiles("test")
 class CadastrosTests {
+    @org.springframework.beans.factory.annotation.Autowired ConviteInicialRepository convitesIniciais;
+    @org.springframework.beans.factory.annotation.Autowired UsuarioRepository contasFixture;
     @Autowired CadastrosService service;
     @Autowired EmpresaService empresas;
     @Autowired EmpresaRepository empresaRepository;
@@ -34,7 +39,7 @@ class CadastrosTests {
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
     }
     Usuario usuario() { return criarUsuario.executar("Teste", UUID.randomUUID() + "@example.test"); }
-    UUID empresa(Usuario usuario) { return empresas.criar(usuario.id(), Map.of("razao_social", "Teste", "cnpj", UUID.randomUUID().toString().substring(0, 14), "endereco", "Rua A", "cidade", "Brasília")).id(); }
+    UUID empresa(Usuario usuario) { return EmpresaTestSupport.criar(empresas, convitesIniciais, contasFixture, usuario.id(), Map.of("razao_social", "Teste", "cnpj", UUID.randomUUID().toString().substring(0, 14), "endereco", "Rua A", "cidade", "Brasília")).id(); }
     CadastroRegistro criar(String tipo, Map<String, String> campos) { return service.salvar(master.id(), tipo, null, campos, true); }
     Sistema sistema(UUID id, String nome, String url) { return new Sistema(id, nome, url, true, "link", "#e4dbd2", ""); }
 

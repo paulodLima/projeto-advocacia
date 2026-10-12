@@ -24,8 +24,8 @@ export class AuthService {
   }
 
   validarCodigo(desafioId: string, codigo: string) {
-    return this.http.post<Usuario>(this.url + '/validar', { desafioId, codigo })
-      .pipe(tap((usuario) => this.usuario.set(usuario)));
+    return this.http.post<Usuario | { cadastroPendente: true }>(this.url + '/validar', { desafioId, codigo })
+      .pipe(tap((resposta) => this.usuario.set('cadastroPendente' in resposta ? null : resposta)));
   }
 
   cadastroPendente() {

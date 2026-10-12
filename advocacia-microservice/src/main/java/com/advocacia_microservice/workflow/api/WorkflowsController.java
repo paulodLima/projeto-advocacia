@@ -1,4 +1,6 @@
 package com.advocacia_microservice.workflow.api;
+import com.advocacia_microservice.workflow.api.request.Criar;
+import com.advocacia_microservice.workflow.api.request.Salvar;
 import com.advocacia_microservice.workflow.application.WorkflowsService;
 import com.advocacia_microservice.workflow.application.WorkflowsService.Etapa;
 import jakarta.validation.Valid;
@@ -10,8 +12,8 @@ import org.springframework.http.HttpStatus;
 
 @RestController @RequestMapping("/api/config/workflows")
 public class WorkflowsController {
-    public record Criar(@NotBlank @Size(max=150) String nome) {}
-    public record Salvar(@NotBlank @Size(max=150) String nome,@NotNull @Min(0) @Max(365) Integer buffer,@NotNull @Min(0) Integer versao,@NotNull @Size(max=100) List<@NotNull UUID> gatilhos,@NotNull @Size(max=100) List<@NotNull Etapa> etapas) {}
+
+
     private final WorkflowsService service;
     public WorkflowsController(WorkflowsService service){this.service=service;}
     @GetMapping public WorkflowsService.Dados buscar(Principal p){return service.buscar(UUID.fromString(p.getName()));}

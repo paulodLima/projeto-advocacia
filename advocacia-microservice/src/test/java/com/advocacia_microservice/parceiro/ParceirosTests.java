@@ -1,4 +1,7 @@
 package com.advocacia_microservice.parceiro;
+import com.advocacia_microservice.empresa.EmpresaTestSupport;
+import com.advocacia_microservice.plataforma.domain.repository.ConviteInicialRepository;
+import com.advocacia_microservice.usuario.domain.UsuarioRepository;
 
 import com.advocacia_microservice.parceiro.application.ParceirosService;
 import com.advocacia_microservice.parceiro.domain.Parceiro;
@@ -26,6 +29,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest @ActiveProfiles("test")
 class ParceirosTests {
+    @org.springframework.beans.factory.annotation.Autowired ConviteInicialRepository convitesIniciais;
+    @org.springframework.beans.factory.annotation.Autowired UsuarioRepository contasFixture;
     @Autowired ParceirosService service;
     @Autowired ContatosService contatos;
     @Autowired EmpresaService empresas;
@@ -35,7 +40,7 @@ class ParceirosTests {
     @Autowired WebApplicationContext context;
     Usuario master; UUID empresa; MockMvc mvc;
     Usuario usuario() { return usuarios.executar("Teste", UUID.randomUUID()+"@example.test"); }
-    UUID empresa(Usuario u) { return empresas.criar(u.id(), Map.of("razao_social","Teste","cnpj",UUID.randomUUID().toString().substring(0,14),"endereco","Rua A","cidade","Brasília")).id(); }
+    UUID empresa(Usuario u) { return EmpresaTestSupport.criar(empresas, convitesIniciais, contasFixture, u.id(), Map.of("razao_social","Teste","cnpj",UUID.randomUUID().toString().substring(0,14),"endereco","Rua A","cidade","Brasília")).id(); }
     @BeforeEach void preparar() { master=usuario(); empresa=empresa(master); mvc=MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build(); }
     ParceirosService.Formulario formulario(String nome) { return new ParceirosService.Formulario(null,Map.of("nome",nome,"tipo_pessoa","PF"),List.of(),List.of()); }
     ParceirosService.Formulario de(Parceiro p) { return new ParceirosService.Formulario(p.versao(),p.dados(),p.socios(),p.areasAtuacao()); }

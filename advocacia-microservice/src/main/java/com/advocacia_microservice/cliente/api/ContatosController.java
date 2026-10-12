@@ -1,4 +1,5 @@
 package com.advocacia_microservice.cliente.api;
+import com.advocacia_microservice.cliente.api.request.NovoIndicador;
 
 import com.advocacia_microservice.cliente.application.ContatosService;
 import com.advocacia_microservice.cliente.domain.Contato;
@@ -19,6 +20,6 @@ public class ContatosController {
     @PostMapping public ResponseEntity<Contato> criar(Principal p,@RequestBody ContatosService.Formulario f) {return resposta(service.salvar(usuario(p),null,f),HttpStatus.CREATED);}
     @PutMapping("/{id}") public ResponseEntity<Contato> editar(Principal p,@PathVariable UUID id,@RequestBody ContatosService.Formulario f) {return resposta(service.salvar(usuario(p),id,f),HttpStatus.OK);}
     @DeleteMapping("/{id}") public ResponseEntity<Void> excluir(Principal p,@PathVariable UUID id,@RequestParam int versao) {service.excluir(usuario(p),id,versao);return resposta(null,HttpStatus.NO_CONTENT);}
-    public record NovoIndicador(String nome) {}
+
     @PostMapping("/indicadores") public ResponseEntity<ContatosService.Indicador> indicador(Principal p,@RequestBody NovoIndicador f) {return resposta(service.criarIndicador(usuario(p),f.nome()),HttpStatus.CREATED);}
 }

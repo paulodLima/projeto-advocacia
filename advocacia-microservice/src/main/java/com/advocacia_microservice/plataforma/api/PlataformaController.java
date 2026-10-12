@@ -17,6 +17,6 @@ public class PlataformaController {
     @GetMapping("/admin/painel")
     public Map<String, String> painel() {
         return Map.of("titulo", "Administração da plataforma",
-                "proximaEntrega", "Cadastro de empresas");
+                "proximaEntrega", "Convite inicial do responsável pelo escritório");
     }
 }

@@ -1,4 +1,7 @@
 package com.advocacia_microservice.documento;
+import com.advocacia_microservice.empresa.EmpresaTestSupport;
+import com.advocacia_microservice.plataforma.domain.repository.ConviteInicialRepository;
+import com.advocacia_microservice.usuario.domain.UsuarioRepository;
 import com.advocacia_microservice.documento.application.DocumentosConfigService;
 import com.advocacia_microservice.documento.domain.PapelTimbrado;
 import com.advocacia_microservice.empresa.application.EmpresaService;
@@ -21,6 +24,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest @ActiveProfiles("test")
 class DocumentosConfigTests {
+    @org.springframework.beans.factory.annotation.Autowired ConviteInicialRepository convitesIniciais;
+    @org.springframework.beans.factory.annotation.Autowired UsuarioRepository contasFixture;
     @Autowired DocumentosConfigService service;
     @Autowired EmpresaService empresas;
     @Autowired EmpresaRepository repository;
@@ -28,7 +33,7 @@ class DocumentosConfigTests {
     @Autowired WebApplicationContext context;
     Usuario master; UUID empresa; MockMvc mvc;
     Usuario novo() { return criar.executar("Teste", UUID.randomUUID()+"@example.test"); }
-    UUID empresa(Usuario user) { return empresas.criar(user.id(), Map.of("razao_social","Teste","cnpj",UUID.randomUUID().toString().substring(0,14),"endereco","Rua A","cidade","Brasília")).id(); }
+    UUID empresa(Usuario user) { return EmpresaTestSupport.criar(empresas, convitesIniciais, contasFixture, user.id(), Map.of("razao_social","Teste","cnpj",UUID.randomUUID().toString().substring(0,14),"endereco","Rua A","cidade","Brasília")).id(); }
     @BeforeEach void preparar() { master=novo(); empresa=empresa(master); mvc=MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build(); }
     @Test void salvaPapelEModelosSeparadamentePreservandoCamposVariaveisETextosVazios() throws Exception {
         var papel = new PapelTimbrado("","","direita",true,false,true,false);

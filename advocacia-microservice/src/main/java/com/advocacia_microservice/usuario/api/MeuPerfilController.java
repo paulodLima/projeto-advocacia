@@ -1,4 +1,6 @@
 package com.advocacia_microservice.usuario.api;
+import com.advocacia_microservice.usuario.api.request.DadosRequest;
+import com.advocacia_microservice.usuario.api.request.FotoRequest;
 
 import com.advocacia_microservice.usuario.application.MeuPerfilService;
 import com.advocacia_microservice.usuario.domain.UsuarioPerfil;
@@ -11,11 +13,8 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/usuarios/me/perfil")
 public class MeuPerfilController {
-    public record DadosRequest(
-            @NotNull @Size(max = 30) String telefone,
-            @NotNull @Email @Size(max = 254) String emailPessoal,
-            @NotNull @Size(max = 500) String endereco) {}
-    public record FotoRequest(@NotNull @Size(max = 700_000) String foto) {}
+
+
     private final MeuPerfilService service;
     public MeuPerfilController(MeuPerfilService service) { this.service = service; }
 

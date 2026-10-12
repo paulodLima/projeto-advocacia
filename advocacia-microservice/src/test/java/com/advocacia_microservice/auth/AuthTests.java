@@ -1,4 +1,6 @@
 package com.advocacia_microservice.auth;
+import com.advocacia_microservice.usuario.infrastructure.persistence.repository.JpaUsuarioRepository;
+import com.advocacia_microservice.usuario.infrastructure.persistence.entity.UsuarioEntity;
 
 import com.advocacia_microservice.auth.application.CodigoAcessoService;
 import com.advocacia_microservice.auth.infrastructure.EmailCodigoSender;
@@ -115,18 +117,19 @@ class AuthTests {
     @Test
     void novoEmailNaoObtémAcessoNemCadastroPublico() throws Exception {
         mvc.perform(post("/api/auth/cadastro").with(csrf()).contentType("application/json")
-            .content("{\"nome\":\"Sem validação\"}")).andExpect(status().isForbidden());
+            .content("{\"nome\":\"Sem validação\"}")).andExpect(status().isUnauthorized());
         var desafio = service.solicitar("teste@example.com");
-        var codigo = codigoEnviado();
+        verifyNoInteractions(sender);
+        var codigo = "000000";
         mvc.perform(post("/api/auth/validar").with(csrf()).contentType("application/json")
             .content("{\"desafioId\":\"" + desafio + "\",\"codigo\":\"" + codigo + "\"}"))
-            .andExpect(status().isForbidden());
+            .andExpect(status().isUnauthorized());
         assertEquals(0, usuarios.count());
         mvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized());
-        mvc.perform(get("/api/auth/cadastro")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/auth/cadastro")).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/auth/cadastro").with(csrf()).contentType("application/json")
             .content("{\"nome\":\"  Novo usuário  \",\"email\":\"outro@example.com\"}"))
-            .andExpect(status().isForbidden());
+            .andExpect(status().isUnauthorized());
         assertTrue(service.validar(desafio, codigo).isEmpty());
         assertEquals(0, usuarios.count());
     }
@@ -137,7 +140,7 @@ class AuthTests {
         session.setAttribute("CADASTRO_VALIDADO", new com.advocacia_microservice.auth.infrastructure.SessaoCadastro.Pendente(
             "novo@example.com", null, Instant.now().minusSeconds(1)));
         mvc.perform(post("/api/auth/cadastro").session(session).with(csrf()).contentType("application/json")
-            .content("{\"nome\":\"Novo\"}")).andExpect(status().isForbidden());
+            .content("{\"nome\":\"Novo\"}")).andExpect(status().isUnauthorized());
         assertEquals(0, usuarios.count());
     }
 }

@@ -9,4 +9,6 @@ public interface EmpresaRepository {
     boolean existeOutroCnpj(String cnpj, UUID id);
     Optional<VinculoEmpresa> vinculo(UUID usuarioId);
     void vincular(VinculoEmpresa vinculo);
+    boolean estaAtiva(UUID empresaId);
+    boolean temConviteEquipePendente(String email);
 }

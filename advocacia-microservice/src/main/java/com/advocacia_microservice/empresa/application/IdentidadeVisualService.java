@@ -1,9 +1,12 @@
 package com.advocacia_microservice.empresa.application;
+import com.advocacia_microservice.empresa.infrastructure.persistence.entity.IdentidadeVisualEntity;
+import com.advocacia_microservice.empresa.infrastructure.persistence.repository.JpaIdentidadeVisualRepository;
 
 import com.advocacia_microservice.empresa.domain.*;
-import com.advocacia_microservice.empresa.infrastructure.persistence.*;
+import com.advocacia_microservice.empresa.infrastructure.persistence.entity.*;
+import com.advocacia_microservice.empresa.infrastructure.persistence.repository.*;
 import com.advocacia_microservice.shared.exception.RecursoNaoEncontradoException;
-import com.advocacia_microservice.usuario.infrastructure.persistence.JpaUsuarioRepository;
+import com.advocacia_microservice.usuario.infrastructure.persistence.repository.JpaUsuarioRepository;
 import java.util.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

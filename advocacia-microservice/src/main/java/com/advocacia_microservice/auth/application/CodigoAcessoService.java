@@ -21,14 +21,16 @@ public class CodigoAcessoService {
     private final CodigoAcessoRepository codigos;
     private final EmailCodigoSender sender;
     private final PasswordEncoder encoder;
+    private final CadastroAutorizadoService autorizacao;
     private final SecureRandom random = new SecureRandom();
 
     public CodigoAcessoService(UsuarioRepository usuarios, CodigoAcessoRepository codigos,
-                               EmailCodigoSender sender, PasswordEncoder encoder) {
+                               EmailCodigoSender sender, PasswordEncoder encoder, CadastroAutorizadoService autorizacao) {
         this.usuarios = usuarios;
         this.codigos = codigos;
         this.sender = sender;
         this.encoder = encoder;
+        this.autorizacao = autorizacao;
     }
 
     @Transactional
@@ -37,8 +39,8 @@ public class CodigoAcessoService {
         email = email.strip().toLowerCase(Locale.ROOT);
         var usuario = usuarios.buscarPorEmail(email)
                 .orElse(null);
-        // Contas inativas continuam bloqueadas; emails novos podem validar para cadastro.
-        if (usuario != null && usuario.status() != StatusUsuario.ATIVO) {
+        // Email novo só recebe código quando existe convite autorizado e vigente.
+        if ((usuario == null && !autorizacao.permitido(email)) || (usuario != null && usuario.status() != StatusUsuario.ATIVO)) {
             return UUID.randomUUID();
         }
         var codigo = codigos.bloquearPorEmail(email).orElseGet(CodigoAcessoEntity::new);

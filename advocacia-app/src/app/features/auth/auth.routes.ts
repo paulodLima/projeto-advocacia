@@ -4,8 +4,8 @@ import { Routes } from '@angular/router';
 export const authRoutes: Routes = [
   {
     path: 'cadastro',
-    pathMatch: 'full',
-    redirectTo: 'login',
+    title: 'Complete seu cadastro — Gestão Advocacia',
+    loadComponent: () => import('./pages/cadastro/cadastro').then((module) => module.Cadastro),
   },
   {
     path: 'login',

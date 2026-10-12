@@ -2,7 +2,7 @@ package com.advocacia_microservice.usuario;
 
 import com.advocacia_microservice.usuario.application.*;
 import com.advocacia_microservice.usuario.domain.Usuario;
-import com.advocacia_microservice.usuario.infrastructure.persistence.JpaUsuarioRepository;
+import com.advocacia_microservice.usuario.infrastructure.persistence.repository.JpaUsuarioRepository;
 import com.advocacia_microservice.shared.exception.RecursoNaoEncontradoException;
 import java.util.*;
 import org.junit.jupiter.api.*;

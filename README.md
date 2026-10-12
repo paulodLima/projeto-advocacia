@@ -2,18 +2,38 @@
 
 Projeto com backend Spring Boot (Java 21), frontend Angular com SSR e PostgreSQL 17.
 
+## Gestão administrativa dos contratantes
+
+Em `/administracao`, a aba **Empresas e contratos** permite localizar escritórios,
+consultar responsável/usuários ativos, suspender ou reativar o serviço, encerrar
+contratos, registrar a situação financeira manualmente e controlar módulos.
+As medidas exigem motivo e confirmação e ficam no histórico administrativo.
+Suspensão e encerramento preservam dados e revogam acesso no próximo pedido à API,
+inclusive em sessões abertas. A reativação preserva usuários inativos e permissões
+revogadas. Financeiro não gera cobrança ou suspensão automática.
+
+Decisões, limites, API e validações: [Gestão de empresas e contratos](docs/gestao-empresas-contratos.md).
+
 ## Fundação white label
 
-Após autenticar, o usuário sem escritório ativo é direcionado para
-`/escritorios`, onde pode selecionar um vínculo existente. A criação pública de empresas está bloqueada.
-Contas existentes não recebem vínculos
-automaticamente. A seleção é validada no backend e pode ser trocada pelo cabeçalho.
+O administrador da plataforma entra em `/administracao` e envia o primeiro
+convite ao responsável pelo escritório, com nome e email. O convite tem validade
+de sete dias e pode ser reenviado ou cancelado antes do cadastro do escritório.
+Após confirmar o email por código ou Google, o convidado completa seu cadastro
+em `/cadastro`, cadastra o escritório em Configurações → Empresa e administra
+os funcionários em Configurações → Equipe. O responsável recebe o perfil MASTER
+somente no próprio escritório; não recebe administração da plataforma.
 
-As operações globais de criação, alteração e exclusão em `/api/usuarios` estão
-bloqueadas nesta etapa. A consulta da própria conta permanece disponível.
-A administração de membros por escritório e a matriz completa de permissões
-ainda estão em desenvolvimento. Consulte as decisões, APIs e pendências em
-[Fundação white label](docs/white-label-fundacao.md).
+Emails novos sem convite não criam contas nem escritórios. Funcionários recebem
+convites do responsável e ficam vinculados à empresa que os convidou. O backend
+determina a empresa pelo vínculo autenticado, sem aceitar IDs enviados pelo cliente
+como autorização. O modelo atual recebido da developer aceita um escritório por
+conta; vínculos antigos são preservados na migração.
+
+O cadastro direto e a edição de funcionários em `/api/usuarios` exigem MASTER
+e vínculo na mesma empresa. O antigo cadastro administrativo de empresas foi
+retirado; a consulta administrativa dos registros existentes permanece disponível.
+Consulte [o fluxo de convites e as validações](docs/fluxo-convite-inicial.md).
 
 A estrutura do backend, os perfis de ambiente e o CRUD de usuário estão documentados no [README do backend](advocacia-microservice/README.md).
 

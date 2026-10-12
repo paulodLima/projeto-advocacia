@@ -1,4 +1,5 @@
 import { provideHttpClient } from '@angular/common/http';
+import { provideRouter } from '@angular/router';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -13,6 +14,7 @@ describe('Formulário da identidade visual', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({ imports: [EmpresaConfig], providers: [provideHttpClient(), provideHttpClientTesting(),
       { provide: API_URL, useValue: '' }, { provide: AuthService, useValue: { usuario: signal({ id: 'marca-teste' }) } }] });
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => { http.verify(); TestBed.resetTestingModule(); });

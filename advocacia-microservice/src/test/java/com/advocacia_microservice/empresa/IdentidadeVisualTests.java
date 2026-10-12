@@ -1,4 +1,7 @@
 package com.advocacia_microservice.empresa;
+import com.advocacia_microservice.empresa.EmpresaTestSupport;
+import com.advocacia_microservice.plataforma.domain.repository.ConviteInicialRepository;
+import com.advocacia_microservice.usuario.domain.UsuarioRepository;
 
 import com.advocacia_microservice.empresa.application.*;
 import com.advocacia_microservice.empresa.domain.*;
@@ -23,6 +26,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest @ActiveProfiles("test")
 class IdentidadeVisualTests {
+    @org.springframework.beans.factory.annotation.Autowired ConviteInicialRepository convitesIniciais;
+    @org.springframework.beans.factory.annotation.Autowired UsuarioRepository contasFixture;
     @Autowired EmpresaService empresas;
     @Autowired EmpresaRepository repository;
     @Autowired IdentidadeVisualService service;
@@ -33,7 +38,7 @@ class IdentidadeVisualTests {
     UUID empresa;
     @BeforeEach void preparar() {
         master = novo();
-        empresa = empresas.criar(master.id(), Map.of("razao_social", "Escritório Teste", "cnpj", UUID.randomUUID().toString().substring(0, 14), "endereco", "Rua A", "cidade", "São Paulo")).id();
+        empresa = EmpresaTestSupport.criar(empresas, convitesIniciais, contasFixture, master.id(), Map.of("razao_social", "Escritório Teste", "cnpj", UUID.randomUUID().toString().substring(0, 14), "endereco", "Rua A", "cidade", "São Paulo")).id();
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
     }
     Usuario novo() { return criarUsuario.executar("Teste", UUID.randomUUID() + "@example.test"); }
@@ -64,7 +69,7 @@ class IdentidadeVisualTests {
             .andExpect(status().isOk()).andExpect(jsonPath("$.empresaId").value(empresa.toString()));
         mvc.perform(put("/api/empresas/minha/identidade").with(user(membro.id().toString())).with(csrf()).contentType("application/json").content(body(imagem(2))))
             .andExpect(status().isForbidden());
-        var outro = novo(); empresas.criar(outro.id(), Map.of("razao_social", "Outro", "cnpj", UUID.randomUUID().toString().substring(0, 14), "endereco", "Rua B", "cidade", "São Paulo"));
+        var outro = novo(); EmpresaTestSupport.criar(empresas, convitesIniciais, contasFixture, outro.id(), Map.of("razao_social", "Outro", "cnpj", UUID.randomUUID().toString().substring(0, 14), "endereco", "Rua B", "cidade", "São Paulo"));
         assertTrue(service.buscar(outro.id()).identidade().imagens().isEmpty());
     }
     @Test void exigeAutenticacaoCsrfEVinculoEConsultaPublicaInexistenteRetorna404() throws Exception {

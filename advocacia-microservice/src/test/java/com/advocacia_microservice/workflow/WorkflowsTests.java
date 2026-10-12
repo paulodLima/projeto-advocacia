@@ -1,4 +1,7 @@
 package com.advocacia_microservice.workflow;
+import com.advocacia_microservice.empresa.EmpresaTestSupport;
+import com.advocacia_microservice.plataforma.domain.repository.ConviteInicialRepository;
+import com.advocacia_microservice.usuario.domain.UsuarioRepository;
 
 import com.advocacia_microservice.workflow.application.WorkflowsService;
 import com.advocacia_microservice.workflow.application.WorkflowsService.Etapa;
@@ -25,6 +28,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest @ActiveProfiles("test")
 class WorkflowsTests {
+    @org.springframework.beans.factory.annotation.Autowired ConviteInicialRepository convitesIniciais;
+    @org.springframework.beans.factory.annotation.Autowired UsuarioRepository contasFixture;
     @Autowired WorkflowsService service;
     @Autowired CadastrosService cadastros;
     @Autowired EmpresaService empresas;
@@ -34,7 +39,7 @@ class WorkflowsTests {
     @Autowired WebApplicationContext context;
     Usuario master; UUID empresa, fase, tarefa; MockMvc mvc;
     Usuario usuario() { return criarUsuario.executar("Teste", UUID.randomUUID()+"@example.test"); }
-    UUID empresa(Usuario u) { return empresas.criar(u.id(), Map.of("razao_social","Teste","cnpj",UUID.randomUUID().toString().substring(0,14),"endereco","Rua A","cidade","Brasília")).id(); }
+    UUID empresa(Usuario u) { return EmpresaTestSupport.criar(empresas, convitesIniciais, contasFixture, u.id(), Map.of("razao_social","Teste","cnpj",UUID.randomUUID().toString().substring(0,14),"endereco","Rua A","cidade","Brasília")).id(); }
     @BeforeEach void preparar() {
         master=usuario(); empresa=empresa(master);
         fase=cadastros.salvar(master.id(),"fases",null,Map.of("nome","Inicial"),true).id();

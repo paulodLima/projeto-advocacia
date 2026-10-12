@@ -1,52 +1,70 @@
 import { Component, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
-import { PlataformaService } from '../../core/plataforma/plataforma.service';
+import { ConviteInicial, PlataformaService } from '../../core/plataforma/plataforma.service';
+import { GestaoEmpresas } from './gestao-empresas';
 
 @Component({
   selector: 'app-admin-painel',
-  imports: [RouterLink],
-  template: `
-    <div class="pagina-admin">
-      <header>
-        <a class="marca" routerLink="/administracao">Gestão Advocacia <span>Administração da plataforma</span></a>
-        <div class="conta"><span>{{ auth.usuario()?.nome }}</span>
-          <button type="button" (click)="sair()" [disabled]="saindo()">Sair</button></div>
-      </header>
-      <main>
-        <p class="contexto">PLATAFORMA</p>
-        <h1>Administração da plataforma</h1>
-        <p class="introducao">Controle o acesso das empresas e dos seus usuários.</p>
-        @if (erro()) { <p role="alert">{{ erro() }}</p> }
-        @if (carregando()) { <p role="status">Carregando administração…</p> }
-        @if (pronto()) {
-          <div class="modulos">
-            <article><h2>Empresas</h2><p>Cadastre empresas e acompanhe sua situação de acesso.</p><a class="empresas" routerLink="/administracao/empresas">Gerenciar empresas</a></article>
-            <article><h2>Funcionalidades</h2><p>Defina os módulos disponíveis para cada empresa.</p><span>Em preparação</span></article>
-            <article><h2>Usuários</h2><p>Cadastre usuários e gerencie seus vínculos com as empresas.</p><span>Em preparação</span></article>
-          </div>
-          <a class="empresas" routerLink="/escritorios">Acessar minhas empresas</a>
-        }
-      </main>
-    </div>
-  `,
+  imports: [RouterLink, FormsModule, DatePipe, GestaoEmpresas],
+  templateUrl: './admin-painel.html',
   styleUrl: './admin-painel.scss',
 })
 export class AdminPainel {
+  protected readonly aba = signal<'convites' | 'empresas'>('convites');
   protected readonly auth = inject(AuthService);
   private readonly plataforma = inject(PlataformaService);
   private readonly router = inject(Router);
-  protected readonly carregando = signal(true);
-  protected readonly pronto = signal(false);
+  protected readonly convites = signal<ConviteInicial[]>([]);
+  protected readonly carregando = signal(false);
+  protected readonly enviando = signal(false);
+  protected readonly operando = signal<string | null>(null);
   protected readonly saindo = signal(false);
   protected readonly erro = signal('');
-  constructor() {
-    this.plataforma.carregarPainel().pipe(finalize(() => this.carregando.set(false))).subscribe({
-      next: () => this.pronto.set(true),
-      error: () => this.erro.set('Não foi possível acessar a administração. Entre novamente ou confira sua autorização.'),
+  protected readonly aviso = signal('');
+  protected nome = '';
+  protected email = '';
+  constructor() { this.carregar(); }
+  protected carregar() {
+    this.carregando.set(true);
+    this.plataforma.listarConvites().pipe(finalize(() => this.carregando.set(false))).subscribe({
+      next: convites => this.convites.set(convites),
+      error: erro => this.falha(erro, 'Não foi possível carregar os convites.'),
     });
   }
+  protected enviar() {
+    if (this.enviando()) return;
+    this.erro.set(''); this.aviso.set(''); this.enviando.set(true);
+    this.plataforma.convidarResponsavel(this.nome.trim(), this.email.trim()).pipe(finalize(() => this.enviando.set(false))).subscribe({
+      next: convite => { this.receber(convite); this.nome = ''; this.email = ''; this.aviso.set('Convite enviado. O responsável poderá completar o cadastro e cadastrar seu escritório.'); },
+      error: erro => this.falha(erro, 'Não foi possível enviar o convite.'),
+    });
+  }
+  protected editavel(convite: ConviteInicial) { return ['PENDENTE', 'ACEITO', 'EXPIRADO'].includes(convite.status); }
+  protected reenviar(convite: ConviteInicial) {
+    if (this.operando()) return;
+    this.erro.set(''); this.aviso.set(''); this.operando.set(convite.id);
+    this.plataforma.reenviarConvite(convite.id).pipe(finalize(() => this.operando.set(null))).subscribe({
+      next: atualizado => { this.receber(atualizado); this.aviso.set('Convite reenviado. Validade renovada por sete dias.'); },
+      error: erro => this.falha(erro, 'Não foi possível reenviar o convite.'),
+    });
+  }
+  protected cancelar(convite: ConviteInicial) {
+    if (this.operando()) return;
+    this.erro.set(''); this.aviso.set(''); this.operando.set(convite.id);
+    this.plataforma.cancelarConvite(convite.id).pipe(finalize(() => this.operando.set(null))).subscribe({
+      next: () => { this.receber({ ...convite, status: 'CANCELADO' }); this.aviso.set('Convite cancelado. Ele não permite cadastrar um escritório.'); },
+      error: erro => this.falha(erro, 'Não foi possível cancelar o convite.'),
+    });
+  }
+  protected situacao(status: string) {
+    return ({ PENDENTE: 'Aguardando primeiro acesso', ACEITO: 'Aguardando cadastro do escritório', CONCLUIDO: 'Escritório cadastrado', EXPIRADO: 'Expirado', CANCELADO: 'Cancelado' } as Record<string, string>)[status] || status;
+  }
+  private receber(convite: ConviteInicial) { this.convites.update(lista => [convite, ...lista.filter(item => item.id !== convite.id)]); }
+  private falha(erro: { error?: { detail?: string; erros?: string[] } }, padrao: string) { this.erro.set(erro.error?.detail || erro.error?.erros?.join(' · ') || padrao); }
   protected sair() {
     if (this.saindo()) return;
     this.saindo.set(true);

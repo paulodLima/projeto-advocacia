@@ -1,4 +1,7 @@
 package com.advocacia_microservice.cliente;
+import com.advocacia_microservice.empresa.EmpresaTestSupport;
+import com.advocacia_microservice.plataforma.domain.repository.ConviteInicialRepository;
+import com.advocacia_microservice.usuario.domain.UsuarioRepository;
 
 import com.advocacia_microservice.cliente.application.ContatosService;
 import com.advocacia_microservice.cliente.application.ContatosService.Formulario;
@@ -26,11 +29,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest @ActiveProfiles("test")
 class ContatosTests {
+    @org.springframework.beans.factory.annotation.Autowired ConviteInicialRepository convitesIniciais;
+    @org.springframework.beans.factory.annotation.Autowired UsuarioRepository contasFixture;
     @Autowired ContatosService service;@Autowired EmpresaService empresas;@Autowired EmpresaRepository vinculos;
     @Autowired CriarUsuarioUseCase usuarios;@Autowired JdbcTemplate jdbc;@Autowired WebApplicationContext context;
     Usuario master;UUID empresa;MockMvc mvc;
     Usuario usuario(){return usuarios.executar("Teste",UUID.randomUUID()+"@example.test");}
-    UUID empresa(Usuario u){return empresas.criar(u.id(),Map.of("razao_social","Teste","cnpj",UUID.randomUUID().toString().substring(0,14),"endereco","Rua A","cidade","Brasília")).id();}
+    UUID empresa(Usuario u){return EmpresaTestSupport.criar(empresas, convitesIniciais, contasFixture, u.id(),Map.of("razao_social","Teste","cnpj",UUID.randomUUID().toString().substring(0,14),"endereco","Rua A","cidade","Brasília")).id();}
     @BeforeEach void preparar(){master=usuario();empresa=empresa(master);mvc=MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();}
     Formulario formulario(String nome,String tipo,Integer versao){return new Formulario(versao,Map.of("nome",nome,"tipo",tipo,"tipo_pessoa","PF","whatsapp","nenhum","carteira","casa"),List.of(),List.of());}
     Formulario alterar(Formulario f,String campo,String valor){var d=new HashMap<>(f.dados());d.put(campo,valor);return new Formulario(f.versao(),d,f.representantes(),f.indicadores());}

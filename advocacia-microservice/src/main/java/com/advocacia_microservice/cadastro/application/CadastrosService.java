@@ -12,8 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service @Transactional(readOnly = true)
 public class CadastrosService {
-    public record Resposta(UUID empresaId, PapelEmpresa papel, Map<String, List<CadastroRegistro>> listas, List<CadastrosRepository.Rotina> rotinas, List<Sistema> sistemas) {}
-    public record Inicio(UUID empresaId, List<CadastrosRepository.Rotina> rotinas, List<Sistema> sistemas) {}
+    public record Resposta(UUID empresaId, PapelEmpresa papel, Map<String, List<CadastroRegistro>> listas, List<Rotina> rotinas, List<Sistema> sistemas) {}
+    public record Inicio(UUID empresaId, List<Rotina> rotinas, List<Sistema> sistemas) {}
     private final EmpresaService empresas;
     private final CadastrosRepository repository;
     public CadastrosService(EmpresaService empresas, CadastrosRepository repository) { this.empresas = empresas; this.repository = repository; }
@@ -52,7 +52,7 @@ public class CadastrosService {
         repository.excluir(empresa, id);
     }
     @Transactional
-    public CadastrosRepository.Rotina criarRotina(UUID usuario, String nome, String periodo) {
+    public Rotina criarRotina(UUID usuario, String nome, String periodo) {
         UUID empresa = editar(usuario);
         if (nome == null || nome.isBlank() || nome.strip().length() > 150 || periodo == null || !Set.of("diaria", "semanal", "mensal", "anual").contains(periodo)) throw new IllegalArgumentException("Informe uma rotina de até 150 caracteres e um período válido.");
         return repository.criarRotina(empresa, nome.strip(), periodo);

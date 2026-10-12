@@ -1,7 +1,7 @@
 package com.advocacia_microservice.usuario.application;
 
 import com.advocacia_microservice.shared.exception.RecursoNaoEncontradoException;
-import com.advocacia_microservice.usuario.infrastructure.persistence.JpaUsuarioRepository;
+import com.advocacia_microservice.usuario.infrastructure.persistence.repository.JpaUsuarioRepository;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;

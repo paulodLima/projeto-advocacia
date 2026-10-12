@@ -1,4 +1,7 @@
 package com.advocacia_microservice.cofre;
+import com.advocacia_microservice.empresa.EmpresaTestSupport;
+import com.advocacia_microservice.plataforma.domain.repository.ConviteInicialRepository;
+import com.advocacia_microservice.usuario.domain.UsuarioRepository;
 import com.advocacia_microservice.cofre.application.*;
 import com.advocacia_microservice.cofre.application.CofreService.Formulario;
 import com.advocacia_microservice.empresa.application.EmpresaService;
@@ -24,11 +27,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest @ActiveProfiles("test")
 class CofreTests {
+    @org.springframework.beans.factory.annotation.Autowired ConviteInicialRepository convitesIniciais;
+    @org.springframework.beans.factory.annotation.Autowired UsuarioRepository contasFixture;
     @Autowired CofreService service;@Autowired CofreCrypto crypto;@Autowired JdbcTemplate jdbc;
     @Autowired EmpresaService empresas;@Autowired EmpresaRepository empresaRepository;@Autowired CriarUsuarioUseCase criarUsuario;@Autowired WebApplicationContext context;
     Usuario master;UUID empresa;MockMvc mvc;
     Usuario usuario() {return criarUsuario.executar("Teste",UUID.randomUUID()+"@example.test");}
-    UUID empresa(Usuario u) {return empresas.criar(u.id(),Map.of("razao_social","Teste","cnpj",UUID.randomUUID().toString().substring(0,14),"endereco","Rua A","cidade","Brasília")).id();}
+    UUID empresa(Usuario u) {return EmpresaTestSupport.criar(empresas, convitesIniciais, contasFixture, u.id(),Map.of("razao_social","Teste","cnpj",UUID.randomUUID().toString().substring(0,14),"endereco","Rua A","cidade","Brasília")).id();}
     Formulario form(String senha,boolean admin,Integer versao) {return new Formulario("PJe","https://example.test","login-teste",senha,"Descrição","Observação",admin,versao);}
     @BeforeEach void preparar(){master=usuario();empresa=empresa(master);mvc=MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();}
     @Test void persisteCriptografadoSemSenhaNaListagemEPreservaSenhaAoEditar() throws Exception {

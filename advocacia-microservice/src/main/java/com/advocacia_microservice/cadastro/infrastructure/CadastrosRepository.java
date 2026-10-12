@@ -7,7 +7,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class CadastrosRepository {
-    public record Rotina(UUID id, String nome, String periodo) {}
     private final JdbcTemplate jdbc;
     public CadastrosRepository(JdbcTemplate jdbc) { this.jdbc = jdbc; }
     public void bloquear(UUID empresa) { jdbc.queryForObject("SELECT id FROM empresa WHERE id = ? FOR UPDATE", UUID.class, empresa); }

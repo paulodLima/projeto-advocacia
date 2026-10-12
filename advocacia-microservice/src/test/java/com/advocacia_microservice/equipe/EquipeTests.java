@@ -1,4 +1,8 @@
 package com.advocacia_microservice.equipe;
+import com.advocacia_microservice.empresa.EmpresaTestSupport;
+import com.advocacia_microservice.plataforma.domain.repository.ConviteInicialRepository;
+import com.advocacia_microservice.usuario.domain.UsuarioRepository;
+import com.advocacia_microservice.equipe.infrastructure.persistence.repository.ConviteEquipeRepository;
 
 import com.advocacia_microservice.auth.application.*;
 import com.advocacia_microservice.auth.infrastructure.EmailCodigoSender;
@@ -6,12 +10,13 @@ import com.advocacia_microservice.equipe.api.ConfiguracaoMembroRequest;
 import com.advocacia_microservice.equipe.application.EquipeService;
 import com.advocacia_microservice.equipe.domain.*;
 import com.advocacia_microservice.equipe.infrastructure.EmailConviteSender;
-import com.advocacia_microservice.equipe.infrastructure.persistence.*;
+import com.advocacia_microservice.equipe.infrastructure.persistence.entity.*;
+import com.advocacia_microservice.equipe.infrastructure.persistence.repository.*;
 import com.advocacia_microservice.empresa.application.EmpresaService;
 import com.advocacia_microservice.empresa.domain.*;
 import com.advocacia_microservice.usuario.application.CriarUsuarioUseCase;
 import com.advocacia_microservice.usuario.domain.*;
-import com.advocacia_microservice.usuario.infrastructure.persistence.JpaUsuarioRepository;
+import com.advocacia_microservice.usuario.infrastructure.persistence.repository.JpaUsuarioRepository;
 import java.time.*;
 import java.util.*;
 import org.junit.jupiter.api.*;
@@ -37,6 +42,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest @ActiveProfiles("test")
 class EquipeTests {
+    @org.springframework.beans.factory.annotation.Autowired ConviteInicialRepository convitesIniciais;
+    @org.springframework.beans.factory.annotation.Autowired UsuarioRepository contasFixture;
     @Autowired CriarUsuarioUseCase criar;
     @Autowired EmpresaService empresas;
     @Autowired EmpresaRepository vinculos;
@@ -55,7 +62,7 @@ class EquipeTests {
     @BeforeEach void preparar() {
         reset(email, codigoEmail);
         master = usuario();
-        empresaId = empresas.criar(master.id(), Map.of("razao_social", "Sociedade de teste", "cnpj", UUID.randomUUID().toString().substring(0, 14), "endereco", "Rua A", "cidade", "Brasília")).id();
+        empresaId = EmpresaTestSupport.criar(empresas, convitesIniciais, contasFixture, master.id(), Map.of("razao_social", "Sociedade de teste", "cnpj", UUID.randomUUID().toString().substring(0, 14), "endereco", "Rua A", "cidade", "Brasília")).id();
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
     }
     Usuario usuario() { return criar.executar("Pessoa", UUID.randomUUID() + "@example.test"); }
@@ -160,7 +167,7 @@ class EquipeTests {
 
     @Test void isolaEquipeConvitesEAtualizacoesEntreEmpresas() throws Exception {
         var membro = membro(); var outro = usuario();
-        empresas.criar(outro.id(), Map.of("razao_social", "Outra sociedade", "cnpj", UUID.randomUUID().toString().substring(0, 14), "endereco", "Rua B", "cidade", "Brasília"));
+        EmpresaTestSupport.criar(empresas, convitesIniciais, contasFixture, outro.id(), Map.of("razao_social", "Outra sociedade", "cnpj", UUID.randomUUID().toString().substring(0, 14), "endereco", "Rua B", "cidade", "Brasília"));
         var convite = equipe.convidar(master.id(), "Pessoa", UUID.randomUUID() + "@example.test", configuracao());
         mvc.perform(get("/api/equipe").with(user(outro.id().toString()))).andExpect(status().isOk()).andExpect(jsonPath("$.membros.length()").value(1)).andExpect(jsonPath("$.membros[0].id").value(outro.id().toString()));
         mvc.perform(delete("/api/equipe/convites/" + convite.id()).with(user(outro.id().toString())).with(csrf())).andExpect(status().isForbidden());

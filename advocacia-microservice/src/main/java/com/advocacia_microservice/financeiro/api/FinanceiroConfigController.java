@@ -1,4 +1,5 @@
 package com.advocacia_microservice.financeiro.api;
+import com.advocacia_microservice.financeiro.api.request.Alterar;
 
 import com.advocacia_microservice.financeiro.application.FinanceiroConfigService;
 import com.advocacia_microservice.financeiro.application.FinanceiroConfigService.Dados;
@@ -12,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController @RequestMapping("/api/config/financeiro")
 public class FinanceiroConfigController {
-    public record Alterar<T>(@NotNull @Min(0) Long versao, @NotNull T dados) {}
+
     private final FinanceiroConfigService service;
     public FinanceiroConfigController(FinanceiroConfigService service) { this.service=service; }
     private UUID usuario(Principal p) { return UUID.fromString(p.getName()); }

@@ -1,4 +1,5 @@
 package com.advocacia_microservice.equipe.api;
+import com.advocacia_microservice.equipe.api.request.ConviteRequest;
 
 import com.advocacia_microservice.equipe.application.EquipeService;
 import jakarta.validation.Valid;
@@ -10,8 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController @RequestMapping("/api/equipe")
 public class EquipeController {
-    public record ConviteRequest(@NotBlank @Size(max = 150) String nome,
-            @NotBlank @Email @Size(max = 254) String email, @NotNull @Valid ConfiguracaoMembroRequest configuracao) {}
+
     private final EquipeService service;
     public EquipeController(EquipeService service) { this.service = service; }
     @GetMapping("/me") public EquipeService.Acesso acesso(Principal principal) { return service.acesso(id(principal)); }

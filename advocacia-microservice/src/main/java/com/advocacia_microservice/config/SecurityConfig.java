@@ -1,4 +1,5 @@
 package com.advocacia_microservice.config;
+import com.advocacia_microservice.usuario.infrastructure.persistence.repository.JpaUsuarioRepository;
 
 import com.advocacia_microservice.usuario.domain.StatusUsuario;
 import com.advocacia_microservice.usuario.domain.UsuarioRepository;
@@ -50,7 +51,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JpaUsuarioRepository usuarios,
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, UsuarioRepository usuarios,
+            com.advocacia_microservice.plataforma.application.AcessoPlataformaService plataforma,
             com.advocacia_microservice.equipe.application.EquipeService equipe,
             org.springframework.beans.factory.ObjectProvider<org.springframework.security.oauth2.client.registration.ClientRegistrationRepository> registrations,
             com.advocacia_microservice.auth.infrastructure.GoogleLoginSuccessHandler googleSuccess,
@@ -67,15 +69,8 @@ public class SecurityConfig {
                                 plataforma.podeAdministrar(authentication.get().getName())))
                 // A criação passa para a API administrativa na etapa de cadastro de empresas.
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/escritorios", "/api/escritorios/**").denyAll()
-                // A conta é global; administração de membros será feita no contexto do escritório.
-                .requestMatchers("/api/usuarios/**").access((authentication, context) -> {
-                    var identidade = authentication.get();
-                    var request = context.getRequest();
-                    boolean permitido = "GET".equals(request.getMethod())
-                            && identidade != null && identidade.isAuthenticated()
-                            && request.getRequestURI().equals("/api/usuarios/" + identidade.getName());
-                    return new org.springframework.security.authorization.AuthorizationDecision(permitido);
-                })
+                // O caso de uso exige MASTER e vínculo na mesma empresa para administrar funcionários.
+                .requestMatchers("/api/usuarios/**").authenticated()
                 .anyRequest().authenticated());
         http.exceptionHandling(errors -> errors
                 .authenticationEntryPoint((request, response, error) -> response.sendError(HttpStatus.UNAUTHORIZED.value())));
@@ -101,8 +96,8 @@ public class SecurityConfig {
                 if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
                     boolean ativo;
                     try {
-                        ativo = usuarios.findById(UUID.fromString(auth.getName()))
-                                .map(item -> item.paraDominio().status() == StatusUsuario.ATIVO).orElse(false);
+                        ativo = usuarios.buscarPorId(UUID.fromString(auth.getName()))
+                                .map(item -> item.status() == StatusUsuario.ATIVO).orElse(false);
                         ativo = ativo && equipe.ativo(UUID.fromString(auth.getName()));
                     } catch (IllegalArgumentException error) {
                         ativo = false;
@@ -117,7 +112,7 @@ public class SecurityConfig {
                         var modulo = java.util.Arrays.stream(caminho.split("/")).skip(2).findFirst().orElse("");
                         boolean negado = caminho.startsWith("/api/")
                                 && com.advocacia_microservice.equipe.domain.PermissoesEquipe.TODOS.contains(modulo)
-                                && !modulo.equals("equipe") && !modulo.equals("config") && !acesso.modulos().contains(modulo);
+                                && !(modulo.equals("equipe") && caminho.equals("/api/equipe/me")) && !modulo.equals("config") && !acesso.modulos().contains(modulo);
                         if (caminho.startsWith("/api/documentos/assinaturas") && !acesso.enviaDocumento()) negado = true;
                         if (negado) { response.sendError(HttpStatus.FORBIDDEN.value()); return; }
                     }

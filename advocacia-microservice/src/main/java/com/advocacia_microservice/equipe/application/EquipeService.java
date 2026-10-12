@@ -1,15 +1,24 @@
 package com.advocacia_microservice.equipe.application;
+import com.advocacia_microservice.usuario.infrastructure.persistence.repository.JpaUsuarioPerfilRepository;
+import com.advocacia_microservice.equipe.infrastructure.persistence.entity.ConviteEquipeEntity;
+import com.advocacia_microservice.equipe.infrastructure.persistence.repository.ConviteEquipeRepository;
+import com.advocacia_microservice.equipe.infrastructure.persistence.entity.MembroEquipeEntity;
+import com.advocacia_microservice.equipe.infrastructure.persistence.repository.MembroEquipeRepository;
+import com.advocacia_microservice.usuario.infrastructure.persistence.repository.JpaUsuarioRepository;
+import com.advocacia_microservice.usuario.infrastructure.persistence.entity.UsuarioEntity;
 
 import com.advocacia_microservice.equipe.api.ConfiguracaoMembroRequest;
 import com.advocacia_microservice.equipe.domain.*;
 import com.advocacia_microservice.equipe.infrastructure.EmailConviteSender;
-import com.advocacia_microservice.equipe.infrastructure.persistence.*;
+import com.advocacia_microservice.equipe.infrastructure.persistence.entity.*;
+import com.advocacia_microservice.equipe.infrastructure.persistence.repository.*;
 import com.advocacia_microservice.empresa.application.EmpresaService;
 import com.advocacia_microservice.empresa.domain.*;
-import com.advocacia_microservice.empresa.infrastructure.persistence.JpaEmpresaUsuarioRepository;
+import com.advocacia_microservice.empresa.infrastructure.persistence.repository.JpaEmpresaUsuarioRepository;
 import com.advocacia_microservice.shared.exception.*;
 import com.advocacia_microservice.usuario.domain.*;
-import com.advocacia_microservice.usuario.infrastructure.persistence.*;
+import com.advocacia_microservice.usuario.infrastructure.persistence.entity.*;
+import com.advocacia_microservice.usuario.infrastructure.persistence.repository.*;
 import java.time.*;
 import java.util.*;
 import org.springframework.security.access.AccessDeniedException;
@@ -31,26 +40,49 @@ public class EquipeService {
     private final MembroEquipeRepository membros;
     private final ConviteEquipeRepository convites;
     private final EmailConviteSender email;
+    private final com.advocacia_microservice.plataforma.domain.repository.ConviteInicialRepository iniciais;
+    private final com.advocacia_microservice.plataforma.application.GestaoEmpresasService contratos;
     public EquipeService(EmpresaService empresas, EmpresaRepository empresaRepository, JpaEmpresaUsuarioRepository vinculos,
             JpaUsuarioRepository usuarios, UsuarioPerfilRepository perfis, MembroEquipeRepository membros,
-            ConviteEquipeRepository convites, EmailConviteSender email, JpaUsuarioPerfilRepository perfisJpa) {
+            ConviteEquipeRepository convites, EmailConviteSender email, JpaUsuarioPerfilRepository perfisJpa,
+            com.advocacia_microservice.plataforma.domain.repository.ConviteInicialRepository iniciais,
+            com.advocacia_microservice.plataforma.application.GestaoEmpresasService contratos) {
         this.empresas = empresas; this.empresaRepository = empresaRepository; this.vinculos = vinculos;
         this.usuarios = usuarios; this.perfis = perfis; this.membros = membros; this.convites = convites; this.email = email;
         this.perfisJpa = perfisJpa;
+        this.iniciais = iniciais;
+        this.contratos = contratos;
     }
 
     @Transactional(readOnly = true)
     public Acesso acesso(UUID id) {
         var vinculo = empresaRepository.vinculo(id).orElse(null);
         if (vinculo == null) return new Acesso(null, null, null, Set.of("inicio", "config"), false);
-        if (vinculo.papel() == PapelEmpresa.MASTER) return new Acesso(vinculo.empresaId(), PapelEmpresa.MASTER, PerfilEquipe.ADMINISTRADOR, PermissoesEquipe.TODOS, true);
+        if (!empresas.estaAtiva(vinculo.empresaId())) throw new AccessDeniedException("Seu escritório está desativado.");
+        if (vinculo.papel() == PapelEmpresa.MASTER) return new Acesso(vinculo.empresaId(), PapelEmpresa.MASTER, PerfilEquipe.ADMINISTRADOR, contratados(vinculo.empresaId(), PermissoesEquipe.TODOS), true);
         var membro = membro(id);
         return new Acesso(vinculo.empresaId(), PapelEmpresa.MEMBRO, membro.perfil,
-                PermissoesEquipe.resolver(membro.perfil, membro.restrito, membro.abas), membro.enviaDocumento);
+                contratados(vinculo.empresaId(), PermissoesEquipe.resolver(membro.perfil, membro.restrito, membro.abas)), membro.enviaDocumento);
+    }
+
+    private Set<String> contratados(UUID empresaId, Set<String> permitidos) {
+        var resultado = new HashSet<>(permitidos);
+        resultado.retainAll(contratos.modulosPermitidos(empresaId));
+        return Set.copyOf(resultado);
     }
 
     @Transactional(readOnly = true)
-    public boolean ativo(UUID id) { return membros.findById(id).map(m -> m.situacao == SituacaoEquipe.ATIVO).orElse(true); }
+    public boolean ativo(UUID id) {
+        var vinculo = empresaRepository.vinculo(id);
+        return vinculo.map(v -> empresas.estaAtiva(v.empresaId())).orElse(true)
+                && membros.findById(id).map(m -> m.situacao == SituacaoEquipe.ATIVO).orElse(true);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean permiteCadastro(String email) {
+        return convites.findByEmail(email).filter(c -> "PENDENTE".equals(c.status) && c.expiraEm.isAfter(Instant.now()))
+                .filter(c -> empresas.estaAtiva(c.empresaId)).isPresent();
+    }
 
     @Transactional(readOnly = true)
     public Equipe listar(UUID solicitante) {
@@ -96,6 +128,9 @@ public class EquipeService {
             throw new IllegalArgumentException("Preencha a ficha do membro após o primeiro acesso. O convite deve estar ativo.");
         }
         var destinatario = endereco.strip().toLowerCase(Locale.ROOT);
+        if (iniciais.buscarPorEmail(destinatario).filter(c -> c.permiteEntrada(Instant.now())).isPresent()) {
+            throw new ConflitoException("Este email tem um convite para cadastrar um escritório. Cancele esse convite antes de convidá-lo como funcionário.");
+        }
         var usuario = usuarios.findByEmail(destinatario).orElse(null);
         if (usuario != null && (usuario.paraDominio().status() != StatusUsuario.ATIVO || empresaRepository.vinculo(usuario.paraDominio().id()).isPresent())) {
             throw new ConflitoException("Esse e-mail já tem vínculo ou está desativado. Não é possível convidá-lo.");
@@ -139,7 +174,7 @@ public class EquipeService {
         if (atual.status() != StatusUsuario.ATIVO || !atual.email().equals(usuario.email())) return;
         if (empresaRepository.vinculo(usuario.id()).isPresent()) return;
         var convite = convites.buscarPorEmailParaAtualizar(usuario.email()).orElse(null);
-        if (convite == null || !"PENDENTE".equals(convite.status) || !convite.expiraEm.isAfter(Instant.now())) return;
+        if (convite == null || !"PENDENTE".equals(convite.status) || !convite.expiraEm.isAfter(Instant.now()) || !empresas.estaAtiva(convite.empresaId)) return;
         empresaRepository.vincular(new VinculoEmpresa(usuario.id(), convite.empresaId, PapelEmpresa.MEMBRO));
         var membro = membro(usuario.id());
         membro.nomeExibicao = convite.nomeExibicao; membro.perfil = convite.perfil; membro.restrito = convite.restrito;

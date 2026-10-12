@@ -32,6 +32,11 @@ public class GoogleLoginSuccessHandler implements AuthenticationSuccessHandler {
                 throw new OAuth2AuthenticationException("invalid_user");
             }
             var usuario = login.autenticar(google);
+            if (usuario == null) {
+                SessaoCadastro.iniciar(request, response, google.getEmail().strip().toLowerCase(java.util.Locale.ROOT), google.getSubject());
+                response.sendRedirect(publicUrl + "/cadastro");
+                return;
+            }
             SessaoCadastro.autenticar(request, response, usuario);
             response.sendRedirect(publicUrl + "/inicio");
         } catch (OAuth2AuthenticationException | DataIntegrityViolationException exception) {
