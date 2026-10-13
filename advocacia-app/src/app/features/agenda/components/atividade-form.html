@@ -1,0 +1,30 @@
+<div class="editor">
+  <header><div><p class="eyebrow">AGENDA DO ESCRITÓRIO</p><h2 id="titulo-atividade">{{ base() ? dados.titulo : 'Nova atividade' }}</h2>@if(base(); as atividade){<span class="situacao">{{ nomeSituacao(atividade.situacao) }}</span>}</div><button type="button" (click)="fechar.emit()" [disabled]="salvando()" aria-label="Fechar atividade">×</button></header>
+  @if(erro()){<p class="erro" role="alert">{{ erro() }}</p>}
+  @if(conflito()){<p>Recarregar descarta o rascunho e consulta a versão atual.</p><button type="button" (click)="recarregar()" [disabled]="salvando()">Recarregar ficha</button>}
+  <form #form="ngForm" (ngSubmit)="salvar()">
+    <fieldset [disabled]="salvando() || !podeEditar()">
+      <legend class="sr-only">Dados da atividade</legend>
+      <div class="colunas"><label>Atividade<select name="tipo" [(ngModel)]="dados.tipo" (ngModelChange)="trocarTipo()">@for(tipo of tipos;track tipo.codigo){<option [value]="tipo.codigo">{{ tipo.nome }}</option>}</select></label>
+      <label>Tipo de tarefa<select name="tipoTarefa" [(ngModel)]="dados.tipoTarefaId"><option [ngValue]="null">Título livre</option>@for(tipo of opcoes().tiposTarefa;track tipo.id){<option [value]="tipo.id" [disabled]="!tipo.ativo">{{ tipo.nome }}{{ !tipo.ativo ? ' (inativo)' : '' }}</option>}</select></label></div>
+      <label>Título<input name="titulo" [(ngModel)]="dados.titulo" maxlength="150" [required]="!dados.tipoTarefaId" placeholder="O que será feito?"></label>
+      <div class="colunas"><label>Data inicial<input name="data" type="date" [(ngModel)]="dados.data" [required]="dados.tipo !== 'TAREFA'"></label><label>Data final (opcional)<input name="dataFim" type="date" [(ngModel)]="dados.dataFim" [min]="dados.data || ''"></label></div>
+      @if(dados.tipo === 'TAREFA' && !dados.data){<p class="ajuda">Sem data, a tarefa aparece na lista quando “Incluir tarefas sem data” estiver marcado.</p>}
+      @if(!compromisso()){<label>Prazo fatal {{ dados.tipo === 'PRAZO' ? '' : '(opcional)' }}<input name="prazoFatal" type="date" [(ngModel)]="dados.prazoFatal" [required]="dados.tipo === 'PRAZO'" [min]="dados.dataFim || dados.data || ''"></label><p class="ajuda">Informe a data manualmente. O prazo fatal aparece também no calendário.</p>}
+      <label class="check"><input name="diaInteiro" type="checkbox" [(ngModel)]="dados.diaInteiro">Dia inteiro</label>
+      @if(!dados.diaInteiro){<div class="colunas"><label>Horário inicial<input name="hora" type="time" [(ngModel)]="dados.hora" [required]="compromisso()"></label><label>Horário final<input name="horaFim" type="time" [(ngModel)]="dados.horaFim" [required]="compromisso()"></label></div>}
+      <p class="ajuda">Datas e horários do escritório: Brasília (America/Sao_Paulo).</p>
+      @if(compromisso()){<label>Modalidade<select name="modalidade" [(ngModel)]="dados.modalidade"><option value="PRESENCIAL">Presencial</option><option value="ONLINE">Online</option></select></label>}
+      <label>{{ dados.modalidade === 'ONLINE' ? 'Link da reunião' : 'Local (opcional)' }}<input name="local" [(ngModel)]="dados.local" maxlength="1000"></label>
+      <h3>Responsáveis</h3><p class="ajuda">Selecione até 20 pessoas ou deixe sem responsável.</p>
+      <div class="responsaveis">@for(pessoa of opcoes().responsaveis;track pessoa.id){<label class="check"><input type="checkbox" [name]="'pessoa-' + pessoa.id" [checked]="dados.responsaveis.includes(pessoa.id)" (change)="alternarResponsavel(pessoa.id)" [disabled]="!pessoa.ativo && !dados.responsaveis.includes(pessoa.id)">{{ pessoa.nome }}{{ !pessoa.ativo ? ' (inativo)' : '' }}</label>}</div>
+      <label>Descrição<textarea name="descricao" [(ngModel)]="dados.descricao" rows="4" maxlength="4000"></textarea></label>
+      @if(podeEditar()){<button class="primario" [disabled]="form.invalid || !dados.titulo.trim() && !dados.tipoTarefaId">{{ salvando() ? 'Salvando…' : 'Salvar atividade' }}</button>}
+    </fieldset>
+  </form>
+  @if(base(); as atividade){
+    @if(opcoes().podeEditar){@if(temAlteracoes()){<p class="ajuda">Salve as altera??es do formul?rio antes de mudar a situa??o.</p>}<div class="acoes">@if(atividade.situacao === 'PENDENTE'){<button type="button" (click)="confirmarAcao('CONCLUIDA')" [disabled]="salvando() || temAlteracoes()">Concluir</button><button class="perigo" type="button" (click)="confirmarAcao('CANCELADA')" [disabled]="salvando() || temAlteracoes()">Cancelar atividade</button>}@else{<button type="button" (click)="confirmarAcao('PENDENTE')" [disabled]="salvando() || temAlteracoes()">Reabrir atividade</button>}</div>}
+    @if(acao(); as situacao){<section class="confirmacao"><h3>{{ situacao === 'CANCELADA' ? 'Confirmar cancelamento' : situacao === 'CONCLUIDA' ? 'Confirmar conclusão' : 'Confirmar reabertura' }}</h3><p>Esta ação será registrada no histórico.</p><label>{{ situacao === 'CANCELADA' ? 'Motivo obrigatório' : 'Providência ou observação (opcional)' }}<textarea [(ngModel)]="observacao" name="observacao" maxlength="2000" rows="3" [disabled]="salvando()"></textarea></label><div class="acoes"><button type="button" class="primario" (click)="executarAcao()" [disabled]="salvando() || temAlteracoes() || situacao === 'CANCELADA' && !observacao.trim()">Confirmar</button><button type="button" (click)="acao.set(null)" [disabled]="salvando()">Voltar</button></div></section>}
+    <section class="historico"><h3>Histórico</h3>@for(evento of atividade.historico;track evento.id){<article><p><strong>{{ nomeAcao(evento.acao) }}</strong> · {{ evento.autor }}</p><time>{{ evento.criadoEm | date:'dd/MM/yyyy HH:mm':'-0300' }}</time>@if(evento.observacao){<p class="observacao">{{ evento.observacao }}</p>}</article>}@empty{<p>Nenhuma alteração registrada.</p>}</section>
+  }
+</div>

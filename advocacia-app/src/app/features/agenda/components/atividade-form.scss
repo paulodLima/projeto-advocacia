@@ -1,0 +1,29 @@
+:host { display:block; color:#383d35; }
+.editor { padding:1.4rem; }
+header { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1rem; }
+h2 { font-family:Georgia,serif; font-weight:400; margin:.3rem 0; overflow-wrap:anywhere; }
+h3 { font-size:1rem; margin:1rem 0 .4rem; }
+.eyebrow { font-size:.68rem; letter-spacing:.12em; color:#74796d; }
+.situacao { font-size:.8rem; background:var(--tema-suave,#eff2eb); border-radius:1rem; padding:.25rem .65rem; }
+fieldset { border:0; padding:0; min-width:0; }
+label { display:grid; gap:.35rem; margin:.8rem 0; font-size:.85rem; }
+input,select,textarea { width:100%; min-width:0; border:1px solid #d0d5ca; border-radius:.55rem; padding:.65rem; font:inherit; color:inherit; background:white; }
+textarea { resize:vertical; }
+button { border:1px solid #ccd2c4; border-radius:.55rem; padding:.6rem .9rem; background:white; color:inherit; font:inherit; cursor:pointer; }
+button:disabled { opacity:.55; cursor:default; }
+.primario { background:var(--tema-primaria,#4f5a49); color:white; border-color:transparent; }
+.perigo,.erro { color:#9a463d; }
+.erro { padding:.8rem; background:#f9eae5; border-radius:.5rem; }
+.colunas { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+.check { display:flex; align-items:center; gap:.5rem; }
+.check input { width:auto; accent-color:var(--tema-primaria,#4f5a49); }
+.responsaveis { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.ajuda { font-size:.75rem; color:#75796e; }
+.acoes { display:flex; flex-wrap:wrap; gap:.6rem; margin-top:1rem; }
+.confirmacao { padding:1rem; background:#faf3e3; border-radius:.8rem; margin-top:1rem; }
+.historico { border-top:1px solid #dcded5; margin-top:1.5rem; padding-top:.5rem; }
+.historico article { padding:.7rem 0; border-bottom:1px solid #e8e9e3; font-size:.85rem; }
+time { font-size:.75rem; color:#797c70; }
+.observacao { white-space:pre-wrap; overflow-wrap:anywhere; }
+.sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
+@media(max-width:500px){.colunas,.responsaveis { grid-template-columns:1fr; gap:0; }.editor{padding:1rem;}}

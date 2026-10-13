@@ -21,7 +21,7 @@ class ArchitectureTests {
         }
     }
     @Test void aplicacaoDeEmpresasEPlataformaDependeDeContratos() throws IOException {
-        for (String module : List.of("escritorio", "plataforma")) {
+        for (String module : List.of("escritorio", "plataforma", "agenda")) {
             for (var file : fontes(ROOT.resolve(module).resolve("application"))) {
                 assertFalse(Pattern.compile("import .*?(infrastructure|\\.api\\.|JdbcTemplate|jakarta.persistence|org.springframework.data).*;")
                         .matcher(Files.readString(file)).find(), file.toString());
@@ -29,7 +29,7 @@ class ArchitectureTests {
         }
     }
     @Test void dominioDeEmpresasEPlataformaNaoDependeDeFrameworks() throws IOException {
-        for (String module : List.of("escritorio", "plataforma")) {
+        for (String module : List.of("escritorio", "plataforma", "agenda")) {
             for (var file : fontes(ROOT.resolve(module).resolve("domain"))) {
                 assertFalse(Pattern.compile("import (org.springframework|jakarta|.*\\.api\\.|.*\\.infrastructure\\.)")
                         .matcher(Files.readString(file)).find(), file.toString());

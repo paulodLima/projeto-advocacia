@@ -1,0 +1,18 @@
+.calendario {background:rgba(255,255,255,.7);border:1px solid var(--tema-borda,#d6dbcf);border-radius:1rem;padding:1rem;margin-top:1rem;}
+button {font:inherit;color:inherit;padding:.65rem 1rem;border:1px solid var(--tema-borda,#d7dccf);border-radius:.65rem;background:#ffffffa6;cursor:pointer;}
+button:focus-visible {outline:2px solid var(--tema-primaria,#4f5a49);outline-offset:2px;}
+.mes,.navegacao {display:flex;align-items:center;justify-content:space-between;gap:.7rem;flex-wrap:wrap;}
+h2{font:400 1.25rem Georgia,serif;margin:0;}
+.mes { margin-bottom:1rem; }.mes h2 {  }.navegacao button { font-size:1.3rem; padding:.15rem .7rem; }
+.semana,.dias { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); }
+.semana span { padding:.4rem; font-size:.75rem; color:#7d8275; text-align:center; }
+.dias { gap:4px; }
+.dia { display:flex; flex-direction:column; align-items:start; min-width:0; min-height:88px; padding:.55rem; border-radius:.5rem; background:#ffffff90; gap:.3rem; }
+.dia.outro-mes { opacity:.5; }.dia.hoje .numero { font-weight:700; color:var(--tema-primaria,#4f5a49); text-decoration:underline; text-underline-offset:4px; }
+.dia.selecionado { border:2px solid var(--tema-primaria,#4f5a49); background:var(--tema-suave,#edf0e8); }
+.numero { font-size:.85rem; }.total,.fatal { font-size:.65rem; border-radius:.3rem; padding:.1rem .35rem; background:var(--tema-suave,#eef0e8); }.fatal { background:#f5e4c1; color:#79571d; }
+.ajuda{margin-top:.7rem;font-size:.75rem;color:#797e72;}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);}
+@media(max-width:650px){.calendario{padding:.65rem}.dia{min-height:65px;padding:.3rem}.texto-dia{display:none}.dias{gap:2px}}
+
+h2::first-letter {text-transform:uppercase;}

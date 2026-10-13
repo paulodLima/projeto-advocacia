@@ -25,7 +25,7 @@ public class CadastrosRepository {
         jdbc.update("DELETE FROM cadastro_campo WHERE item_id=?", item.id());
         item.campos().forEach((campo, valor) -> jdbc.update("INSERT INTO cadastro_campo(item_id,campo,valor) VALUES (?,?,?)", item.id(), campo, valor));
     }
-    public boolean usado(UUID empresa, UUID id) { return jdbc.queryForObject("SELECT COUNT(*) FROM cadastro_item WHERE empresa_id=? AND referencia_id=?", Long.class, empresa, id) > 0 || jdbc.queryForObject("SELECT COUNT(*) FROM workflow_gatilho WHERE empresa_id=? AND tarefa_id=?",Long.class,empresa,id)>0; }
+    public boolean usado(UUID empresa, UUID id) { return jdbc.queryForObject("SELECT COUNT(*) FROM cadastro_item WHERE empresa_id=? AND referencia_id=?", Long.class, empresa, id) > 0 || jdbc.queryForObject("SELECT COUNT(*) FROM workflow_gatilho WHERE empresa_id=? AND tarefa_id=?",Long.class,empresa,id)>0 || jdbc.queryForObject("SELECT COUNT(*) FROM agenda_atividade WHERE empresa_id=? AND tipo_tarefa_id=?",Long.class,empresa,id)>0; }
     public void excluir(UUID empresa, UUID id) { jdbc.update("DELETE FROM cadastro_item WHERE empresa_id=? AND id=?", empresa, id); }
     public List<Rotina> rotinas(UUID empresa) { return jdbc.query("SELECT id,nome,periodo FROM escritorio_rotina WHERE empresa_id=? ORDER BY periodo,nome_chave", (rs, n) -> new Rotina(rs.getObject("id", UUID.class), rs.getString("nome"), rs.getString("periodo")), empresa); }
     public Rotina criarRotina(UUID empresa, String nome, String periodo) {

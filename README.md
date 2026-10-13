@@ -2,6 +2,14 @@
 
 Projeto com backend Spring Boot (Java 21), frontend Angular com SSR e PostgreSQL 17.
 
+## Agenda
+
+O menu **Agenda** oferece calendário mensal, lista paginada e filtros para tarefas,
+prazos, reuniões e audiências do escritório. Permite responsáveis, datas/horários,
+prazo fatal manual, edição, conclusão, cancelamento e reabertura com histórico.
+Tarefas sem data ficam na lista. O acesso respeita a empresa, o módulo contratado
+e o perfil da equipe. Decisões, limites e API: [Agenda básica](docs/agenda-basica.md).
+
 ## Gestão administrativa dos contratantes
 
 Em `/administracao`, a aba **Empresas e contratos** permite localizar escritórios,

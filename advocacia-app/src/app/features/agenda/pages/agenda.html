@@ -1,0 +1,28 @@
+<section class="agenda" aria-labelledby="titulo-agenda">
+  <header class="cabecalho"><div><p class="eyebrow">ORGANIZAÇÃO DO ESCRITÓRIO</p><h1 id="titulo-agenda">Agenda</h1><p>Tarefas, prazos e compromissos da sua equipe.</p></div>@if(opcoes()?.podeEditar){<button class="primario" type="button" (click)="nova()">+ Nova atividade</button>}</header>
+  @if(erro()){<div class="erro" role="alert">{{ erro() }} <button type="button" (click)="carregar()">Tentar novamente</button></div>}
+  @if(erroOpcoes()){<div class="erro" role="alert">{{ erroOpcoes() }} <button type="button" (click)="carregarOpcoes()">Recarregar opções</button></div>}
+  @if(aviso()){<p role="status" class="aviso">{{ aviso() }}</p>}
+  <div class="barra"><div class="visuais" aria-label="Visualização"><button type="button" [attr.aria-pressed]="visual() === 'calendario'" (click)="mudarVisual('calendario')">Calendário</button><button type="button" [attr.aria-pressed]="visual() === 'lista'" (click)="mudarVisual('lista')">Lista</button></div><span class="fuso">Horário de Brasília</span></div>
+  <form class="filtros" (ngSubmit)="filtrar()">
+    <label>Buscar título<input name="busca" [(ngModel)]="busca" maxlength="150" placeholder="Buscar atividade"></label>
+    <label>Tipo<select name="tipo" [(ngModel)]="tipo"><option value="">Todos os tipos</option>@for(item of tipos;track item.codigo){<option [value]="item.codigo">{{ item.nome }}</option>}</select></label>
+    <label>Situação<select name="situacao" [(ngModel)]="situacao"><option value="">Todas</option>@for(item of situacoes;track item.codigo){<option [value]="item.codigo">{{ item.nome }}</option>}</select></label>
+    <label>Responsável<select name="responsavel" [(ngModel)]="responsavel"><option value="">Toda a equipe</option>@for(pessoa of opcoes()?.responsaveis || [];track pessoa.id){<option [value]="pessoa.id">{{ pessoa.nome }}{{ !pessoa.ativo ? ' (inativo)' : '' }}</option>}</select></label>
+    @if(visual() === 'lista'){<label>De<input name="inicio" type="date" [(ngModel)]="inicio" required></label><label>Até<input name="fim" type="date" [(ngModel)]="fim" required [min]="inicio"></label>}
+    <button type="submit" [disabled]="carregando()">Filtrar</button>
+  </form>
+  @if(visual() === 'calendario'){
+    <app-calendario-mensal [dias]="dias()" [titulo]="tituloMes()" [selecionado]="diaSelecionado()" [hoje]="hoje" (navegar)="navegarMes($event)" (escolher)="selecionarDia($event)" (irHoje)="irHoje()"/>
+  }
+  <section class="listagem" aria-labelledby="titulo-lista">
+    <div class="titulo-lista"><h2 id="titulo-lista">{{ diaSelecionado() ? 'Atividades do dia' : 'Atividades do período' }}@if(diaSelecionado()){ — {{ diaSelecionado() + 'T12:00:00' | date:'dd/MM/yyyy' }}}</h2>@if(diaSelecionado()){<button type="button" (click)="selecionarDia(diaSelecionado())">Ver período inteiro</button>}@else{<label class="check"><input name="semData" type="checkbox" [(ngModel)]="incluirSemData" (ngModelChange)="carregar()">Incluir tarefas sem data</label>}</div>
+    @if(carregando()){<p role="status" class="vazio">Carregando Agenda…</p>}
+    @if(resultado(); as paginaAtual){
+      <p class="contagem">{{ paginaAtual.total }} atividades encontradas</p>
+      @for(item of paginaAtual.itens;track item.id){<button type="button" class="atividade" (click)="abrir(item.id)" [disabled]="abrindo() || !opcoes()" [attr.aria-label]="'Abrir ' + item.dados.titulo"><div class="data-atividade">@if(item.dados.data){<strong>{{ item.dados.data + 'T12:00:00' | date:'dd' }}</strong><span>{{ item.dados.data + 'T12:00:00' | date:'MMM' }}</span>}@else{<span>Sem data</span>}</div><div class="conteudo"><div class="badges"><span class="tipo">{{ nomeTipo(item.dados.tipo) }}</span><span>{{ nomeSituacao(item.situacao) }}</span>@if(atrasada(item)){<span class="atrasada">Atrasada</span>}</div><h3 [class.concluida]="item.situacao === 'CONCLUIDA'">{{ item.dados.titulo }}</h3><p>{{ responsaveis(item) }}</p><p class="horario">{{ item.dados.diaInteiro ? 'Dia inteiro' : (item.dados.hora || '').slice(0,5) }}@if(!item.dados.diaInteiro && item.dados.horaFim){ — {{ item.dados.horaFim.slice(0,5) }}}@if(item.dados.dataFim){ · Até {{ item.dados.dataFim + 'T12:00:00' | date:'dd/MM' }}}@if(item.dados.local){ · {{ item.dados.local }}}</p>@if(item.dados.prazoFatal){<p class="prazo">Prazo fatal: {{ item.dados.prazoFatal + 'T12:00:00' | date:'dd/MM/yyyy' }}</p>}</div><span class="seta" aria-hidden="true">›</span></button>}@empty{<div class="vazio"><h3>Nenhuma atividade neste período.</h3><p>Revise os filtros ou cadastre uma atividade.</p></div>}
+      <div class="paginacao"><button type="button" (click)="carregar(pagina - 1)" [disabled]="pagina === 0 || carregando()">Anterior</button><span>Página {{ pagina + 1 }}</span><button type="button" (click)="carregar(pagina + 1)" [disabled]="(pagina + 1) * paginaAtual.tamanho >= paginaAtual.total || carregando()">Próxima</button></div>
+    }
+  </section>
+</section>
+<dialog #editor class="painel-editor" aria-labelledby="titulo-atividade" (cancel)="cancelarDialogo($event)">@if(aberto() && opcoes(); as opcoesAtuais){<app-atividade-form [base]="atividade()" [opcoes]="opcoesAtuais" [dataInicial]="dataNova()" (salvou)="salvo($event)" (recarregou)="atividade.set($event)" (fechar)="fechar()"/>}</dialog>

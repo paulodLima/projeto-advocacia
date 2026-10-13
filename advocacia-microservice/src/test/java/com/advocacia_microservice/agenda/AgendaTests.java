@@ -1,0 +1,139 @@
+package com.advocacia_microservice.agenda;
+
+import com.advocacia_microservice.agenda.application.AgendaService;
+import com.advocacia_microservice.agenda.application.command.*;
+import com.advocacia_microservice.agenda.domain.*;
+import com.advocacia_microservice.empresa.application.EmpresaService;
+import com.advocacia_microservice.empresa.EmpresaTestSupport;
+import com.advocacia_microservice.plataforma.domain.repository.ConviteInicialRepository;
+import com.advocacia_microservice.usuario.application.CriarUsuarioUseCase;
+import com.advocacia_microservice.usuario.domain.UsuarioRepository;
+import com.advocacia_microservice.cadastro.application.CadastrosService;
+import com.advocacia_microservice.shared.exception.*;
+import java.time.*;
+import java.util.*;
+import org.junit.jupiter.api.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.WebApplicationContext;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@SpringBootTest @ActiveProfiles("test") @Transactional
+class AgendaTests {
+    @Autowired AgendaService agenda;
+    @Autowired CriarUsuarioUseCase criar;
+    @Autowired UsuarioRepository usuarios;
+    @Autowired EmpresaService empresas;
+    @Autowired ConviteInicialRepository convites;
+    @Autowired CadastrosService cadastros;
+    @Autowired JdbcTemplate jdbc;
+    @Autowired WebApplicationContext context;
+    @Autowired jakarta.persistence.EntityManager em;
+    UUID master,empresa;MockMvc mvc;
+    static final LocalDate DIA=LocalDate.of(2026,10,15);
+    @BeforeEach void preparar() {
+        master=usuario("Responsável");empresa=empresa(master);
+        mvc=MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+    }
+    UUID usuario(String nome) {return criar.executar(nome,UUID.randomUUID()+"@example.test").id();}
+    UUID empresa(UUID u) {return EmpresaTestSupport.criar(empresas,convites,usuarios,u,Map.of("razao_social","Escritório","cnpj",UUID.randomUUID().toString().substring(0,14),"endereco","Rua A","cidade","Brasília")).id();}
+    UUID membro(String perfil) {
+        var id=usuario(perfil);jdbc.update("INSERT INTO empresa_usuario(usuario_id,empresa_id,papel) VALUES(?,?,'MEMBRO')",id,empresa);
+        jdbc.update("INSERT INTO equipe_membro(usuario_id,perfil) VALUES(?,?)",id,perfil);return id;
+    }
+    com.advocacia_microservice.cadastro.domain.CadastroRegistro tipoTarefa(UUID dono,String nome) {
+        var fase=cadastros.salvar(dono,"fases",null,Map.of("nome","Inicial","codigo","INI"),true);
+        return cadastros.salvar(dono,"tarefas",null,Map.of("nome",nome,"fase",fase.id().toString(),"pontos","10"),true);
+    }
+    SalvarAtividade tarefa(String titulo,LocalDate data,List<UUID> responsaveis) {return new SalvarAtividade(0,TipoAtividade.TAREFA,titulo,null,data,null,null,null,null,true,null,"","Descrição",responsaveis);}
+    SalvarAtividade copia(AtividadeAgenda a,LocalDate data) {var d=a.dados();return new SalvarAtividade(a.versao(),d.tipo(),d.titulo(),d.tipoTarefaId(),data,d.dataFim(),d.hora(),d.horaFim(),d.prazoFatal(),d.diaInteiro(),d.modalidade(),d.local(),d.descricao(),d.responsaveis());}
+    FiltroAgenda filtro(LocalDate inicio,LocalDate fim,boolean semData) {return new FiltroAgenda(inicio,fim,null,null,null,"",semData);}
+    @Test void persisteTarefaSemDataMultiplosResponsaveisETipoConfiguradoPreservandoVinculoAoRenomear() {
+        var assistente=membro("ASSISTENTE");
+        var tipo=tipoTarefa(master,"Preparar petição");
+        var a=agenda.salvar(master,null,new SalvarAtividade(0,TipoAtividade.TAREFA,"",tipo.id(),null,null,null,null,null,true,null,"","",List.of(master,assistente)));
+        em.clear();var salvo=agenda.buscar(master,a.id());assertEquals("Preparar petição",salvo.dados().titulo());assertNull(salvo.dados().data());
+        assertEquals(Set.of(master,assistente),new HashSet<>(salvo.dados().responsaveis()));
+        assertEquals(1,agenda.listar(master,filtro(DIA,DIA,true),0,50).total());
+        assertEquals(0,agenda.listar(master,filtro(DIA,DIA,false),0,50).total());
+        assertThrows(ConflitoException.class,()->cadastros.excluir(master,"tarefas",tipo.id()));
+        cadastros.salvar(master,"tarefas",tipo.id(),Map.of("nome","Preparar recurso","fase",tipo.campos().get("fase"),"pontos","10"),true);
+        assertEquals(tipo.id(),agenda.buscar(master,a.id()).dados().tipoTarefaId());
+        assertEquals("Preparar petição",agenda.buscar(master,a.id()).dados().titulo());
+    }
+    @Test void calendarioIncluiCompromissoDeVariosDiasEPrazoFatalForaDaDataPlanejadaSemDuplicarMesmoDia() {
+        agenda.salvar(master,null,new SalvarAtividade(0,TipoAtividade.REUNIAO,"Reunião",null,DIA,DIA.plusDays(2),LocalTime.of(9,0),LocalTime.of(10,0),null,false,"ONLINE","https://example.test/reuniao","",List.of(master)));
+        agenda.salvar(master,null,new SalvarAtividade(0,TipoAtividade.PRAZO,"Protocolo",null,DIA,null,null,null,DIA.plusDays(4),true,null,"","",List.of(master)));
+        var dias=agenda.calendario(master,filtro(DIA,DIA.plusDays(4),false));
+        assertEquals(2,dias.getFirst().total());assertEquals(1,dias.get(1).total());assertEquals(1,dias.get(2).total());assertEquals(1,dias.get(4).prazosFatais());
+        assertEquals(1,agenda.listar(master,filtro(DIA.plusDays(4),DIA.plusDays(4),false),0,50).total());
+        agenda.salvar(master,null,new SalvarAtividade(0,TipoAtividade.PRAZO,"Prazo hoje",null,DIA,null,null,null,DIA,true,null,"","",List.of()));
+        assertEquals(3,agenda.calendario(master,filtro(DIA,DIA,false)).getFirst().total());
+    }
+    @Test void concluirReabrirCancelarPreservaHistoricoEConflitosNaoSobrescrevem() {
+        var original=agenda.salvar(master,null,tarefa("Tarefa",DIA,List.of(master)));
+        var editada=agenda.salvar(master,original.id(),copia(original,DIA.plusDays(1)));
+        assertThrows(ConflitoException.class,()->agenda.salvar(master,original.id(),copia(original,DIA.plusDays(3))));
+        assertEquals(DIA.plusDays(1),agenda.buscar(master,original.id()).dados().data());
+        var concluida=agenda.alterarSituacao(master,editada.id(),new AlterarSituacaoAgenda(editada.versao(),SituacaoAgenda.CONCLUIDA,"Providência tomada"));
+        assertNotNull(concluida.concluidaEm());assertThrows(ConflitoException.class,()->agenda.salvar(master,concluida.id(),copia(concluida,DIA)));
+        var reaberta=agenda.alterarSituacao(master,concluida.id(),new AlterarSituacaoAgenda(concluida.versao(),SituacaoAgenda.PENDENTE,"Revisão"));
+        assertNull(reaberta.concluidaEm());
+        assertThrows(IllegalArgumentException.class,()->agenda.alterarSituacao(master,reaberta.id(),new AlterarSituacaoAgenda(reaberta.versao(),SituacaoAgenda.CANCELADA," ")));
+        var cancelada=agenda.alterarSituacao(master,reaberta.id(),new AlterarSituacaoAgenda(reaberta.versao(),SituacaoAgenda.CANCELADA,"Cliente desistiu"));
+        assertEquals(5,cancelada.historico().size());assertTrue(cancelada.historico().stream().anyMatch(e->e.observacao().equals("Providência tomada")));
+        assertEquals(SituacaoAgenda.CANCELADA,agenda.buscar(master,original.id()).situacao());
+    }
+    @Test void referenciasDeOutraEmpresaOuInativasSaoRejeitadasSemCriacaoParcial() {
+        var outro=usuario("Outro");empresa(outro);var tipo=tipoTarefa(outro,"Tipo externo");
+        assertThrows(IllegalArgumentException.class,()->agenda.salvar(master,null,tarefa("Externa",DIA,List.of(outro))));
+        assertThrows(IllegalArgumentException.class,()->agenda.salvar(master,null,new SalvarAtividade(0,TipoAtividade.TAREFA,"Tipo externo",tipo.id(),DIA,null,null,null,null,true,null,"","",List.of())));
+        var inativo=membro("ASSISTENTE");jdbc.update("UPDATE equipe_membro SET situacao='INATIVO' WHERE usuario_id=?",inativo);em.clear();
+        assertThrows(IllegalArgumentException.class,()->agenda.salvar(master,null,tarefa("Inativa",DIA,List.of(inativo))));
+        assertEquals(0,agenda.listar(master,filtro(DIA,DIA,true),0,50).total());
+    }
+    @Test void validacaoDeDatasHorariosPrazoFatalEUrlOnline() {
+        assertThrows(IllegalArgumentException.class,()->agenda.salvar(master,null,new SalvarAtividade(0,TipoAtividade.REUNIAO,"Horários",null,DIA,null,LocalTime.of(10,0),LocalTime.of(9,0),null,false,"PRESENCIAL","","",List.of())));
+        assertThrows(IllegalArgumentException.class,()->agenda.salvar(master,null,new SalvarAtividade(0,TipoAtividade.AUDIENCIA,"Link",null,DIA,null,null,null,null,true,"ONLINE","javascript:alert(1)","",List.of())));
+        assertThrows(IllegalArgumentException.class,()->agenda.salvar(master,null,new SalvarAtividade(0,TipoAtividade.PRAZO,"Prazo",null,DIA,null,null,null,null,true,null,"","",List.of())));
+        assertThrows(IllegalArgumentException.class,()->agenda.salvar(master,null,new SalvarAtividade(0,TipoAtividade.TAREFA,"Antes",null,DIA,null,null,null,DIA.minusDays(1),true,null,"","",List.of())));
+        assertThrows(IllegalArgumentException.class,()->agenda.listar(master,filtro(DIA,DIA,false),0,101));
+        assertThrows(IllegalArgumentException.class,()->agenda.calendario(master,filtro(DIA,DIA.plusDays(62),false)));
+    }
+    @Test void apiRespeitaEmpresaPerfilModuloESuspensaoComSessao() throws Exception {
+        var a=agenda.salvar(master,null,tarefa("Protegida",DIA,List.of()));var outro=usuario("Outro");empresa(outro);
+        var url="/api/agenda/"+a.id();
+        mvc.perform(get(url).with(user(outro.toString()))).andExpect(status().isNotFound());
+        String body="{\"versao\":0,\"situacao\":\"CONCLUIDA\",\"observacao\":\"\"}";
+        mvc.perform(patch(url+"/situacao").with(user(outro.toString())).with(csrf()).contentType("application/json").content(body)).andExpect(status().isNotFound());
+        var financeiro=membro("FINANCEIRO");
+        mvc.perform(get("/api/agenda/opcoes").with(user(financeiro.toString()))).andExpect(status().isOk()).andExpect(jsonPath("$.podeEditar").value(false));
+        mvc.perform(patch(url+"/situacao").with(user(financeiro.toString())).with(csrf()).contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(patch(url+"/situacao").with(user(master.toString())).contentType("application/json").content(body)).andExpect(status().isForbidden());
+        jdbc.update("UPDATE empresa_modulo SET liberado=FALSE WHERE empresa_id=? AND modulo_codigo='agenda'",empresa);
+        mvc.perform(get(url).with(user(master.toString()))).andExpect(status().isForbidden());
+        jdbc.update("UPDATE empresa_modulo SET liberado=TRUE WHERE empresa_id=? AND modulo_codigo='agenda'",empresa);
+        jdbc.update("UPDATE escritorio SET ativo=FALSE WHERE id=?",empresa);em.clear();
+        mvc.perform(get(url).with(user(master.toString()))).andExpect(status().isUnauthorized());
+    }
+    @Test void filtrosPaginacaoResponsavelBuscaLiteralEApiIgnoraEmpresaIdDoCliente() throws Exception {
+        var assistente=membro("ASSISTENTE");agenda.salvar(master,null,tarefa("Preparar recurso",DIA,List.of(assistente)));
+        agenda.salvar(master,null,tarefa("Outras atividades",DIA,List.of(master)));
+        var f=new FiltroAgenda(DIA,DIA,TipoAtividade.TAREFA,SituacaoAgenda.PENDENTE,assistente,"ReCuRsO",false);
+        assertEquals(1,agenda.listar(master,f,0,1).total());assertEquals(0,agenda.listar(master,f,1,1).itens().size());
+        assertEquals(0,agenda.listar(master,new FiltroAgenda(DIA,DIA,null,null,null,"%",false),0,50).total());
+        mvc.perform(post("/api/agenda").with(user(master.toString())).with(csrf()).contentType("application/json")
+            .content("{\"versao\":0,\"tipo\":\"TAREFA\",\"titulo\":\"API\",\"data\":\"2026-10-15\",\"diaInteiro\":true,\"responsaveis\":[],\"empresaId\":\""+UUID.randomUUID()+"\"}"))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.dados.titulo").value("API"));
+        assertEquals(3,agenda.listar(master,filtro(DIA,DIA,false),0,50).total());
+    }
+}
