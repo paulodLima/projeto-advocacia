@@ -1,0 +1,487 @@
+<div class="conteudo-ficha financeiro-caso pilha">
+  @if (erro() && !aberta()) {
+    <p class="mensagem erro" role="alert">
+      {{ erro() }}
+      <button type="button" [disabled]="ocupado()" (click)="carregar()">Recarregar</button>
+    </p>
+  }
+  @if (carregando()) {
+    <p role="status">Lendo o financeiro do caso…</p>
+  }
+  @if (ficha(); as f) {
+    <div class="resumo-financeiro">
+      <article class="cartao">
+        <p class="rotulo">Honorários combinados</p>
+        <strong>{{ f.resumo.honorarios | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</strong>
+      </article>
+      <article class="cartao">
+        <p class="rotulo">Já recebido</p>
+        <strong>{{ f.resumo.recebido | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</strong>
+      </article>
+      <article class="cartao">
+        <p class="rotulo">A receber</p>
+        <strong>{{ f.resumo.aReceber | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</strong>
+      </article>
+      <article class="cartao">
+        <p class="rotulo">Despesas a reembolsar</p>
+        <strong>{{
+          f.resumo.despesasAReembolsar | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR'
+        }}</strong>
+      </article>
+    </div>
+    @if (exclusao()) {
+      <fieldset class="mensagem pilha curta" [disabled]="ocupado()">
+        <p>Excluir este registro financeiro? Esta ação não pode ser desfeita.</p>
+        <div class="linha fim">
+          <button type="button" (click)="exclusao.set(null)">Cancelar</button
+          ><button type="button" class="perigo" (click)="excluir()">Confirmar exclusão</button>
+        </div>
+      </fieldset>
+    }
+    <section class="pilha curta">
+      <h3>Honorários</h3>
+      @for (h of f.honorarios; track h.id) {
+        <div class="honorario-linha linha">
+          <span
+            class="badge"
+            [class.exito]="h.tipo === 'exito'"
+            [class.sucumbencia]="h.tipo === 'sucumbencia'"
+            >{{ nomeTipo(h) }}</span
+          >
+          <div class="cresce">
+            <p>
+              {{ h.valor == null ? '—' : (h.valor | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR')
+              }}{{ h.percentual && !h.baseCalculo ? ' · ' + h.percentual + '%' : ''
+              }}{{ h.observacoes ? ' · ' + h.observacoes : '' }}
+            </p>
+            @if (h.percentual && h.baseCalculo) {
+              <small
+                >{{ h.percentual }}% sobre
+                {{ h.baseCalculo | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR'
+                }}{{ h.tipo === 'exito' ? ' · expectativa' : '' }}</small
+              >
+            }
+          </div>
+          @if (podeEditar()) {
+            <button
+              type="button"
+              class="perigo"
+              [disabled]="ocupado()"
+              (click)="exclusao.set({ tipo: 'honorarios', id: h.id })"
+            >
+              Excluir
+            </button>
+          }
+        </div>
+      } @empty {
+        <p class="rotulo">Nenhum honorário cadastrado ainda.</p>
+      }
+      @if (podeEditar()) {
+        <form (ngSubmit)="adicionarHonorario()">
+          <fieldset class="pilha curta" [disabled]="ocupado()">
+            <div class="campos-honorario">
+              <label
+                >Tipo<select name="tipo" [(ngModel)]="honorario.tipo">
+                  <option value="contratual">Contratual</option>
+                  <option value="exito">Êxito</option>
+                  <option value="sucumbencia">Sucumbência</option>
+                </select></label
+              ><label
+                >Base de cálculo<input
+                  name="base"
+                  [(ngModel)]="honorario.base"
+                  placeholder="Valor da causa"
+                  inputmode="decimal" /></label
+              ><label
+                >Percentual<input
+                  name="percentual"
+                  [(ngModel)]="honorario.percentual"
+                  placeholder="%"
+                  inputmode="decimal" /></label
+              ><label
+                >Ou valor fixo<input
+                  name="valor"
+                  [(ngModel)]="honorario.valor"
+                  placeholder="0,00"
+                  inputmode="decimal"
+              /></label>
+            </div>
+            <div class="linha">
+              <input
+                class="cresce"
+                name="observacoes"
+                aria-label="Observação do honorário"
+                [(ngModel)]="honorario.observacoes"
+                placeholder="Observação (sobre o que incide, condição combinada…)"
+                maxlength="2000"
+              /><button type="submit" class="primario">Adicionar</button>
+            </div>
+            @if (calculado(); as valor) {
+              <p class="calculo-honorario">
+                {{ honorario.percentual }}% sobre {{ honorario.base }} =
+                <strong>{{ valor | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</strong>
+              </p>
+            }
+          </fieldset>
+        </form>
+      }
+    </section>
+    <section class="pilha curta">
+      <header class="linha entre">
+        <div>
+          <h3>Lançamentos</h3>
+          <p class="rotulo">O que entra e o que sai — parcelas, vencimentos e baixa.</p>
+        </div>
+        @if (podeEditar()) {
+          <div class="linha">
+            <button type="button" [disabled]="ocupado()" (click)="abrir('entrada')">
+              ↓ Nova entrada</button
+            ><button type="button" class="perigo" [disabled]="ocupado()" (click)="abrir('saida')">
+              ↑ Nova saída</button
+            ><button
+              type="button"
+              [disabled]="ocupado() || aberta()"
+              [attr.aria-expanded]="rapida()"
+              (click)="cobrancaRapida()"
+            >
+              Cobrança rápida
+            </button>
+          </div>
+        }
+      </header>
+      @if (rapida()) {
+        <form class="cartao pilha curta" #r="ngForm" (ngSubmit)="r.valid && criarLancamento()">
+          <fieldset class="pilha curta" [disabled]="ocupado()">
+            <input
+              name="descricaoRapida"
+              [(ngModel)]="lancamento.descricao"
+              required
+              maxlength="280"
+              placeholder="Do que se trata (ex.: honorários contratuais)"
+              aria-label="Descrição da cobrança"
+            />
+            <div class="resumo-financeiro">
+              <input
+                name="valorRapida"
+                [(ngModel)]="lancamento.valor"
+                inputmode="decimal"
+                required
+                placeholder="Valor total"
+                aria-label="Valor total"
+              /><select
+                name="modalidadeRapida"
+                [(ngModel)]="lancamento.modalidade"
+                aria-label="Modalidade"
+              >
+                @for (m of modalidades; track m.id) {
+                  <option [value]="m.id">{{ m.nome }}</option>
+                }</select
+              ><input
+                type="number"
+                name="parcelasRapida"
+                [(ngModel)]="lancamento.parcelas"
+                min="1"
+                max="60"
+                required
+                aria-label="Quantidade de parcelas"
+              /><input
+                type="date"
+                name="vencimentoRapida"
+                [(ngModel)]="lancamento.vencimento"
+                required
+                aria-label="Primeiro vencimento"
+              />
+            </div>
+            @if (parcelas().length) {
+              <p class="rotulo">
+                {{ parcelas().length }} parcela(s) · primeira
+                {{ parcelas()[0] | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }} · demais
+                {{
+                  parcelas()[parcelas().length - 1] | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR'
+                }}
+              </p>
+            }
+            <div class="linha fim">
+              <button type="button" (click)="rapida.set(false)">Cancelar</button
+              ><button type="submit" class="primario" [disabled]="r.invalid">
+                Gravar cobrança
+              </button>
+            </div>
+          </fieldset>
+        </form>
+      }
+      @for (g of grupos(); track g.id) {
+        <article class="cartao pilha curta grupo-cobranca">
+          <header class="linha entre">
+            <div>
+              <h3>{{ g.descricao }}</h3>
+              <p class="rotulo">
+                {{ nomeModalidade(g.modalidade) }} · {{ g.itens.length }} parcela(s) · {{ g.pagas }}
+                {{ g.direcao === 'saida' ? 'pagas' : 'recebidas' }}
+                <span class="badge-local">só aqui</span>
+              </p>
+            </div>
+            <strong>{{ g.total | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</strong>
+          </header>
+          @for (l of g.itens; track l.id) {
+            <div class="parcela-caso pilha curta">
+              <div class="linha entre">
+                <div class="cresce">
+                  <p>
+                    {{ l.parcela }}/{{ l.parcelas }} ·
+                    {{ l.valor | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }} ·
+                    {{ l.vencimento | date: 'dd/MM/yyyy' }}
+                  </p>
+                  <small [class.vencida]="!l.pago && l.vencimento < hoje">{{
+                    l.pago
+                      ? (l.direcao === 'saida' ? 'pago' : 'recebido') +
+                        ' em ' +
+                        (l.pagoEm | date: 'dd/MM/yyyy')
+                      : l.vencimento < hoje
+                        ? 'vencida'
+                        : 'aguardando pagamento'
+                  }}</small>
+                  @if (l.categoria || l.contato) {
+                    <small>{{ l.categoria }}{{ l.contato ? ' · ' + l.contato : '' }}</small>
+                  }
+                </div>
+                <span class="rotulo">{{
+                  l.titularidade === 'cliente' ? 'dinheiro do cliente' : 'do escritório'
+                }}</span>
+              </div>
+              @if (podeEditar()) {
+                <div class="linha">
+                  <button type="button" [disabled]="ocupado()" (click)="baixa(l)">
+                    {{
+                      l.pago
+                        ? 'Estornar baixa'
+                        : l.direcao === 'saida'
+                          ? 'Marcar como pago'
+                          : 'Marcar como recebido'
+                    }}</button
+                  ><button
+                    type="button"
+                    [disabled]="ocupado() || l.pago"
+                    (click)="mudarVencimento(l)"
+                  >
+                    Mudar vencimento</button
+                  ><button type="button" [disabled]="ocupado()" (click)="titularidade(l)">
+                    {{
+                      l.titularidade === 'cliente'
+                        ? 'Marcar como do escritório'
+                        : 'Marcar como dinheiro do cliente'
+                    }}</button
+                  ><button
+                    type="button"
+                    class="perigo"
+                    [disabled]="ocupado() || l.pago"
+                    (click)="exclusao.set({ tipo: 'lancamentos', id: l.id })"
+                  >
+                    Excluir
+                  </button>
+                </div>
+              }
+              @if (vencimentoEditando() === l.id) {
+                <fieldset class="linha" [disabled]="ocupado()">
+                  <label>Novo vencimento:<input type="date" [(ngModel)]="novoVencimento" /></label
+                  ><button type="button" [disabled]="!novoVencimento" (click)="salvarVencimento(l)">
+                    Salvar</button
+                  ><button type="button" (click)="vencimentoEditando.set(null)">Cancelar</button>
+                </fieldset>
+              }
+            </div>
+          }
+          <footer class="linha fim">
+            <button type="button" disabled title="Integração com o gateway ainda não configurada">
+              Enviar ao ASAAS
+            </button>
+            @if (g.direcao === 'entrada') {
+              <button
+                type="button"
+                disabled
+                title="Exportação de documentos financeiros prevista para a próxima etapa"
+              >
+                Fatura em PDF
+              </button>
+            }
+          </footer>
+        </article>
+      } @empty {
+        <p class="rotulo">Nenhuma cobrança cadastrada ainda.</p>
+      }
+      <p class="rotulo">
+        Os lançamentos e baixas são registros internos. A emissão de boleto/PIX e o envio pelo ASAAS
+        ainda não estão disponíveis.
+      </p>
+    </section>
+    <section class="pilha curta">
+      <h3>Despesas</h3>
+      @for (d of f.despesas; track d.id) {
+        <div class="honorario-linha linha">
+          <div class="cresce">
+            <p>
+              {{ d.descricao }} · {{ d.valor | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+            </p>
+            <small
+              >{{ d.data | date: 'dd/MM/yyyy' }} ·
+              {{
+                d.reembolsavel
+                  ? d.reembolsada
+                    ? 'reembolsada'
+                    : 'a reembolsar'
+                  : 'não reembolsável'
+              }}</small
+            >
+          </div>
+          @if (podeEditar()) {
+            <div class="linha">
+              @if (d.reembolsavel) {
+                <button type="button" [disabled]="ocupado()" (click)="reembolso(d)">
+                  {{ d.reembolsada ? 'Estornar reembolso' : 'Marcar reembolsada' }}
+                </button>
+              }
+              <button
+                type="button"
+                class="perigo"
+                [disabled]="ocupado() || d.reembolsada"
+                (click)="exclusao.set({ tipo: 'despesas', id: d.id })"
+              >
+                Excluir
+              </button>
+            </div>
+          }
+        </div>
+      } @empty {
+        <p class="rotulo">Nenhuma despesa cadastrada ainda.</p>
+      }
+      @if (podeEditar()) {
+        <form #d="ngForm" (ngSubmit)="d.valid && adicionarDespesa()">
+          <fieldset class="pilha curta" [disabled]="ocupado()">
+            <div class="grade tres">
+              <label
+                >Descrição<input
+                  name="descricaoDespesa"
+                  [(ngModel)]="despesa.descricao"
+                  maxlength="300"
+                  required /></label
+              ><label
+                >Valor<input
+                  name="valorDespesa"
+                  [(ngModel)]="despesa.valor"
+                  inputmode="decimal"
+                  required
+                  placeholder="0,00" /></label
+              ><label
+                >Data<input type="date" name="dataDespesa" [(ngModel)]="despesa.data" required
+              /></label>
+            </div>
+            <div class="linha entre">
+              <label class="checkbox-financeiro"
+                ><input type="checkbox" name="reembolsavel" [(ngModel)]="despesa.reembolsavel" />
+                Reembolsável</label
+              ><button type="submit" [disabled]="d.invalid">Adicionar despesa</button>
+            </div>
+          </fieldset>
+        </form>
+      }
+    </section>
+  }
+  <dialog #painel class="lancamento-dialog" (cancel)="fechar($event)">
+    @if (aberta()) {
+      <div class="pilha">
+        <header class="linha entre">
+          <h2>{{ lancamento.direcao === 'entrada' ? 'Nova entrada' : 'Nova saída' }}</h2>
+          <button type="button" [disabled]="ocupado()" (click)="fechar()">Fechar</button>
+        </header>
+        @if (erro()) {
+          <p class="mensagem erro" role="alert">
+            {{ erro() }}
+            <button type="button" [disabled]="ocupado()" (click)="carregar()">
+              Recarregar versão
+            </button>
+          </p>
+        }
+        <form #f="ngForm" (ngSubmit)="f.valid && criarLancamento()">
+          <fieldset class="pilha" [disabled]="ocupado()">
+            <label
+              >Descrição<input
+                name="descricao"
+                [(ngModel)]="lancamento.descricao"
+                maxlength="280"
+                required
+                placeholder="Do que se trata"
+            /></label>
+            <div class="grade dois">
+              <label
+                >Valor total<input
+                  name="valor"
+                  [(ngModel)]="lancamento.valor"
+                  inputmode="decimal"
+                  required
+                  placeholder="0,00" /></label
+              ><label
+                >Primeiro vencimento<input
+                  type="date"
+                  name="vencimento"
+                  [(ngModel)]="lancamento.vencimento"
+                  required /></label
+              ><label
+                >Modalidade<select name="modalidade" [(ngModel)]="lancamento.modalidade">
+                  @for (m of modalidades; track m.id) {
+                    <option [value]="m.id">{{ m.nome }}</option>
+                  }
+                </select></label
+              ><label
+                >Quantidade de parcelas<input
+                  type="number"
+                  name="parcelas"
+                  [(ngModel)]="lancamento.parcelas"
+                  min="1"
+                  max="60"
+                  required /></label
+              ><label
+                >Categoria<select name="categoria" [(ngModel)]="lancamento.categoriaId">
+                  <option [ngValue]="null">— não informado —</option>
+                  @for (c of categorias(); track c.id) {
+                    <option [value]="c.id">{{ c.nome }}</option>
+                  }
+                </select></label
+              ><label
+                >{{ lancamento.direcao === 'entrada' ? 'Receber de' : 'Pagar a'
+                }}<select name="contato" [(ngModel)]="lancamento.contatoId">
+                  <option [ngValue]="null">— ninguém em especial —</option>
+                  @for (c of opcoes()?.contatos || []; track c.id) {
+                    <option [value]="c.id">{{ c.nome }}</option>
+                  }
+                </select></label
+              >
+            </div>
+            <label
+              >Observações<textarea
+                name="observacoes"
+                [(ngModel)]="lancamento.observacoes"
+                rows="3"
+                maxlength="2000"
+              ></textarea>
+            </label>
+            @if (parcelas().length) {
+              <p class="rotulo">
+                {{ parcelas().length }} parcela(s) · primeira
+                {{ parcelas()[0] | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }} · demais
+                {{
+                  parcelas()[parcelas().length - 1] | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR'
+                }}
+              </p>
+            }
+            <div class="linha fim">
+              <button type="button" (click)="fechar()">Cancelar</button
+              ><button type="submit" class="primario" [disabled]="f.invalid">
+                {{ ocupado() ? 'Salvando…' : 'Salvar lançamento' }}
+              </button>
+            </div>
+          </fieldset>
+        </form>
+      </div>
+    }
+  </dialog>
+</div>

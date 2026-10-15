@@ -1,0 +1,123 @@
+<form class="caso-form pilha" #f="ngForm" (ngSubmit)="f.valid && salvar()">
+  @if (erro()) {
+    <p class="mensagem erro" role="alert">{{ erro() }}</p>
+  }
+  <fieldset class="pilha" [disabled]="ocupado()">
+    <div class="cartao pilha">
+      <label
+        >Título do caso<input
+          name="titulo"
+          [(ngModel)]="form.titulo"
+          required
+          maxlength="300"
+          placeholder="Ex.: Consultoria sucessória — família Almeida"
+      /></label>
+      <div class="grade dois">
+        <div class="pilha curta">
+          <div class="linha entre">
+            <label for="cliente-caso">Cliente</label>
+            @if (opcoes().podeCriarCliente) {
+              <button type="button" (click)="alternarCliente()">
+                {{ novoCliente ? 'selecionar existente' : '+ novo cliente' }}
+              </button>
+            }
+          </div>
+          @if (!novoCliente) {
+            <select
+              id="cliente-caso"
+              name="cliente"
+              [(ngModel)]="form.clienteId"
+              (ngModelChange)="sugerirTitulo()"
+            >
+              <option [ngValue]="null">—</option>
+              @for (c of opcoes().clientes; track c.id) {
+                <option [value]="c.id">{{ c.nome }}</option>
+              }
+            </select>
+          } @else {
+            <div class="novo-cliente pilha curta">
+              <label
+                >Nome<input
+                  name="clienteNome"
+                  [(ngModel)]="cliente.nome"
+                  (ngModelChange)="sugerirTitulo()"
+                  required
+                  maxlength="150" /></label
+              ><label
+                >CPF<input
+                  name="clienteCpf"
+                  appMascara="cpf"
+                  [(ngModel)]="cliente.documento" /></label
+              ><label
+                >Telefone<input
+                  name="clienteTelefone"
+                  appMascara="telefone"
+                  [(ngModel)]="cliente.telefone"
+                  placeholder="(61) 90000-0000"
+              /></label>
+              <p class="rotulo">Você poderá completar os outros dados na ficha de Contatos.</p>
+            </div>
+          }
+        </div>
+        <label
+          >Área<select name="grupo" [(ngModel)]="form.grupoId">
+            <option [ngValue]="null">—</option>
+            @for (g of opcoes().grupos; track g.id) {
+              <option [value]="g.id">{{ g.nome }}</option>
+            }
+            @if (caso()?.grupoId && !opcoes().grupos.some(grupoAtual)) {
+              <option [value]="caso()!.grupoId">{{ caso()!.grupo }} (inativa)</option>
+            }
+          </select></label
+        >
+      </div>
+      <label
+        >Partes adversas<input
+          name="partesAdversas"
+          [(ngModel)]="form.partesAdversas"
+          (ngModelChange)="sugerirTitulo()"
+          maxlength="300"
+      /></label>
+      <div class="proposta pilha curta">
+        <h3>Proposta</h3>
+        <div class="grade dois">
+          <label
+            >Valor apresentado
+            <div class="valor-reais">
+              <span>R$</span
+              ><input
+                name="proposta"
+                [(ngModel)]="proposta"
+                inputmode="decimal"
+                placeholder="0,00"
+              /></div></label
+          ><label
+            >Data da proposta<input type="date" name="propostaEm" [(ngModel)]="form.propostaEm"
+          /></label>
+        </div>
+      </div>
+      <label
+        >Responsável<select name="responsavel" [(ngModel)]="form.responsavelId">
+          <option [ngValue]="null">—</option>
+          @for (m of opcoes().membros; track m.id) {
+            <option [value]="m.id">{{ m.nome }}</option>
+          }
+        </select></label
+      >
+      <label
+        >Observações<textarea
+          name="observacoes"
+          [(ngModel)]="form.observacoes"
+          maxlength="4000"
+          rows="4"
+        ></textarea>
+      </label>
+    </div>
+    <div class="linha fim">
+      <button type="button" (click)="cancelar.emit()">Cancelar</button
+      ><button class="primario" [disabled]="f.invalid">
+        {{ ocupado() ? 'Salvando…' : 'Salvar caso' }}
+      </button>
+    </div>
+  </fieldset>
+</form>

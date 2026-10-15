@@ -10,6 +10,7 @@ import {
   output,
   signal,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, finalize } from 'rxjs';
@@ -30,7 +31,7 @@ import {
 
 @Component({
   selector: 'app-lead-card',
-  imports: [FormsModule, Icone],
+  imports: [FormsModule, Icone, RouterLink],
   templateUrl: './lead-card.html',
 })
 export class LeadCard {

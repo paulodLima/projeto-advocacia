@@ -395,3 +395,7 @@ A foto é reduzida no navegador a até 400 pixels e enviada junto do formulário
 Escritas exigem CSRF e são atômicas, incluindo os campos compartilhados. Respostas usam `Cache-Control: no-store`. A auditoria utiliza `contato_evento` com identificadores, operação e data. Parceiros com contatos na carteira não podem ser excluídos: primeiro remova os vínculos. A exclusão remove também o contato compartilhado e seus dados profissionais. Esta etapa não implementa processos em parceria, percentuais, repasses nem saldos financeiros; essas partes da referência serão integradas com Gestão Processual e Financeiro.
 
 Atualize os containers pela raiz com `docker compose -f docker/compose.yaml up --build -d`. O Flyway aplica V16 ao iniciar a API.
+
+### Casos
+
+Cadastro, ficha, proposta, desfecho comercial, histórico, tarefas e financeiro já persistem no banco. Consulte [a documentação de Casos](docs/casos.md) para endpoints, permissões e partes previstas para as próximas etapas.

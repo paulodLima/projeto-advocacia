@@ -1,0 +1,395 @@
+<div class="conteudo-ficha tarefas-caso pilha curta">
+  @if (erro() && !aberto()) {
+    <p class="mensagem erro" role="alert">
+      {{ erro() }} <button type="button" (click)="carregar()">Recarregar</button>
+    </p>
+  }
+  @if (carregando()) {
+    <p role="status">Lendo as tarefas do caso…</p>
+  }
+  @if (podeEditar()) {
+    <div class="linha fim">
+      <button type="button" class="primario linha" (click)="abrir(null)">
+        <app-icone nome="plus" /> Nova tarefa
+      </button>
+    </div>
+  }
+  @if (!carregando() && !tarefas().length && !erro()) {
+    <p class="vazio">Nenhuma tarefa neste caso ainda.</p>
+  }
+  @for (t of pendentes(); track t.id) {
+    <button type="button" class="tarefa-linha linha" (click)="abrir(t)">
+      <span class="ponto-tarefa" [class.atrasada]="atrasada(t)"></span>
+      <div class="cresce">
+        <p>{{ t.dados.titulo || t.tipo || 'Tarefa' }}</p>
+        <small [class.atrasada]="atrasada(t)"
+          >{{ t.dados.prazoFatal ? 'prazo fatal ' : ''
+          }}{{
+            t.dados.prazoFatal || t.dados.data
+              ? (t.dados.prazoFatal || t.dados.data | date: 'dd/MM/yyyy')
+              : 'sem data'
+          }}{{ nomes(t) ? ' · ' + nomes(t) : '' }}</small
+        >
+      </div>
+    </button>
+  }
+  @if (concluidas().length) {
+    <p class="rotulo separacao-concluidas">Concluídas ({{ concluidas().length }})</p>
+  }
+  @for (t of concluidas(); track t.id) {
+    <button type="button" class="tarefa-linha linha concluida" (click)="abrir(t)">
+      <span class="ponto-tarefa"></span>
+      <div class="cresce">
+        <p>{{ t.dados.titulo || t.tipo || 'Tarefa' }}</p>
+        <small
+          >{{
+            t.dados.prazoFatal || t.dados.data
+              ? (t.dados.prazoFatal || t.dados.data | date: 'dd/MM/yyyy')
+              : 'sem data'
+          }}{{ nomes(t) ? ' · ' + nomes(t) : '' }}</small
+        >
+      </div>
+    </button>
+  }
+  <dialog #painel class="tarefa-dialog" (cancel)="fechar($event)">
+    @if (aberto()) {
+      <div class="pilha">
+        <button type="button" class="voltar" [disabled]="ocupado()" (click)="fechar()">
+          ‹ Fechar
+        </button>
+        @if (erro()) {
+          <p class="mensagem erro" role="alert">
+            {{ erro() }}
+            @if (selecionada()) {
+              <button type="button" [disabled]="ocupado()" (click)="recarregarTarefa()">
+                Recarregar tarefa
+              </button>
+            }
+          </p>
+        }
+        @if (editando()) {
+          <h2>{{ selecionada() ? 'Editar tarefa' : 'Nova tarefa' }}</h2>
+          <form #f="ngForm" (ngSubmit)="f.valid && salvar()">
+            <fieldset class="pilha" [disabled]="ocupado() || !podeEditar()">
+              <label
+                >O que será feito<select name="tipo" [(ngModel)]="form.tipoId">
+                  <option [ngValue]="null">— escrever um título livre —</option>
+                  @for (tipo of opcoes()?.tipos || []; track tipo.id) {
+                    <option [value]="tipo.id">{{ tipo.nome }}</option>
+                  }
+                  @if (selecionada()?.dados?.tipoId && !opcoes()?.tipos?.some(tipoAtual)) {
+                    <option [value]="selecionada()!.dados.tipoId">
+                      {{ selecionada()!.tipo }} (inativo)
+                    </option>
+                  }
+                </select></label
+              >
+              @if (!form.tipoId) {
+                <label
+                  >Título<input name="titulo" [(ngModel)]="form.titulo" required maxlength="300"
+                /></label>
+              }
+              <div class="grade dois">
+                <label
+                  >Processo (opcional)<select disabled>
+                    <option>— sem processo —</option></select
+                  ><small class="rotulo">Disponível com Gestão Processual.</small></label
+                ><label
+                  >Categoria<select disabled>
+                    <option>— selecione —</option></select
+                  ><small class="rotulo">Cadastro de categorias ainda não disponível.</small></label
+                >
+              </div>
+              <label
+                >Prazo fatal<input type="date" name="prazoFatal" [(ngModel)]="form.prazoFatal"
+              /></label>
+              <div class="proposta pilha curta">
+                <p class="rotulo">Quando acontece</p>
+                <div class="grade dois">
+                  <div>
+                    <label>Começa em<input type="date" name="data" [(ngModel)]="form.data" /></label
+                    ><label
+                      >Hora de início<input
+                        type="time"
+                        name="hora"
+                        [(ngModel)]="form.hora"
+                        [disabled]="form.diaInteiro"
+                    /></label>
+                  </div>
+                  <div>
+                    <label
+                      >Termina em<input
+                        type="date"
+                        name="dataFim"
+                        [(ngModel)]="form.dataFim"
+                        [min]="form.data || ''" /></label
+                    ><label
+                      >Hora de término<input
+                        type="time"
+                        name="horaFim"
+                        [(ngModel)]="form.horaFim"
+                        [disabled]="form.diaInteiro"
+                    /></label>
+                  </div>
+                </div>
+              </div>
+              <div class="pilha curta">
+                <p class="rotulo">Responsáveis</p>
+                <div class="linha responsaveis-tarefa">
+                  @for (m of opcoes()?.membros || []; track m.id) {
+                    <button
+                      type="button"
+                      [class.ativo]="form.responsaveis.includes(m.id)"
+                      [attr.aria-pressed]="form.responsaveis.includes(m.id)"
+                      (click)="alternar(form.responsaveis, m.id)"
+                    >
+                      {{ m.nome }}
+                    </button>
+                  }
+                  @for (m of responsaveisInativos(); track m.id) {
+                    @if (form.responsaveis.includes(m.id)) {
+                      <button
+                        type="button"
+                        class="ativo"
+                        (click)="alternar(form.responsaveis, m.id)"
+                        [attr.aria-label]="'Remover responsável indisponível ' + m.nome"
+                      >
+                        {{ m.nome }} (indisponível) ×
+                      </button>
+                    }
+                  }
+                </div>
+              </div>
+              <label>Local<input name="local" [(ngModel)]="form.local" maxlength="500" /></label>
+              <label
+                >Descrição<textarea
+                  name="descricao"
+                  [(ngModel)]="form.descricao"
+                  rows="4"
+                  maxlength="4000"
+                ></textarea>
+              </label>
+              <div class="linha">
+                <label class="check-tarefa"
+                  ><input type="checkbox" name="agenda" [(ngModel)]="form.mostrarAgenda" /> Mostrar
+                  na agenda</label
+                ><label class="check-tarefa"
+                  ><input type="checkbox" name="diaInteiro" [(ngModel)]="form.diaInteiro" /> Dia
+                  inteiro</label
+                >
+              </div>
+              <p class="rotulo">
+                A preferência de agenda fica salva para a integração com o módulo Agenda.
+              </p>
+              <label
+                >Repetição<select name="repeticao" [(ngModel)]="form.repeticao">
+                  <option value="nunca">Não se repete</option>
+                  <option value="diaria">Diariamente</option>
+                  <option value="semanal">Semanalmente</option>
+                  <option value="mensal">Mensalmente</option>
+                  <option value="anual">Anualmente</option>
+                </select></label
+              >
+              @if (form.repeticao !== 'nunca') {
+                <p class="rotulo">
+                  A repetição fica registrada aqui, mas ainda não gera automaticamente as próximas
+                  ocorrências — isso entra numa etapa futura.
+                </p>
+              }
+              <div class="linha">
+                @for (flag of flags; track flag) {
+                  <label class="check-tarefa"
+                    ><input
+                      type="checkbox"
+                      [checked]="form.flags.includes(flag)"
+                      (change)="alternar(form.flags, flag)"
+                    />
+                    {{ flag }}</label
+                  >
+                }
+              </div>
+              <p class="rotulo">
+                Tarefa privada: visível para o criador, responsáveis e usuário master.
+              </p>
+              <div class="linha fim">
+                <button type="button" (click)="cancelarEdicao()">Cancelar</button
+                ><button type="submit" class="primario" [disabled]="f.invalid">
+                  {{ ocupado() ? 'Salvando…' : 'Salvar tarefa' }}
+                </button>
+              </div>
+            </fieldset>
+          </form>
+        } @else if (selecionada(); as t) {
+          <article class="cartao pilha">
+            <header class="pilha curta">
+              <div class="linha">
+                <span class="badge">Tarefa</span>
+                @if (t.status === 'concluida') {
+                  <span class="rotulo">Concluída</span>
+                } @else if (atrasada(t)) {
+                  <span class="atrasada">Atrasada</span>
+                }
+              </div>
+              <h2>{{ t.dados.titulo || t.tipo || 'Tarefa' }}</h2>
+              <p class="rotulo">
+                {{ t.dados.prazoFatal ? 'prazo fatal ' : ''
+                }}{{
+                  t.dados.prazoFatal || t.dados.data
+                    ? (t.dados.prazoFatal || t.dados.data | date: 'dd/MM/yyyy')
+                    : 'sem data'
+                }}
+                @if (t.dados.hora) {
+                  · {{ t.dados.hora.slice(0, 5) }}
+                }
+              </p>
+              <p class="rotulo">Responsável(is): {{ t.responsaveis.length ? nomes(t) : '—' }}</p>
+              @if (t.concluidaEm) {
+                <p class="rotulo">
+                  Cumprida por {{ t.concluidaPor }} em
+                  {{ t.concluidaEm | date: 'dd/MM/yyyy HH:mm' : '-0300' }}
+                </p>
+              }
+            </header>
+            @if (podeEditar()) {
+              <fieldset class="linha acoes-tarefa" [disabled]="ocupado()">
+                <button
+                  type="button"
+                  [class.primario]="t.status !== 'concluida'"
+                  (click)="realizar()"
+                >
+                  {{ t.status === 'concluida' ? 'Reabrir' : 'Realizar' }}</button
+                ><button type="button" (click)="acao.set(acao() === 'adiar' ? '' : 'adiar')">
+                  Adiar</button
+                ><button type="button" (click)="acao.set(acao() === 'delegar' ? '' : 'delegar')">
+                  Delegar</button
+                ><button type="button" (click)="editar()">Editar</button
+                ><button type="button" class="perigo excluir-tarefa" (click)="acao.set('excluir')">
+                  Excluir
+                </button>
+              </fieldset>
+            }
+            @if (acao() === 'realizar') {
+              <fieldset class="proposta pilha curta" [disabled]="ocupado()">
+                <label
+                  >Qual providência foi tomada?<textarea
+                    [(ngModel)]="providencia"
+                    rows="3"
+                    maxlength="4000"
+                    placeholder="Anotação opcional"
+                  ></textarea>
+                </label>
+                <div class="linha fim">
+                  <button type="button" (click)="acao.set('')">Cancelar</button
+                  ><button type="button" class="primario" (click)="cumprir()">
+                    Confirmar cumprimento
+                  </button>
+                </div>
+              </fieldset>
+            }
+            @if (acao() === 'adiar') {
+              <fieldset class="proposta pilha curta" [disabled]="ocupado()">
+                <p>Adiar para…</p>
+                <div class="linha">
+                  <button type="button" (click)="adiar(1)">+1 dia</button
+                  ><button type="button" (click)="adiar(7)">+7 dias</button>
+                </div>
+                <label>Nova data<input type="date" [(ngModel)]="adiarData" /></label
+                ><button type="button" [disabled]="!adiarData" (click)="adiar()">
+                  Confirmar data
+                </button>
+              </fieldset>
+            }
+            @if (acao() === 'delegar') {
+              <fieldset class="proposta pilha curta" [disabled]="ocupado()">
+                <p>Delegar para…</p>
+                <div class="linha responsaveis-tarefa">
+                  @for (m of opcoes()?.membros || []; track m.id) {
+                    <button
+                      type="button"
+                      [class.ativo]="delegados.includes(m.id)"
+                      [attr.aria-pressed]="delegados.includes(m.id)"
+                      (click)="alternar(delegados, m.id)"
+                    >
+                      {{ m.nome }}
+                    </button>
+                  }
+                  @for (m of responsaveisInativos(); track m.id) {
+                    @if (delegados.includes(m.id)) {
+                      <button
+                        type="button"
+                        class="ativo"
+                        (click)="alternar(delegados, m.id)"
+                        [attr.aria-label]="'Remover responsável indisponível ' + m.nome"
+                      >
+                        {{ m.nome }} (indisponível) ×
+                      </button>
+                    }
+                  }
+                </div>
+                <button type="button" (click)="delegar()">Confirmar delegação</button>
+              </fieldset>
+            }
+            @if (acao() === 'excluir') {
+              <fieldset class="mensagem pilha curta" [disabled]="ocupado()">
+                <p>Excluir esta tarefa e seus comentários? Esta ação não pode ser desfeita.</p>
+                <div class="linha fim">
+                  <button type="button" (click)="acao.set('')">Cancelar</button
+                  ><button type="button" class="perigo" (click)="excluir()">
+                    Confirmar exclusão
+                  </button>
+                </div>
+              </fieldset>
+            }
+            <section class="pilha curta">
+              <h3>Informações gerais</h3>
+              <p>Caso: {{ caso().titulo }}</p>
+              @if (t.dados.local) {
+                <p>Local: {{ t.dados.local }}</p>
+              }
+              @if (t.dados.dataFim) {
+                <p>
+                  Termina em {{ t.dados.dataFim | date: 'dd/MM/yyyy' }}
+                  {{ t.dados.horaFim?.slice(0, 5) }}
+                </p>
+              }
+              @if (t.dados.flags.length) {
+                <p class="rotulo">{{ t.dados.flags.join(' · ') }}</p>
+              }
+              @if (t.dados.descricao) {
+                <h3>Descrição</h3>
+                <p class="texto-preservado">{{ t.dados.descricao }}</p>
+              }
+            </section>
+            <section class="proposta pilha curta">
+              <h3>Comentários</h3>
+              @if (podeEditar()) {
+                <form (ngSubmit)="comentar()">
+                  <fieldset class="pilha curta" [disabled]="ocupado()">
+                    <label
+                      >Comentário<textarea
+                        name="comentario"
+                        [(ngModel)]="comentario"
+                        maxlength="4000"
+                        rows="3"
+                      ></textarea></label
+                    ><button type="submit" [disabled]="!comentario.trim()">Comentar</button>
+                  </fieldset>
+                </form>
+              }
+              @for (c of t.comentarios; track c.id) {
+                <article class="anotacao">
+                  <p class="rotulo">
+                    {{ c.autor }} · {{ c.criadoEm | date: 'dd/MM/yyyy HH:mm' : '-0300' }}
+                  </p>
+                  <p class="texto-preservado">{{ c.texto }}</p>
+                </article>
+              } @empty {
+                <p class="rotulo">Nenhum comentário ainda.</p>
+              }
+            </section>
+          </article>
+        }
+      </div>
+    }
+  </dialog>
+</div>
