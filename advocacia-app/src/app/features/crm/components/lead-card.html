@@ -175,6 +175,7 @@
           </button>
           @if (lead().dados.casoId) {
             <span class="badge qualificacao">Caso criado · histórico preservado</span>
+            @if (opcoes().podeConverter) {<a class="acao" routerLink="/casos" [queryParams]="{id:lead().dados.casoId}">Abrir caso</a>}
           }
         </div>
       </div>

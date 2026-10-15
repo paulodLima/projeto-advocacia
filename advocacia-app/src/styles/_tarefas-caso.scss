@@ -1,0 +1,90 @@
+.casos-ui .tarefas-caso {
+  .tarefa-linha {
+    width: 100%;
+    padding: 12px;
+    text-align: left;
+    border-radius: 8px;
+    gap: 12px;
+    background: transparent;
+  }
+  .tarefa-linha p {
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+  .tarefa-linha small {
+    font-size: 11px;
+    color: #7d6c5e;
+  }
+  .ponto-tarefa {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #7d6c5e;
+    flex-shrink: 0;
+  }
+  .atrasada {
+    color: #9a4b3f;
+  }
+  .ponto-tarefa.atrasada {
+    background: #9a4b3f;
+  }
+  .concluida .ponto-tarefa {
+    background: var(--tema-clara);
+  }
+  .concluida p {
+    text-decoration: line-through;
+  }
+  .separacao-concluidas {
+    padding-top: 12px;
+  }
+  .tarefa-dialog {
+    position: fixed;
+    inset: 0 0 0 auto;
+    margin: 0;
+    border: 0;
+    border-left: 1px solid var(--linha);
+    width: min(680px, 100vw);
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    padding: 24px;
+    background: var(--tema-fundo);
+    overflow: auto;
+    box-shadow: -12px 0 40px #3a342d26;
+  }
+  .tarefa-dialog::backdrop {
+    background: #3a342d66;
+    backdrop-filter: blur(3px);
+  }
+  .tarefa-dialog label {
+    display: block;
+    font-size: 12px;
+    color: #7d6c5e;
+  }
+  .tarefa-dialog .check-tarefa {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .check-tarefa input {
+    width: auto;
+    margin: 0;
+    accent-color: var(--tema-primaria);
+  }
+  .responsaveis-tarefa button {
+    border-radius: 999px;
+    padding: 4px 10px;
+  }
+  .acoes-tarefa {
+    border-top: 1px solid var(--linha);
+    padding-top: 12px;
+  }
+  .excluir-tarefa {
+    margin-left: auto;
+  }
+  @media (max-width: 760px) {
+    .tarefa-dialog {
+      padding: 16px;
+    }
+  }
+}

@@ -1,0 +1,279 @@
+.casos-ui {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+  .pilha {
+    display: grid;
+    gap: 20px;
+    min-width: 0;
+  }
+  .curta {
+    gap: 8px;
+  }
+  .grade {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+  }
+  .dois {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tres {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .busca {
+    margin-bottom: 0;
+  }
+  .rotulo {
+    font-size: 11px;
+    color: #7d6c5e;
+  }
+  .vazio {
+    text-align: center;
+    padding: 32px;
+    color: #7d6c5e;
+  }
+  .voltar {
+    border: 0;
+    background: transparent;
+    justify-self: start;
+    padding: 0;
+    font-size: 14px;
+  }
+  .badge {
+    border-radius: 999px;
+    background: var(--tema-primaria);
+    color: #fff;
+    font-size: 10px;
+    padding: 3px 8px;
+    flex-shrink: 0;
+  }
+  .encerrado {
+    background: #9c948b;
+  }
+  .convertido {
+    background: var(--tema-destaque);
+  }
+  .linhas-casos {
+    display: grid;
+    gap: 8px;
+  }
+  .caso-lista {
+    width: 100%;
+    text-align: left;
+    padding: 12px;
+    border-radius: 12px;
+    min-width: 0;
+    background: #ffffff80;
+  }
+  .caso-lista strong {
+    font-size: 14px;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+  .caso-lista p {
+    font-size: 11px;
+    margin-top: 3px;
+  }
+  .ficha-caso,
+  .edicao-caso {
+    width: 100%;
+  }
+  .caso-ficha {
+    padding: 0;
+    overflow: hidden;
+  }
+  .caso-capa {
+    background: var(--tema-primaria);
+    padding: 24px;
+    color: white;
+  }
+  .caso-capa h2 {
+    font-size: 20px;
+    font-weight: 300;
+    overflow-wrap: anywhere;
+  }
+  .caso-capa a {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 14px;
+    text-decoration: underline;
+  }
+  .caso-eyebrow {
+    font-size: 12px;
+    letter-spacing: 2px;
+    opacity: 0.7;
+    margin-bottom: 4px;
+  }
+  .status-caso {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+  .status-caso .badge {
+    background: #ffffff26;
+  }
+  .status-caso small {
+    font-size: 11px;
+    opacity: 0.7;
+  }
+  .status-caso button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: white;
+    background: transparent;
+    border-color: #ffffff4d;
+  }
+  .status-caso app-icone {
+    width: 14px;
+    height: 14px;
+  }
+  .abas-caso {
+    padding: 12px 20px 0;
+    gap: 4px;
+  }
+  .abas-caso button {
+    border: 0;
+    background: transparent;
+    font-size: 13px;
+  }
+  .abas-caso .ativa {
+    background: var(--tema-clara-suave);
+    color: var(--tema-primaria);
+  }
+  .conteudo-ficha {
+    padding: 20px;
+  }
+  .comercial,
+  .proposta,
+  .novo-cliente,
+  .historico-lead {
+    border: 1px solid var(--linha);
+    border-radius: 12px;
+    padding: 14px;
+    background: var(--tema-clara-suave);
+  }
+  .valor-reais {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .valor-reais span {
+    font-size: 12px;
+  }
+  .caso-form label,
+  .conteudo-ficha label {
+    display: block;
+    font-size: 12px;
+    color: #7d6c5e;
+  }
+  input,
+  select,
+  textarea {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1px solid var(--linha);
+    border-radius: 8px;
+    background: #ffffffb3;
+    color: #2a2723;
+    margin-top: 4px;
+  }
+  .busca input {
+    margin-top: 0;
+  }
+  fieldset {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+  }
+  .texto-preservado {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .anotacao {
+    border-left: 2px solid var(--tema-borda);
+    padding-left: 12px;
+  }
+  .anotacao p + p {
+    margin-top: 6px;
+  }
+  .origem-crm {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    flex-wrap: wrap;
+  }
+  .origem-crm app-icone {
+    width: 16px;
+    height: 16px;
+  }
+  .origem-crm a {
+    text-decoration: underline;
+  }
+  .perigo {
+    color: #b4442f;
+  }
+  .mensagem {
+    border-radius: 12px;
+    padding: 12px;
+    background: var(--tema-clara-suave);
+  }
+  .mensagem.erro {
+    color: #b4442f;
+    background: #b4442f12;
+  }
+  .novo-caso-dialog {
+    position: fixed;
+    inset: 0 0 0 auto;
+    margin: 0;
+    border: 0;
+    border-left: 1px solid var(--linha);
+    height: 100dvh;
+    max-height: 100dvh;
+    width: min(50vw, 820px);
+    max-width: 100vw;
+    box-sizing: border-box;
+    padding: 24px;
+    overflow: auto;
+    background: #f7f4ef;
+    box-shadow: -12px 0 40px #3a342d26;
+  }
+  .novo-caso-dialog::backdrop {
+    background: #3a342d66;
+    backdrop-filter: blur(3px);
+  }
+  .novo-caso-dialog > header {
+    margin-bottom: 20px;
+  }
+  .novo-caso-dialog > header app-icone {
+    width: 16px;
+    height: 16px;
+  }
+  @media (max-width: 760px) {
+    .dois,
+    .tres {
+      grid-template-columns: 1fr;
+    }
+    .novo-caso-dialog {
+      width: calc(100vw - 24px);
+      padding: 16px;
+    }
+    .titulo {
+      flex-wrap: wrap;
+    }
+    .titulo span {
+      flex-basis: 100%;
+      margin-left: 28px;
+    }
+    .status-caso {
+      align-items: flex-start;
+    }
+  }
+}

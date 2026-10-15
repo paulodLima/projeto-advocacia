@@ -41,20 +41,32 @@ export const routes: Routes = [
       {
         path: 'parceiros',
         data: { modulo: 'parceiros' },
-        loadChildren: () => import('./features/parceiros/parceiros.routes').then(m=>m.parceirosRoutes),
+        loadChildren: () =>
+          import('./features/parceiros/parceiros.routes').then((m) => m.parceirosRoutes),
       },
-      { path: 'crm', title: 'CRM — Gestão Advocacia', data: { modulo: 'crm' }, loadComponent: () => import('./features/crm/pages/crm').then(m => m.Crm) },
-      ...ITENS_MENU.filter((item) => !['inicio', 'config', 'contatos', 'parceiros', 'crm'].includes(item.id)).map(
-        (item) => ({
-          path: item.id,
-          title: item.label + ' — Gestão Advocacia',
-          data: { label: item.label, icon: item.icon },
-          loadComponent: () =>
-            import('./shared/pages/modulo-em-breve/modulo-em-breve').then(
-              (module) => module.ModuloEmBreve,
-            ),
-        }),
-      ),
+      {
+        path: 'crm',
+        title: 'CRM — Gestão Advocacia',
+        data: { modulo: 'crm' },
+        loadComponent: () => import('./features/crm/pages/crm').then((m) => m.Crm),
+      },
+      {
+        path: 'casos',
+        title: 'Casos — Gestão Advocacia',
+        data: { modulo: 'casos' },
+        loadComponent: () => import('./features/casos/pages/casos').then((m) => m.Casos),
+      },
+      ...ITENS_MENU.filter(
+        (item) => !['inicio', 'config', 'contatos', 'parceiros', 'crm', 'casos'].includes(item.id),
+      ).map((item) => ({
+        path: item.id,
+        title: item.label + ' — Gestão Advocacia',
+        data: { label: item.label, icon: item.icon },
+        loadComponent: () =>
+          import('./shared/pages/modulo-em-breve/modulo-em-breve').then(
+            (module) => module.ModuloEmBreve,
+          ),
+      })),
     ],
   },
   { path: '**', redirectTo: 'login' },
