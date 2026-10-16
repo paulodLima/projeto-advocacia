@@ -15,11 +15,13 @@ import { IdentidadeApiService } from '../../core/branding/identidade-api.service
 import { CONFIGURACOES, GRUPOS_MENU, INICIO, ITENS_MENU } from '../../core/navigation/menu.model';
 import { TemaService } from '../../core/theme/tema.service';
 import { Icone } from '../../shared/components/icone/icone';
+import { AgendaContagem } from '../../features/agenda/components/agenda-contagem';
+import { AgendaNotificacoes } from '../../features/agenda/components/agenda-notificacoes';
 import { CrmNotificacoes } from '../../features/crm/components/crm-notificacoes';
 
 @Component({
   selector: 'app-authenticated-layout',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, FormsModule, Icone, CrmNotificacoes],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, FormsModule, Icone, CrmNotificacoes, AgendaNotificacoes, AgendaContagem],
   templateUrl: './authenticated-layout.html',
   styleUrls: ['./authenticated-layout.scss', './menu-lateral.scss', './cabecalho.scss', './responsive.scss'],
 })
@@ -66,6 +68,11 @@ export class AuthenticatedLayout {
   protected readonly fixado = signal(this.lerPreferencia() === '1');
   protected readonly menuMobile = signal(false);
   protected readonly recolhidos = signal<string[]>([]);
+  protected readonly totalAgenda=signal<number|null>(null);
+  protected readonly rotuloNotificacoes=computed(()=>{
+    const total=this.acesso.permite('agenda')?this.totalAgenda():null;
+    return total?'Notificações, '+total+' '+(total===1?'lembrete':'lembretes')+' da Agenda':'Notificações';
+  });
   protected readonly painel = signal<'notificacoes' | 'assistente' | 'atalhos' | null>(null);
   protected readonly saindo = signal(false);
   protected readonly erro = signal('');

@@ -1,0 +1,33 @@
+<section aria-label="Lembretes da Agenda">
+  <div class="topo"><h3>Agenda</h3><button type="button" (click)="carregar()" [disabled]="carregando() || gravando()">Atualizar</button></div>
+  <p class="ajuda">Avisos internos das atividades em que você é responsável. Datas e horários de Brasília. Lembretes de atividades sem horário e de prazos fatais aparecem às 09h.</p>
+  @if(erro()){<p role="alert" class="erro">{{ erro() }} <button type="button" (click)="carregar()" [disabled]="gravando()">Tentar novamente</button></p>}
+  @if(aviso()){<p role="status">{{ aviso() }}</p>}
+  @if(carregando()){<p role="status">Carregando lembretes…</p>}
+  @if(painel();as p){
+    <button type="button" (click)="configurar()" [disabled]="gravando()" [attr.aria-expanded]="configurando()">Meus lembretes</button>
+    @if(configurando()){
+      <form (ngSubmit)="salvarPreferencias()">
+        <fieldset [disabled]="gravando()">
+          <legend>Preferências pessoais</legend>
+          <label class="check"><input name="ativo" type="checkbox" [(ngModel)]="preferencias.ativo">Mostrar meus lembretes</label>
+          <label>Antecedência<select name="antecedencia" [(ngModel)]="preferencias.antecedenciaMinutos"><option [ngValue]="0">No horário</option><option [ngValue]="15">15 minutos antes</option><option [ngValue]="60">1 hora antes</option><option [ngValue]="1440">1 dia antes</option></select></label>
+          <button type="submit">{{ gravando() ? 'Salvando…' : 'Salvar preferências' }}</button>
+        </fieldset>
+      </form>
+    }
+    @if(!p.preferencias.ativo){<p>Seus lembretes estão desativados.</p>}
+    @else{
+      <p>{{ p.total }} {{ p.total === 1 ? 'aviso não visto' : 'avisos não vistos' }}</p>
+      @for(l of p.itens;track l.atividadeId + '-' + l.marco){
+        <article>
+          <strong>{{ l.titulo }}</strong>
+          <span>{{ l.marco === 'PRAZO_FATAL' ? 'Lembrete de prazo fatal' : 'Lembrete de atividade' }} · {{ l.data + 'T12:00:00' | date:'dd/MM/yyyy' }} às {{ l.hora.slice(0,5) }}</span>
+          <div class="acoes"><button type="button" (click)="ler(l,true)" [disabled]="gravando()">Abrir atividade</button><button type="button" (click)="ler(l)" [disabled]="gravando()">Marcar como visto</button></div>
+        </article>
+      }@empty{<p>Nenhum lembrete pendente.</p>}
+      <div class="paginacao"><button type="button" (click)="carregar(p.pagina - 1)" [disabled]="!p.pagina || carregando() || gravando()">Anterior</button><span>Página {{ p.pagina + 1 }}</span><button type="button" (click)="carregar(p.pagina + 1)" [disabled]="(p.pagina + 1) * p.tamanho >= p.total || carregando() || gravando()">Próxima</button></div>
+    }
+    <p class="ajuda">Atualiza a cada 45 segundos enquanto este painel está aberto. Marcar como visto não conclui a atividade. Alterações na ficha renovam seus avisos.</p>
+  }
+</section>

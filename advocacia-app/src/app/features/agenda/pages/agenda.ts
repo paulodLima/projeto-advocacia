@@ -1,4 +1,6 @@
-import { Component, DestroyRef, ElementRef, ViewChild, computed, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, DestroyRef, ElementRef, ViewChild, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -9,7 +11,12 @@ import { AgendaApiService } from '../services/agenda-api.service';
 import { AtividadeAgenda, DiaAgenda, FiltroAgenda, OpcoesAgenda, PaginaAgenda, SITUACOES_AGENDA, TIPOS_AGENDA, atividadeAtrasada, dataCivil, hojeEscritorio, nomeSituacao, nomeTipo } from '../models/agenda.model';
 
 @Component({selector:'app-agenda',imports:[FormsModule,DatePipe,AtividadeForm,CalendarioMensal],templateUrl:'./agenda.html',styleUrl:'./agenda.scss'})
-export class Agenda {
+export class Agenda implements AfterViewInit {
+  private readonly route=inject(ActivatedRoute);
+  private readonly router=inject(Router);
+  private readonly parametros=toSignal(this.route.queryParamMap,{initialValue:convertToParamMap({})});
+  private readonly pronta=signal(false);
+  private ultimoLink='';
   private readonly api=inject(AgendaApiService);
   private readonly destroyRef=inject(DestroyRef);
   @ViewChild('editor') private editor?:ElementRef<HTMLDialogElement>;
@@ -44,7 +51,24 @@ export class Agenda {
     const resumos=new Map(this.calendario().map(d=>[d.data,d]));
     return Array.from({length:42},(_,i)=>{const d=new Date(primeiro);d.setDate(d.getDate()+i);const data=dataCivil(d);return {data,numero:d.getDate(),mesAtual:data.slice(0,7)===this.mes().slice(0,7),...(resumos.get(data) ?? {total:0,pendentes:0,prazosFatais:0})};});
   });
-  constructor(){this.carregarOpcoes();this.carregar();}
+  constructor(){
+    this.carregarOpcoes();this.carregar();
+    effect(()=>{
+      const id=this.parametros().get('atividade');
+      if(!id){this.ultimoLink='';return;}
+      if(!this.opcoes() || !this.pronta() || id===this.ultimoLink) return;
+      this.ultimoLink=id;
+      if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+        this.erro.set('O link da atividade é inválido.');return;
+      }
+      untracked(()=>{if(!this.aberto())this.abrir(id);});
+    });
+  }
+  ngAfterViewInit(){this.pronta.set(true);}
+  private limparLink(){
+    if(this.route.snapshot.queryParamMap.has('atividade'))
+      void this.router.navigate([],{relativeTo:this.route,queryParams:{atividade:null},queryParamsHandling:'merge',replaceUrl:true});
+  }
   protected carregarOpcoes(){
     this.erroOpcoes.set('');
     this.api.opcoes().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({next:o=>this.opcoes.set(o),error:()=>this.erroOpcoes.set('Não foi possível carregar responsáveis e permissões. Tente novamente.')});
@@ -72,11 +96,11 @@ export class Agenda {
   protected nova(){if(!this.opcoes()?.podeEditar)return;this.atividade.set(null);this.abrirEditor();}
   protected abrir(id:string){
     if(this.abrindo())return;this.abrindo.set(true);this.erro.set('');
-    this.api.buscar(id).pipe(finalize(()=>this.abrindo.set(false)),takeUntilDestroyed(this.destroyRef)).subscribe({next:a=>{this.atividade.set(a);this.abrirEditor();},error:e=>this.erro.set(e.error?.detail || 'Não foi possível abrir a atividade.')});
+    this.api.buscar(id).pipe(finalize(()=>this.abrindo.set(false)),takeUntilDestroyed(this.destroyRef)).subscribe({next:a=>{this.atividade.set(a);this.abrirEditor();},error:e=>{this.erro.set(e.error?.detail || 'Não foi possível abrir a atividade.');this.limparLink();}});
   }
   private abrirEditor(){this.aberto.set(true);this.editor?.nativeElement.showModal();}
-  protected fechar(){if(this.formulario?.salvando())return;this.aberto.set(false);this.editor?.nativeElement.close();this.atividade.set(null);}
+  protected fechar(){if(this.formulario?.salvando())return;this.aberto.set(false);this.editor?.nativeElement.close();this.atividade.set(null);this.limparLink();}
   protected cancelarDialogo(event:Event){event.preventDefault();this.fechar();}
-  protected salvo(a:AtividadeAgenda){this.aberto.set(false);this.editor?.nativeElement.close();this.atividade.set(null);this.aviso.set('Atividade salva. '+nomeSituacao(a.situacao)+'.');this.carregar();}
+  protected salvo(a:AtividadeAgenda){this.aberto.set(false);this.editor?.nativeElement.close();this.atividade.set(null);this.aviso.set('Atividade salva. '+nomeSituacao(a.situacao)+'.');this.limparLink();this.carregar();}
   protected dataNova(){return this.diaSelecionado() || hojeEscritorio();}
 }

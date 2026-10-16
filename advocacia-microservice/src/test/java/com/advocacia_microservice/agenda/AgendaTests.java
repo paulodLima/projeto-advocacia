@@ -30,6 +30,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest @ActiveProfiles("test") @Transactional
 class AgendaTests {
     @Autowired AgendaService agenda;
+    @Autowired com.advocacia_microservice.agenda.application.LembretesAgendaService lembretes;
+    @Autowired com.advocacia_microservice.agenda.domain.repository.LembretesAgendaRepository lembretesRepository;
     @Autowired CriarUsuarioUseCase criar;
     @Autowired UsuarioRepository usuarios;
     @Autowired EmpresaService empresas;
@@ -272,5 +274,96 @@ class AgendaTests {
         assertThrows(ConflitoException.class,()->agenda.alterarSituacao(master,a.id(),new AlterarSituacaoAgenda(recorrente.versao(),SituacaoAgenda.CONCLUIDA,"")));
         assertEquals(SituacaoAgenda.PENDENTE,agenda.buscar(master,a.id()).situacao());
         assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM agenda_atividade WHERE anterior_id=?",Integer.class,a.id()));
+    }
+
+    LocalDate ontem(){return LocalDate.now(PreferenciaLembrete.FUSO).minusDays(1);}
+    @Test void lembretesSaoPessoaisPendentesESemDuplicarExecucaoComPrazoNoMesmoHorario() {
+        var assistente=membro("ASSISTENTE");
+        var a=agenda.salvar(master,null,tarefa("Minha tarefa",ontem(),List.of(master)));
+        agenda.salvar(master,null,tarefa("De outra pessoa",ontem(),List.of(assistente)));
+        agenda.salvar(master,null,tarefa("Sem responsável",ontem(),List.of()));
+        agenda.salvar(master,null,tarefa("Sem data",null,List.of(master)));
+        agenda.salvar(master,null,tarefa("Futura",ontem().plusDays(10),List.of(master)));
+        agenda.salvar(master,null,new SalvarAtividade(0,TipoAtividade.PRAZO,"Fatal",null,ontem(),null,null,null,ontem(),true,null,"","",List.of(master)));
+        var painel=lembretes.listar(master,0,20);
+        assertEquals(2,painel.pagina().total());
+        assertEquals(1,painel.pagina().itens().stream().filter(l->l.marco()==MarcoLembrete.PRAZO_FATAL).count());
+        assertEquals(1,lembretes.listar(assistente,0,20).pagina().total());
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM agenda_lembrete_preferencia WHERE empresa_id=?",Integer.class,empresa));
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM agenda_lembrete_lido WHERE empresa_id=?",Integer.class,empresa));
+        assertEquals(a.versao(),agenda.buscar(master,a.id()).versao());
+        assertEquals(2,lembretes.listar(master,0,1).pagina().total());
+        assertEquals(1,lembretes.listar(master,1,1).pagina().itens().size());
+    }
+    @Test void leituraEhPessoalIdempotenteEEdicaoRenovaAvisoSemAlterarAtividade() {
+        var assistente=membro("ASSISTENTE");
+        var a=agenda.salvar(master,null,tarefa("Compartilhada",ontem(),List.of(master,assistente)));
+        var comando=new LerLembrete(a.versao(),MarcoLembrete.ATIVIDADE);
+        lembretes.ler(master,a.id(),comando);lembretes.ler(master,a.id(),comando);
+        assertEquals(0,lembretes.listar(master,0,20).pagina().total());assertEquals(1,lembretes.listar(assistente,0,20).pagina().total());
+        assertEquals(a.versao(),agenda.buscar(master,a.id()).versao());
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM agenda_lembrete_lido WHERE empresa_id=?",Integer.class,empresa));
+        var atual=agenda.salvar(master,a.id(),copia(a,ontem()));
+        assertEquals(1,lembretes.listar(master,0,20).pagina().total());
+        assertThrows(RecursoNaoEncontradoException.class,()->lembretes.ler(master,a.id(),comando));
+        assertEquals(atual.versao(),lembretes.listar(master,0,20).pagina().itens().getFirst().versao());
+        jdbc.update("DELETE FROM agenda_responsavel WHERE empresa_id=? AND atividade_id=? AND usuario_id=?",empresa,a.id(),master);
+        assertEquals(0,lembretes.listar(master,0,20).pagina().total());
+        assertThrows(RecursoNaoEncontradoException.class,()->lembretes.ler(master,a.id(),new LerLembrete(atual.versao(),MarcoLembrete.ATIVIDADE)));
+    }
+    @Test void preferenciaPessoalPersisteDesativaERetomaSemApagarAtividades() {
+        var assistente=membro("ASSISTENTE");
+        agenda.salvar(master,null,tarefa("Ontem",ontem(),List.of(master)));
+        var p=new PreferenciaLembrete(false,15);assertEquals(p,lembretes.salvarPreferencias(master,p));
+        assertEquals(p,lembretes.listar(master,0,20).preferencias());assertEquals(0,lembretes.listar(master,0,20).pagina().total());
+        assertEquals(PreferenciaLembrete.padrao(),lembretes.listar(assistente,0,20).preferencias());
+        lembretes.salvarPreferencias(master,new PreferenciaLembrete(true,0));
+        assertEquals(1,lembretes.listar(master,0,20).pagina().total());
+        assertThrows(IllegalArgumentException.class,()->new PreferenciaLembrete(true,14));
+        assertThrows(IllegalArgumentException.class,()->lembretes.listar(master,0,51));
+        assertThrows(IllegalArgumentException.class,()->lembretes.listar(master,-1,20));
+    }
+    @Test void limiteDoLembreteRespeitaBrasiliaHorarioEExecucaoSeparadaDoPrazoFatal() {
+        var base=LocalDate.of(2026,10,16);
+        var limite=new PreferenciaLembrete(true,60).limite(Instant.parse("2026-10-16T02:30:00Z"));
+        assertEquals(base.atTime(0,30),limite);
+        agenda.salvar(master,null,new SalvarAtividade(0,TipoAtividade.TAREFA,"À meia noite",null,base,null,LocalTime.of(0,15),null,null,false,null,"","",List.of(master)));
+        agenda.salvar(master,null,new SalvarAtividade(0,TipoAtividade.TAREFA,"Depois",null,base,null,LocalTime.of(0,45),null,null,false,null,"","",List.of(master)));
+        assertEquals(1,lembretesRepository.listar(empresa,master,limite,0,20).total());
+        var fim=base.atTime(23,59);
+        agenda.salvar(master,null,new SalvarAtividade(0,TipoAtividade.TAREFA,"Dois marcos",null,base,null,LocalTime.of(8,0),null,base,false,null,"","",List.of(master)));
+        var pagina=lembretesRepository.listar(empresa,master,fim,0,20);
+        assertEquals(4,pagina.total());
+        assertEquals(2,pagina.itens().stream().filter(l->l.titulo().equals("Dois marcos")).count());
+    }
+    @Test void notificacoesSomemAoCancelarOuConcluirERetornamNaReaberturaENaProximaRecorrencia() {
+        var a=agenda.salvar(master,null,tarefa("Recorrente",ontem(),List.of(master)));
+        a=agenda.salvar(master,a.id(),repetida(a,RepeticaoAgenda.DIARIA,ontem()));
+        lembretes.ler(master,a.id(),new LerLembrete(a.versao(),MarcoLembrete.ATIVIDADE));
+        var concluida=agenda.alterarSituacao(master,a.id(),new AlterarSituacaoAgenda(a.versao(),SituacaoAgenda.CONCLUIDA,""));
+        var nova=sucessora(a.id());
+        assertEquals(nova.id(),lembretes.listar(master,0,20).pagina().itens().getFirst().atividadeId());
+        var reaberta=agenda.alterarSituacao(master,a.id(),new AlterarSituacaoAgenda(concluida.versao(),SituacaoAgenda.PENDENTE,""));
+        assertEquals(2,lembretes.listar(master,0,20).pagina().total());
+        agenda.alterarSituacao(master,a.id(),new AlterarSituacaoAgenda(reaberta.versao(),SituacaoAgenda.CANCELADA,"Dispensada"));
+        assertEquals(1,lembretes.listar(master,0,20).pagina().total());
+    }
+    @Test void apiDeLembretesRespeitaEscritorioModuloCsrfEPerfilDeConsulta() throws Exception {
+        var financeiro=membro("FINANCEIRO");
+        var a=agenda.salvar(master,null,tarefa("Financeiro",ontem(),List.of(financeiro)));
+        var url="/api/agenda/lembretes";
+        mvc.perform(get(url).with(user(financeiro.toString()))).andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store")).andExpect(jsonPath("$.total").value(1));
+        var corpo="{\"versao\":0,\"marco\":\"ATIVIDADE\"}";
+        mvc.perform(patch(url+"/"+a.id()+"/lido").with(user(financeiro.toString())).contentType("application/json").content(corpo)).andExpect(status().isForbidden());
+        mvc.perform(patch(url+"/"+a.id()+"/lido").with(user(financeiro.toString())).with(csrf()).contentType("application/json").content(corpo)).andExpect(status().isNoContent());
+        assertEquals(0,lembretes.listar(financeiro,0,20).pagina().total());
+        var outro=usuario("Outro");empresa(outro);
+        mvc.perform(patch(url+"/"+a.id()+"/lido").with(user(outro.toString())).with(csrf()).contentType("application/json").content(corpo)).andExpect(status().isNotFound());
+        mvc.perform(put(url+"/preferencias").with(user(financeiro.toString())).with(csrf()).contentType("application/json").content("{\"ativo\":true,\"antecedenciaMinutos\":30}")).andExpect(status().isBadRequest());
+        jdbc.update("UPDATE empresa_modulo SET liberado=FALSE WHERE empresa_id=? AND modulo_codigo='agenda'",empresa);
+        mvc.perform(get(url).with(user(financeiro.toString()))).andExpect(status().isForbidden());
+        jdbc.update("UPDATE empresa_modulo SET liberado=TRUE WHERE empresa_id=? AND modulo_codigo='agenda'",empresa);
+        jdbc.update("UPDATE escritorio SET ativo=FALSE WHERE id=?",empresa);em.clear();
+        mvc.perform(get(url).with(user(financeiro.toString()))).andExpect(status().isUnauthorized());
     }
 }

@@ -56,7 +56,7 @@
       <div class="acoes">
         <button class="botao-icone" type="button" aria-label="Acesso rápido" [attr.aria-expanded]="painel() === 'atalhos'" (click)="alternarPainel('atalhos')"><app-icone nome="plus" /></button>
         <button class="botao-icone assistente" type="button" aria-label="Assistente" [attr.aria-expanded]="painel() === 'assistente'" (click)="alternarPainel('assistente')"><app-icone nome="sparkles" /></button>
-        <button class="botao-icone" type="button" aria-label="Notificações" [attr.aria-expanded]="painel() === 'notificacoes'" (click)="alternarPainel('notificacoes')"><app-icone nome="bell" /></button>
+        <button class="botao-icone" type="button" [attr.aria-label]="rotuloNotificacoes()" [attr.aria-expanded]="painel() === 'notificacoes'" (click)="alternarPainel('notificacoes')"><app-icone nome="bell" />@if(acesso.permite('agenda')){<app-agenda-contagem (contagem)="totalAgenda.set($event)" />}</button>
         <span class="avatar" [title]="auth.usuario()?.nome || 'Usuário'" [attr.aria-label]="auth.usuario()?.nome || 'Usuário'">@if (meuPerfil.perfil()?.foto) { <img [src]="meuPerfil.perfil()!.foto" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" /> } @else { {{ iniciais() }} }</span>
         <button class="sair" type="button" (click)="sair()" [disabled]="saindo()">{{ saindo() ? 'Saindo…' : 'Sair' }}</button>
       </div>
@@ -67,7 +67,11 @@
             @if (acesso.permite('agenda')) { <a routerLink="/agenda" (click)="fecharMenu()"><app-icone nome="calendar" />Agenda</a> }
             @if (acesso.permite('processual')) { <a routerLink="/processual" (click)="fecharMenu()"><app-icone nome="scale" />Gestão Processual</a> }
             @if (acesso.permite('contatos')) { <a routerLink="/contatos" (click)="fecharMenu()"><app-icone nome="users" />Contatos</a> }
-          } @else if (painel() === 'notificacoes' && acesso.permite('crm')) { <app-crm-notificacoes /> }
+          } @else if (painel() === 'notificacoes') {
+            @if (acesso.permite('agenda')) { <app-agenda-notificacoes (abriu)="painel.set(null)" /> }
+            @if (acesso.permite('crm')) { <h3>CRM</h3><app-crm-notificacoes /> }
+            @if (!acesso.permite('agenda') && !acesso.permite('crm')) { <p>Nenhuma notificação por aqui.</p> }
+          }
           @else { <p>{{ painel() === 'notificacoes' ? 'Nenhuma notificação por aqui.' : 'Seu assistente estará disponível em breve.' }}</p> }
         </section>
       }
