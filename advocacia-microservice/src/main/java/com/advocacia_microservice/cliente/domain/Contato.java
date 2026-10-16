@@ -4,7 +4,10 @@ import java.time.LocalDate;
 import java.util.*;
 
 public record Contato(UUID id, UUID empresaId, int versao, Map<String,String> dados,
-                      List<Map<String,String>> representantes, List<UUID> indicadores) {
+                      List<Map<String,String>> representantes, List<UUID> indicadores, boolean cadastroIncompleto) {
+    public Contato(UUID id, UUID empresaId, int versao, Map<String,String> dados, List<Map<String,String>> representantes, List<UUID> indicadores) {
+        this(id,empresaId,versao,dados,representantes,indicadores,false);
+    }
     public static final Set<String> TIPOS = Set.of("Cliente","Parte adversa","Parte interessada","Advogado(a)","Fornecedor","Parceiro");
     public static final Set<String> CAMPOS = Set.of("nome","tipo","tipo_pessoa","documento","nome_fantasia","email","telefone","telefone2","whatsapp","cep","logradouro","numero","complemento","bairro","cidade","uf","origem_id","observacoes","data_nascimento","rg","rg_orgao_emissor","nacionalidade","estado_civil","profissao","carteira","carteira_parceiro_id");
     public static final Set<String> REPRESENTANTE = Set.of("nome","cpf","cargo","telefone","data_nascimento","rg","rg_orgao_emissor","nacionalidade","estado_civil");
@@ -18,8 +21,9 @@ public record Contato(UUID id, UUID empresaId, int versao, Map<String,String> da
         copia.put("uf",dados.get("uf").toUpperCase(Locale.ROOT));
         validarDocumento(dados.get("documento"),dados.get("tipo_pessoa").equals("PF")?11:14);
         validarTelefone(dados.get("telefone")); validarTelefone(dados.get("telefone2"));
+        for(var campo:List.of("documento","telefone","telefone2")) copia.put(campo,dados.get(campo).replaceAll("\\D",""));
         if(!dados.get("email").isEmpty() && !dados.get("email").matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+")) throw new IllegalArgumentException("Informe um e-mail válido.");
-        if(dados.get("tipo").equals("Cliente") && (dados.get("documento").isEmpty() || dados.get("telefone").isEmpty() || dados.get("email").isEmpty())) throw new IllegalArgumentException("Para cadastrar um cliente, informe CPF/CNPJ, telefone principal e e-mail.");
+        if(!cadastroIncompleto && dados.get("tipo").equals("Cliente") && (dados.get("documento").isEmpty() || dados.get("telefone").isEmpty() || dados.get("email").isEmpty())) throw new IllegalArgumentException("Para cadastrar um cliente, informe CPF/CNPJ, telefone principal e e-mail.");
         if(!dados.get("cep").isEmpty() && !dados.get("cep").matches("\\d{5}-?\\d{3}")) throw new IllegalArgumentException("O CEP deve ter oito dígitos.");
         if(!copia.get("uf").isEmpty() && !Set.of("AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO").contains(copia.get("uf"))) throw new IllegalArgumentException("UF inválida.");
         data(dados.get("data_nascimento")); estadoCivil(dados.get("estado_civil"));
@@ -28,7 +32,7 @@ public record Contato(UUID id, UUID empresaId, int versao, Map<String,String> da
         else if(dados.get("carteira_parceiro_id").isEmpty()) throw new IllegalArgumentException("Selecione o parceiro responsável pela carteira.");
         dados=Map.copyOf(copia);
         if(representantes==null || representantes.size()>20) throw new IllegalArgumentException("Cadastre até 20 representantes.");
-        representantes=representantes.stream().map(r->{var m=normalizar(r,REPRESENTANTE); if(m.get("nome").isEmpty()) throw new IllegalArgumentException("Informe o nome do representante."); validarDocumento(m.get("cpf"),11); validarTelefone(m.get("telefone"));data(m.get("data_nascimento"));estadoCivil(m.get("estado_civil"));return m;}).toList();
+        representantes=representantes.stream().map(r->{var m=normalizar(r,REPRESENTANTE); if(m.get("nome").isEmpty()) throw new IllegalArgumentException("Informe o nome do representante."); validarDocumento(m.get("cpf"),11); validarTelefone(m.get("telefone"));data(m.get("data_nascimento"));estadoCivil(m.get("estado_civil"));var limpo=new HashMap<>(m);for(var campo:List.of("cpf","telefone")) limpo.put(campo,m.get(campo).replaceAll("\\D",""));return Map.copyOf(limpo);}).toList();
         if(!dados.get("tipo_pessoa").equals("PJ")) representantes=List.of();
         if(indicadores==null || indicadores.size()>50 || indicadores.stream().anyMatch(Objects::isNull) || new HashSet<>(indicadores).size()!=indicadores.size()) throw new IllegalArgumentException("Indicadores inválidos.");
         indicadores=List.copyOf(indicadores);

@@ -26,11 +26,11 @@ describe('Equipe conectada à API', () => {
   function botao(elemento: HTMLElement, texto: string) { return Array.from(elemento.querySelectorAll('button')).find(b => b.textContent?.includes(texto))!; }
   it('salva a ficha pela API e mantém o rascunho quando a escrita falha', async () => {
     const fixture = await abrir(); const telefone = fixture.nativeElement.querySelector('input[type=tel]') as HTMLInputElement;
-    expect(telefone.value).toBe('123'); telefone.value = '456'; telefone.dispatchEvent(new Event('input'));
+    expect(telefone.value).toBe('(12) 3'); telefone.value = '456'; telefone.dispatchEvent(new Event('input'));
     botao(fixture.nativeElement, 'Salvar membro').click();
     const req = http.expectOne(url + '/membros/membro'); expect(req.request.method).toBe('PUT'); expect(req.request.body.telefone).toBe('456');
     req.flush({ detail: 'Falha ao salvar' }, { status: 503, statusText: 'Unavailable' }); await fixture.whenStable();
-    expect(telefone.value).toBe('456'); expect(fixture.nativeElement.querySelector('[role=alert]').textContent).toContain('Falha ao salvar');
+    expect(telefone.value).toBe('(45) 6'); expect(fixture.nativeElement.querySelector('[role=alert]').textContent).toContain('Falha ao salvar');
     botao(fixture.nativeElement, 'Salvar membro').click();
     http.expectOne(url + '/membros/membro').flush({ ...membro, configuracao: { ...membro.configuracao, telefone: '456' } }); await fixture.whenStable();
     expect(fixture.nativeElement.textContent).toContain('Dados e permissões do membro salvos.');

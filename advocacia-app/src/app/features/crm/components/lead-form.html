@@ -1,0 +1,93 @@
+<form class="cartao crm-form pilha" #form="ngForm" (ngSubmit)="form.valid && salvar()">
+  @if (erro()) {
+    <p class="mensagem erro" role="alert">{{ erro() }}</p>
+  }
+  <fieldset [disabled]="ocupado()">
+    <div class="grade dois">
+      <label
+        >Nome *<input
+          name="nome"
+          [(ngModel)]="cadastro.nome"
+          required
+          maxlength="150"
+          autocomplete="name"
+      /></label>
+      <label
+        >WhatsApp ou telefone *<input
+          name="telefone" appMascara="telefone" placeholder="(61) 90000-0000"
+          [(ngModel)]="cadastro.telefone"
+          required
+          maxlength="30"
+          autocomplete="tel"
+      /></label>
+    </div>
+    <div class="grade tres">
+      <label
+        >E-mail<input
+          name="email"
+          [(ngModel)]="cadastro.email"
+          type="email"
+          email
+          maxlength="254"
+          autocomplete="email"
+      /></label>
+      <label
+        >Origem<select name="origem" [(ngModel)]="cadastro.origem">
+          @for (o of opcoes().origens; track o) {
+            <option>{{ o }}</option>
+          }
+        </select></label
+      >
+      <label
+        >Temperatura<select name="temperatura" [(ngModel)]="cadastro.temperatura">
+          @for (t of temperaturas; track t.id) {
+            <option [value]="t.id">{{ t.nome }}</option>
+          }
+        </select></label
+      >
+    </div>
+    <label
+      >Necessidade do lead *<input
+        name="necessidade"
+        [(ngModel)]="cadastro.necessidade"
+        required
+        maxlength="150"
+        placeholder="O que a pessoa procura — divórcio, inventário, pensão…"
+    /></label>
+    <div>
+      <p class="rotulo">Etiquetas</p>
+      <div class="linha etiquetas">
+        @for (t of opcoes().etiquetas; track t.id) {
+          <button
+            type="button"
+            [class.selecionada]="cadastro.etiquetas.includes(t.id)"
+            [style.--cor]="t.cor"
+            [attr.aria-pressed]="cadastro.etiquetas.includes(t.id)"
+            (click)="etiqueta(t.id)"
+          >
+            {{ t.nome }}
+          </button>
+        }
+        @if (!opcoes().etiquetas.length) {
+          <p class="rotulo">
+            Nenhuma etiqueta cadastrada. Crie em Configurações → Cadastros e sistemas.
+          </p>
+        }
+      </div>
+    </div>
+    <label
+      >Observações<textarea
+        name="observacoes"
+        [(ngModel)]="cadastro.observacoes"
+        rows="2"
+        maxlength="4000"
+      ></textarea>
+    </label>
+    <div class="linha fim">
+      <button type="button" (click)="cancelar.emit()">Cancelar</button
+      ><button class="dourado" type="submit" [disabled]="form.invalid || ocupado()">
+        {{ ocupado() ? 'Salvando…' : lead() ? 'Salvar alterações' : 'Salvar lead' }}
+      </button>
+    </div>
+  </fieldset>
+</form>

@@ -1,3 +1,4 @@
+import { formatarNumero } from '../../../shared/directives/mascara.directive';
 import {
   afterNextRender,
   Component,
@@ -40,6 +41,7 @@ import { ParceirosApiService } from '../services/parceiros-api.service';
   styles: ':host{display:block;min-width:0}',
 })
 export class Parceiros {
+  protected readonly mascarar = formatarNumero;
   private readonly api = inject(ParceirosApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -234,10 +236,10 @@ export class Parceiros {
   protected campos(p: Parceiro) {
     const d = p.dados;
     return [
-      [d['tipo_pessoa'] === 'PJ' ? 'CNPJ' : 'CPF', d['documento']],
+      [d['tipo_pessoa'] === 'PJ' ? 'CNPJ' : 'CPF', this.mascarar(d['documento'], d['tipo_pessoa'] === 'PJ' ? 'cnpj' : 'cpf')],
       ['OAB', d['oab']],
       ['Advogado responsável', d['advogado_responsavel']],
-      ['Telefone', d['telefone']],
+      ['Telefone', this.mascarar(d['telefone'], 'telefone')],
       ['E-mail', d['email']],
       ['Endereço', enderecoContato(d)],
       ['Site', d['site']],

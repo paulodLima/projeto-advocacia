@@ -1,0 +1,414 @@
+<div class="contatos-ui casos-ui">
+  @if (erro()) {
+    <p class="mensagem erro" role="alert">
+      {{ erro() }} <button type="button" (click)="carregar()">Recarregar</button>
+    </p>
+  }
+  @if (opcoes(); as o) {
+    @if (ficha(); as f) {
+      @if (editando()) {
+        <div class="pilha edicao-caso">
+          <button type="button" class="voltar" [disabled]="ocupado()" (click)="editando.set(false)">
+            ‹ Cancelar
+          </button>
+          <div class="titulo">
+            <app-icone nome="folder" />
+            <h2>Editar caso</h2>
+          </div>
+          <app-caso-form
+            [caso]="f.caso"
+            [opcoes]="o"
+            (salvo)="salvo($event)"
+            (cancelar)="editando.set(false)"
+            (ocupadoChange)="ocupado.set($event)"
+          />
+        </div>
+      } @else {
+        <div class="pilha ficha-caso">
+          <button type="button" class="voltar" [disabled]="ocupado()" (click)="abrir(null)">
+            ‹ Voltar aos casos
+          </button>
+          <article class="cartao caso-ficha">
+            <header class="caso-capa linha entre">
+              <div class="cresce">
+                <p class="caso-eyebrow">CASO</p>
+                <h2>{{ f.caso.titulo }}</h2>
+                @if (f.caso.clienteId) {
+                  <a [routerLink]="'/contatos/' + f.caso.clienteId">{{ f.caso.cliente }}</a>
+                } @else {
+                  <p>—</p>
+                }
+              </div>
+              <div class="status-caso">
+                <span class="badge">{{
+                  f.caso.status === 'ativo'
+                    ? 'Ativo'
+                    : f.caso.status === 'encerrado'
+                      ? 'Encerrado'
+                      : 'Convertido'
+                }}</span>
+                @if (o.podeEditar && f.caso.status === 'ativo') {
+                  <button type="button" [disabled]="ocupado()" (click)="editando.set(true)">
+                    Editar
+                  </button>
+                }
+                <small
+                  >Modificado em {{ f.caso.atualizadoEm | date: 'dd/MM/yyyy' : '-0300' }}</small
+                >
+              </div>
+            </header>
+            <nav class="abas-caso linha" aria-label="Abas da ficha">
+              <button
+                type="button"
+                [class.ativa]="aba === 'dados'"
+                [attr.aria-pressed]="aba === 'dados'"
+                (click)="aba = 'dados'"
+              >
+                Dados do Caso</button
+              ><button
+                type="button"
+                [class.ativa]="aba === 'historico'"
+                [attr.aria-pressed]="aba === 'historico'"
+                (click)="aba = 'historico'"
+              >
+                Histórico ({{ f.anotacoes.length }})</button
+              ><button
+                type="button"
+                [class.ativa]="aba === 'tarefas'"
+                [attr.aria-pressed]="aba === 'tarefas'"
+                (click)="aba = 'tarefas'"
+              >
+                Tarefas</button
+              ><button
+                type="button"
+                [disabled]="!o.podeVerFinanceiro"
+                [class.ativa]="aba === 'financeiro'"
+                [attr.aria-pressed]="aba === 'financeiro'"
+                [title]="
+                  o.podeVerFinanceiro
+                    ? 'Financeiro do caso'
+                    : 'Seu perfil não tem acesso ao Financeiro'
+                "
+                (click)="aba = 'financeiro'"
+              >
+                Financeiro
+              </button>
+            </nav>
+            @if (aba === 'dados') {
+              <div class="conteudo-ficha pilha">
+                <div class="grade tres">
+                  <div>
+                    <p class="rotulo">Área</p>
+                    <strong>{{ f.caso.grupo || '—' }}</strong>
+                  </div>
+                  <div>
+                    <p class="rotulo">Responsável</p>
+                    <strong>{{ f.caso.responsavel || '—' }}</strong>
+                  </div>
+                  <div>
+                    <p class="rotulo">Criado em</p>
+                    <strong>{{ f.caso.criadoEm | date: 'dd/MM/yyyy' : '-0300' }}</strong>
+                  </div>
+                </div>
+                @if (f.caso.partesAdversas) {
+                  <div>
+                    <p class="rotulo">Partes adversas</p>
+                    <p>{{ f.caso.partesAdversas }}</p>
+                  </div>
+                }
+                @if (f.caso.observacoes) {
+                  <div>
+                    <p class="rotulo">Observações</p>
+                    <p class="texto-preservado">{{ f.caso.observacoes }}</p>
+                  </div>
+                }
+                <section class="comercial pilha">
+                  <h3>Comercial</h3>
+                  <div class="grade tres">
+                    <div>
+                      <p class="rotulo">Valor apresentado</p>
+                      <strong>{{
+                        f.caso.valorProposta == null
+                          ? '—'
+                          : (f.caso.valorProposta | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR')
+                      }}</strong>
+                    </div>
+                    <div>
+                      <p class="rotulo">Data da proposta</p>
+                      <strong>{{
+                        f.caso.propostaEm ? (f.caso.propostaEm | date: 'dd/MM/yyyy') : '—'
+                      }}</strong>
+                    </div>
+                    <div>
+                      <p class="rotulo">Desfecho</p>
+                      <strong>{{ nomeDesfecho(f.caso.desfecho) }}</strong>
+                    </div>
+                  </div>
+                  @if (o.podeEditar && f.caso.status === 'ativo') {
+                    <form class="pilha" (ngSubmit)="comercial()">
+                      <fieldset class="pilha" [disabled]="ocupado()">
+                        <div class="grade dois">
+                          <label
+                            >Desfecho<select name="desfecho" [(ngModel)]="desfecho">
+                              @for (d of desfechos; track d.id) {
+                                <option [value]="d.id">{{ d.nome }}</option>
+                              }
+                            </select></label
+                          >
+                          @if (desfecho === 'fechado') {
+                            <label
+                              >Valor fechado
+                              <div class="valor-reais">
+                                <span>R$</span
+                                ><input
+                                  name="valorFechado"
+                                  [(ngModel)]="valorFechado"
+                                  inputmode="decimal"
+                                  placeholder="0,00"
+                                /></div
+                            ></label>
+                          } @else if (desfecho) {
+                            <label
+                              >Por quê?<input name="motivo" [(ngModel)]="motivo" maxlength="2000"
+                            /></label>
+                          }
+                        </div>
+                        <div>
+                          <button class="primario" type="submit">
+                            {{ ocupado() ? 'Salvando…' : 'Salvar desfecho' }}
+                          </button>
+                        </div>
+                      </fieldset>
+                    </form>
+                  } @else {
+                    <p>
+                      Valor fechado:
+                      {{
+                        f.caso.valorFechado == null
+                          ? '—'
+                          : (f.caso.valorFechado | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR')
+                      }}
+                    </p>
+                    @if (f.caso.motivoPerda) {
+                      <p>{{ f.caso.motivoPerda }}</p>
+                    }
+                  }
+                </section>
+                @if (f.caso.leadId) {
+                  <p class="origem-crm">
+                    <app-icone nome="crm" /> Originado no CRM · histórico preservado
+                    <a routerLink="/crm" [queryParams]="{ lead: f.caso.leadId }">Abrir lead</a>
+                  </p>
+                }
+                <p class="rotulo">
+                  A transformação em processo será disponibilizada com Gestão Processual.
+                </p>
+              </div>
+            } @else if (aba === 'financeiro' && o.podeVerFinanceiro) {
+              <app-financeiro-caso [caso]="f.caso" />
+            } @else if (aba === 'tarefas') {
+              <app-tarefas-caso [caso]="f.caso" />
+            } @else {
+              <div class="conteudo-ficha pilha">
+                @if (o.podeEditar && f.caso.status === 'ativo') {
+                  <form class="pilha" #anotacao="ngForm" (ngSubmit)="anotacao.valid && anotar()">
+                    <fieldset class="pilha curta" [disabled]="ocupado()">
+                      <h3>Registrar reunião / anotação</h3>
+                      <label
+                        >Data<input name="data" type="date" [(ngModel)]="data" required /></label
+                      ><label
+                        >Anotação<textarea
+                          name="descricao"
+                          [(ngModel)]="descricao"
+                          rows="3"
+                          required
+                          maxlength="4000"
+                        ></textarea>
+                      </label>
+                      <div>
+                        <button
+                          type="submit"
+                          class="primario"
+                          [disabled]="anotacao.invalid || !descricao.trim()"
+                        >
+                          Registrar
+                        </button>
+                      </div>
+                    </fieldset>
+                  </form>
+                }
+                @for (n of f.anotacoes; track n.id) {
+                  <article class="anotacao">
+                    <p class="rotulo">{{ n.data | date: 'dd/MM/yyyy' }} · {{ n.autor }}</p>
+                    <p class="texto-preservado">{{ n.descricao }}</p>
+                  </article>
+                } @empty {
+                  <p class="vazio">Nenhuma anotação ainda.</p>
+                }
+                @if (f.historicoLead.entrada) {
+                  <section class="historico-lead pilha curta">
+                    <h3>Tratativas do CRM</h3>
+                    <p class="rotulo">
+                      Entrada: {{ f.historicoLead.entrada | date: 'dd/MM/yyyy' }} ·
+                      {{ f.historicoLead.origem }}
+                    </p>
+                    <p>{{ f.historicoLead.necessidade }}</p>
+                    @for (t of f.historicoLead.contatos || []; track t.id) {
+                      <article class="anotacao">
+                        <p class="rotulo">
+                          {{ t.data | date: 'dd/MM/yyyy' }} · {{ t.canal }} · {{ t.resultado }}
+                        </p>
+                        <p class="texto-preservado">{{ t.observacao }}</p>
+                      </article>
+                    }
+                    @for (c of f.historicoLead.comentarios || []; track c.id) {
+                      <article class="anotacao">
+                        <p class="rotulo">Comentário do CRM · {{ c.autor }}</p>
+                        <p class="texto-preservado">{{ c.texto }}</p>
+                      </article>
+                    }
+                  </section>
+                }
+              </div>
+            }
+          </article>
+          @if (o.podeEditar && f.caso.status !== 'convertido') {
+            <div class="linha entre">
+              <button type="button" [disabled]="ocupado()" (click)="situacao()">
+                {{ f.caso.status === 'ativo' ? 'Encerrar caso' : 'Reativar caso' }}
+              </button>
+              @if (!f.caso.leadId) {
+                <button type="button" class="perigo" (click)="confirmarExcluir.set(true)">
+                  Excluir caso
+                </button>
+              }
+            </div>
+          }
+          @if (confirmarExcluir()) {
+            <div class="cartao pilha curta" role="alert">
+              <p>Excluir este caso e suas anotações? Esta ação não pode ser desfeita.</p>
+              <div class="linha">
+                <button type="button" [disabled]="ocupado()" (click)="confirmarExcluir.set(false)">
+                  Cancelar</button
+                ><button type="button" class="perigo" [disabled]="ocupado()" (click)="excluir()">
+                  Confirmar exclusão
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    } @else if (!erro() && !carregando() && !resultado()) {
+      <p role="status">Carregando casos…</p>
+    }
+    @if (!routeId && !ficha()) {
+      <section class="lista-casos pilha">
+        <header class="linha entre">
+          <div class="titulo">
+            <app-icone nome="folder" />
+            <h2>Casos</h2>
+            <span>consultivo e extrajudicial, antes de virar processo</span>
+          </div>
+          @if (o.podeEditar) {
+            <button type="button" class="primario linha" (click)="novoCaso()">
+              <app-icone nome="plus" />Novo caso
+            </button>
+          }
+        </header>
+        <div class="cartao busca">
+          <app-icone nome="search" /><input
+            [(ngModel)]="busca"
+            (ngModelChange)="filtrar()"
+            placeholder="Buscar caso…"
+            aria-label="Buscar caso"
+            maxlength="150"
+          />
+        </div>
+        <div class="linha filtros-casos">
+          @for (s of statuses; track s.id) {
+            <button
+              type="button"
+              [class.ativo]="status === s.id"
+              [attr.aria-pressed]="status === s.id"
+              (click)="status = s.id; filtrar()"
+            >
+              {{ s.nome }}
+            </button>
+          }
+          <span class="rotulo">{{ resultado()?.total || 0 }} caso(s)</span>
+        </div>
+        @if (carregando()) {
+          <p role="status">Carregando casos…</p>
+        }
+        <div class="linhas-casos">
+          @for (c of resultado()?.itens || []; track c.id) {
+            <button type="button" class="caso-lista linha" (click)="abrir(c.id)">
+              <span
+                class="badge"
+                [class.encerrado]="c.status === 'encerrado'"
+                [class.convertido]="c.status === 'convertido'"
+                >{{
+                  c.status === 'ativo'
+                    ? 'Ativo'
+                    : c.status === 'encerrado'
+                      ? 'Encerrado'
+                      : 'Convertido'
+                }}</span
+              >
+              <div class="cresce">
+                <strong>{{ c.titulo }}</strong>
+                <p>{{ c.cliente || 'sem cliente' }} · {{ c.grupo || 'sem área' }}</p>
+              </div>
+            </button>
+          } @empty {
+            @if (!carregando()) {
+              <div class="cartao vazio">Nenhum caso encontrado.</div>
+            }
+          }
+        </div>
+        @if (resultado(); as r) {
+          @if (r.total > r.tamanho) {
+            <div class="linha fim">
+              <button type="button" [disabled]="carregando() || pagina === 0" (click)="paginar(-1)">
+                Anterior</button
+              ><span>Página {{ pagina + 1 }}</span
+              ><button
+                type="button"
+                [disabled]="carregando() || (pagina + 1) * r.tamanho >= r.total"
+                (click)="paginar(1)"
+              >
+                Próxima
+              </button>
+            </div>
+          }
+        }
+      </section>
+    }
+    <dialog #novo class="novo-caso-dialog" (cancel)="fecharNovo($event)">
+      <header class="linha entre">
+        <div>
+          <h2>Novo caso</h2>
+          <p class="rotulo">trabalho que ainda não virou processo</p>
+        </div>
+        <button
+          type="button"
+          aria-label="Fechar novo caso"
+          [disabled]="ocupado()"
+          (click)="fecharNovo()"
+        >
+          <app-icone nome="close" />
+        </button>
+      </header>
+      @if (novoAberto()) {
+        <app-caso-form
+          [opcoes]="o"
+          (salvo)="salvo($event)"
+          (cancelar)="fecharNovo()"
+          (ocupadoChange)="ocupado.set($event)"
+        />
+      }
+    </dialog>
+  } @else if (!erro()) {
+    <p role="status">Carregando permissões…</p>
+  }
+</div>

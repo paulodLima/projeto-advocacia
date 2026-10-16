@@ -5,6 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { API_URL } from '../../../../core/config/api-url.token';
+import { AcessoService } from '../../../../core/auth/acesso.service';
 import { Inicio } from './inicio';
 
 describe('Sistemas e rotinas no Início', () => {
@@ -14,6 +15,23 @@ describe('Sistemas e rotinas no Início', () => {
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => { http.verify(); TestBed.resetTestingModule(); });
+  it('exibe somente páginas selecionadas e permitidas, inclusive nenhuma', async () => {
+    const acesso = TestBed.inject(AcessoService);
+    acesso.acesso.set({ empresaId: 'a', papel: 'MEMBRO', perfil: 'ASSISTENTE', modulos: ['inicio', 'crm', 'contatos'], enviaDocumento: false });
+    const fixture = TestBed.createComponent(Inicio);
+    http.expectOne('/api/config/cadastros/inicio').flush({ empresaId: 'a', rotinas: [], sistemas: [], atalhos: ['crm', 'financeiro', 'contatos'] });
+    await fixture.whenStable();
+    Array.from(fixture.nativeElement.querySelectorAll('app-painel-inicio header button') as NodeListOf<HTMLButtonElement>).find(b => b.textContent?.includes('Acesso rápido'))!.click();
+    await fixture.whenStable();
+    const painel = fixture.nativeElement.querySelector('.atalhos') as HTMLElement;
+    expect(painel.querySelector('a[href="/crm"]')).not.toBeNull();
+    expect(painel.querySelector('a[href="/contatos"]')).not.toBeNull();
+    expect(painel.querySelector('a[href="/financeiro"]')).toBeNull();
+    (fixture.componentInstance as unknown as { carregarCadastros(): void }).carregarCadastros();
+    http.expectOne('/api/config/cadastros/inicio').flush({ empresaId: 'a', rotinas: [], sistemas: [], atalhos: [] });
+    await fixture.whenStable();
+    expect(painel.querySelectorAll('a').length).toBe(0);
+  });
   it('mostra as rotinas do banco e somente os acessos rápidos habilitados', async () => {
     const fixture = TestBed.createComponent(Inicio);
     http.expectOne('/api/config/cadastros/inicio').flush({ empresaId: 'a', papel: 'MEMBRO', listas: {},

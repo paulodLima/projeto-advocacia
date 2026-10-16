@@ -40,16 +40,16 @@
       <label
         >{{ pj() ? 'CNPJ' : 'CPF'
         }}<input
-          name="documento"
+          name="documento" [appMascara]="pj() ? 'cnpj' : 'cpf'"
           [ngModel]="form.dados['documento']"
-          (ngModelChange)="documento($event)"
+          (ngModelChange)="form.dados['documento'] = $event"
           inputmode="numeric"
       /></label>
       <label
         >Telefone<input
-          name="telefone"
+          name="telefone" appMascara="telefone"
           [ngModel]="form.dados['telefone']"
-          (ngModelChange)="telefone($event)"
+          (ngModelChange)="form.dados['telefone'] = $event"
           placeholder="(61) 90000-0000"
           inputmode="tel"
       /></label>

@@ -1,4 +1,5 @@
 package com.advocacia_microservice.cadastro.api;
+import com.advocacia_microservice.cadastro.api.request.AtalhosRequest;
 import com.advocacia_microservice.cadastro.api.request.RegistroRequest;
 import com.advocacia_microservice.cadastro.api.request.RotinaRequest;
 import com.advocacia_microservice.cadastro.api.request.SistemasRequest;
@@ -14,13 +15,11 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController @RequestMapping("/api/config/cadastros")
 public class CadastrosController {
-
-
-
     private final CadastrosService service;
     public CadastrosController(CadastrosService service) { this.service = service; }
     @GetMapping public CadastrosService.Resposta buscar(Principal p) { return service.buscar(UUID.fromString(p.getName())); }
     @GetMapping("/inicio") public CadastrosService.Inicio inicio(Principal p) { return service.inicio(UUID.fromString(p.getName())); }
+    @PutMapping("/atalhos") public List<String> atalhos(Principal p, @Valid @RequestBody AtalhosRequest body) { return service.salvarAtalhos(UUID.fromString(p.getName()), body.atalhos()); }
     @PostMapping("/listas/{tipo}") @ResponseStatus(HttpStatus.CREATED)
     public CadastroRegistro criar(Principal p, @PathVariable String tipo, @Valid @RequestBody RegistroRequest body) { return service.salvar(UUID.fromString(p.getName()), tipo, null, body.campos(), body.ativo()); }
     @PutMapping("/listas/{tipo}/{id}")

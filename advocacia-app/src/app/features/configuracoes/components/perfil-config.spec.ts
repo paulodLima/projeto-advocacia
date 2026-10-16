@@ -22,7 +22,7 @@ describe('Meu perfil no banco', () => {
     http.expectOne(url).flush(perfil);
     await fixture.whenStable();
     const input = fixture.nativeElement.querySelector('input[name=telefone]') as HTMLInputElement;
-    expect(input.value).toBe('123');
+    expect(input.value).toBe('(12) 3');
     input.value = '456'; input.dispatchEvent(new Event('input'));
     fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true }));
     const escrita = http.expectOne(url);
@@ -30,7 +30,7 @@ describe('Meu perfil no banco', () => {
     expect(escrita.request.body).toEqual({ telefone: '456', emailPessoal: '', endereco: 'Rua A' });
     escrita.flush({ detail: 'Falha ao salvar' }, { status: 500, statusText: 'Error' });
     await fixture.whenStable();
-    expect(input.value).toBe('456');
+    expect(input.value).toBe('(45) 6');
     expect(fixture.nativeElement.querySelector('[role=alert]').textContent).toContain('Falha ao salvar');
     expect(JSON.parse(localStorage.getItem('configuracoes-front:perfil-api-teste')!).perfil.telefone).toBe('rascunho');
     fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true }));

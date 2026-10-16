@@ -35,6 +35,7 @@ export const CAMPOS_CONTATO = [
   'carteira_parceiro_id',
 ];
 export interface Contato {
+  cadastroIncompleto?: boolean;
   id: string;
   empresaId: string;
   versao: number;
