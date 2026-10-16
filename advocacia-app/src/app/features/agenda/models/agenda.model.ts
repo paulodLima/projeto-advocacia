@@ -5,12 +5,12 @@ export const SITUACOES_AGENDA = [{ codigo: 'PENDENTE', nome: 'Pendente' }, { cod
 export interface DadosAtividade {
   tipo: TipoAtividade; titulo: string; tipoTarefaId: string | null; data: string | null; dataFim: string | null;
   hora: string | null; horaFim: string | null; prazoFatal: string | null; diaInteiro: boolean;
-  modalidade: string | null; local: string; descricao: string; responsaveis: string[];
+  modalidade: string | null; local: string; descricao: string; responsaveis: string[]; participantes?: string[];
 }
 export interface EventoAgenda { id: string; autor: string; acao: string; observacao: string; criadoEm: string; }
 export interface AtividadeAgenda { id: string; versao: number; dados: DadosAtividade; situacao: SituacaoAgenda; concluidaEm: string | null; criadoEm: string; atualizadoEm: string; historico: EventoAgenda[]; }
 export interface OpcaoAgenda { id: string; nome: string; ativo: boolean; }
-export interface OpcoesAgenda { podeEditar: boolean; responsaveis: OpcaoAgenda[]; tiposTarefa: OpcaoAgenda[]; fusoHorario: string; }
+export interface OpcoesAgenda { podeEditar: boolean; podeVincularContatos?: boolean; responsaveis: OpcaoAgenda[]; tiposTarefa: OpcaoAgenda[]; fusoHorario: string; }
 export interface PaginaAgenda { itens: AtividadeAgenda[]; total: number; pagina: number; tamanho: number; }
 export interface DiaAgenda { data: string; total: number; pendentes: number; prazosFatais: number; }
 export interface FiltroAgenda { inicio: string; fim: string; tipo: string; situacao: string; responsavel: string; busca: string; incluirSemData: boolean; }

@@ -7,7 +7,10 @@ import java.util.*;
 
 public record DadosAtividade(TipoAtividade tipo, String titulo, UUID tipoTarefaId, LocalDate data, LocalDate dataFim,
         LocalTime hora, LocalTime horaFim, LocalDate prazoFatal, boolean diaInteiro, String modalidade,
-        String local, String descricao, List<UUID> responsaveis) {
+        String local, String descricao, List<UUID> responsaveis, List<UUID> participantes) {
+    public DadosAtividade(TipoAtividade tipo,String titulo,UUID tipoTarefaId,LocalDate data,LocalDate dataFim,LocalTime hora,LocalTime horaFim,LocalDate prazoFatal,boolean diaInteiro,String modalidade,String local,String descricao,List<UUID> responsaveis) {
+        this(tipo,titulo,tipoTarefaId,data,dataFim,hora,horaFim,prazoFatal,diaInteiro,modalidade,local,descricao,responsaveis,List.of());
+    }
     public DadosAtividade {
         if (tipo==null) throw new IllegalArgumentException("Selecione o tipo de atividade.");
         titulo = texto(titulo,150,"título"); local = texto(local,1000,"local/link"); descricao = texto(descricao,4000,"descrição");
@@ -38,6 +41,10 @@ public record DadosAtividade(TipoAtividade tipo, String titulo, UUID tipoTarefaI
         if (responsaveis==null || responsaveis.size()>20 || responsaveis.stream().anyMatch(Objects::isNull) || new HashSet<>(responsaveis).size()!=responsaveis.size())
             throw new IllegalArgumentException("Selecione até 20 responsáveis sem duplicidade.");
         responsaveis=List.copyOf(responsaveis);
+        participantes=participantes==null?List.of():participantes;
+        if (participantes.size()>50 || participantes.stream().anyMatch(Objects::isNull) || new HashSet<>(participantes).size()!=participantes.size())
+            throw new IllegalArgumentException("Selecione até 50 participantes sem duplicidade.");
+        participantes=List.copyOf(participantes);
     }
     private static String texto(String valor,int limite,String campo) {
         var texto=valor==null?"":valor.strip();

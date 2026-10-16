@@ -8,6 +8,7 @@ public interface AgendaRepository {
     List<MarcoAgenda> marcos(UUID empresa,FiltroAgenda filtro);
     List<OpcaoAgenda> responsaveis(UUID empresa);
     List<OpcaoAgenda> tiposTarefa(UUID empresa);
+    List<OpcaoAgenda> contatos(UUID empresa,String busca,List<UUID> ids);
     void salvar(AtividadeAgenda atividade,boolean nova);
     void registrar(UUID empresa,UUID atividade,UUID autor,String acao,String observacao);
 }

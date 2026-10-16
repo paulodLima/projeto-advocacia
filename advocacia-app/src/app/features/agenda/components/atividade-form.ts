@@ -2,9 +2,9 @@ import { Component, DestroyRef, effect, inject, input, output, signal } from '@a
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize } from 'rxjs';
+import { finalize, Subscription } from 'rxjs';
 import { AgendaApiService } from '../services/agenda-api.service';
-import { AtividadeAgenda, DadosAtividade, OpcoesAgenda, SituacaoAgenda, TIPOS_AGENDA, nomeSituacao } from '../models/agenda.model';
+import { AtividadeAgenda, DadosAtividade, OpcoesAgenda, OpcaoAgenda, SituacaoAgenda, TIPOS_AGENDA, nomeSituacao } from '../models/agenda.model';
 
 @Component({ selector:'app-atividade-form', imports:[FormsModule,DatePipe], templateUrl:'./atividade-form.html',styleUrl:'./atividade-form.scss' })
 export class AtividadeForm {
@@ -20,21 +20,54 @@ export class AtividadeForm {
   protected readonly erro = signal('');
   protected readonly conflito = signal(false);
   protected readonly acao = signal<SituacaoAgenda | null>(null);
+  protected buscaContato = '';
+  protected readonly contatos = signal<OpcaoAgenda[]>([]);
+  protected readonly selecionados = signal<OpcaoAgenda[]>([]);
+  protected readonly buscandoContatos = signal(false);
+  protected readonly erroContatos = signal('');
+  private consultaContatos?: Subscription;
   protected observacao = '';
   protected readonly tipos = TIPOS_AGENDA;
   protected readonly nomeSituacao = nomeSituacao;
   protected dados: DadosAtividade = this.vazio();
   constructor() {
-    effect(() => { const base=this.base(); this.dados=base ? { ...base.dados,responsaveis:[...base.dados.responsaveis] } : { ...this.vazio(),data:this.dataInicial() || null }; this.erro.set('');this.conflito.set(false);this.acao.set(null);this.observacao=''; });
+    effect(() => { const base=this.base(); this.dados=base ? { ...base.dados,responsaveis:[...base.dados.responsaveis],participantes:[...(base.dados.participantes ?? [])] } : { ...this.vazio(),data:this.dataInicial() || null }; this.erro.set('');this.conflito.set(false);this.acao.set(null);this.observacao='';
+      this.selecionados.set([]);this.contatos.set([]);this.erroContatos.set('');
+      this.consultaContatos?.unsubscribe();
+      const ids=this.dados.participantes ?? [];
+      if(this.opcoes().podeVincularContatos && ids.length)
+        this.consultaContatos=this.api.contatos('',ids).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+          next:pessoas=>this.selecionados.set(pessoas),error:()=>this.erroContatos.set('Não foi possível carregar os participantes. Tente buscar novamente.')
+        });
+    });
   }
-  private vazio(): DadosAtividade { return { tipo:'TAREFA',titulo:'',tipoTarefaId:null,data:null,dataFim:null,hora:null,horaFim:null,prazoFatal:null,diaInteiro:true,modalidade:null,local:'',descricao:'',responsaveis:[] }; }
+  private vazio(): DadosAtividade { return { tipo:'TAREFA',titulo:'',tipoTarefaId:null,data:null,dataFim:null,hora:null,horaFim:null,prazoFatal:null,diaInteiro:true,modalidade:null,local:'',descricao:'',responsaveis:[],participantes:[] }; }
   protected podeEditar() { return this.opcoes().podeEditar && (!this.base() || this.base()?.situacao === 'PENDENTE'); }
   protected compromisso() { return ['REUNIAO','AUDIENCIA'].includes(this.dados.tipo); }
-  protected temAlteracoes() { return !!this.base() && JSON.stringify(this.dados) !== JSON.stringify(this.base()?.dados); }
+  protected temAlteracoes() { return !!this.base() && JSON.stringify(this.dados) !== JSON.stringify({...this.base()?.dados,participantes:this.base()?.dados.participantes ?? []}); }
   protected trocarTipo() {
     if(this.compromisso()) { this.dados.modalidade='PRESENCIAL';this.dados.prazoFatal=null; }
     else this.dados.modalidade=null;
     if(this.dados.tipo==='PRAZO' && !this.dados.prazoFatal) this.dados.prazoFatal=this.dados.data;
+  }
+  protected nomeContato(id:string) { return this.selecionados().find(p=>p.id===id)?.nome ?? this.contatos().find(p=>p.id===id)?.nome ?? "Contato vinculado"; }
+  protected buscarContatos() {
+    if(!this.opcoes().podeVincularContatos) return;
+    this.consultaContatos?.unsubscribe();this.buscandoContatos.set(true);this.erroContatos.set('');
+    this.consultaContatos=this.api.contatos(this.buscaContato.trim()).pipe(finalize(()=>this.buscandoContatos.set(false)),takeUntilDestroyed(this.destroyRef)).subscribe({
+      next:pessoas=>this.contatos.set(pessoas),error:()=>this.erroContatos.set('Não foi possível buscar contatos. Tente novamente.')
+    });
+  }
+  protected adicionarContato(pessoa:OpcaoAgenda) {
+    if(!this.podeEditar() || !this.opcoes().podeVincularContatos) return;
+    const ids=this.dados.participantes ?? [];
+    if(ids.includes(pessoa.id) || ids.length>=50) return;
+    this.dados.participantes=[...ids,pessoa.id];this.selecionados.update(lista=>[...lista,pessoa]);
+  }
+  protected removerContato(id:string) {
+    if(!this.podeEditar() || !this.opcoes().podeVincularContatos) return;
+    this.dados.participantes=(this.dados.participantes ?? []).filter(p=>p!==id);
+    this.selecionados.update(lista=>lista.filter(p=>p.id!==id));
   }
   protected alternarResponsavel(id:string) { this.dados.responsaveis=this.dados.responsaveis.includes(id) ? this.dados.responsaveis.filter(r=>r!==id) : [...this.dados.responsaveis,id]; }
   protected salvar() {

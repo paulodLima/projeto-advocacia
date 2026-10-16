@@ -30,7 +30,9 @@ class TarefasCasoTests {
     @Autowired CriarUsuarioUseCase usuarios; @Autowired JdbcTemplate jdbc; @Autowired WebApplicationContext context;
     Usuario master;UUID empresa;UUID caso;MockMvc mvc;
     Usuario usuario(){return usuarios.executar("Teste Tarefas",UUID.randomUUID()+"@example.test");}
-    UUID empresa(Usuario u){return empresas.criar(u.id(),Map.of("razao_social","Tarefas","cnpj",UUID.randomUUID().toString().substring(0,14),"endereco","Rua A","cidade","Brasília")).id();}
+    @Autowired com.advocacia_microservice.plataforma.domain.repository.ConviteInicialRepository convitesIniciais;
+    @Autowired com.advocacia_microservice.usuario.domain.UsuarioRepository usuariosDominio;
+    UUID empresa(Usuario u){return com.advocacia_microservice.empresa.EmpresaTestSupport.criar(empresas,convitesIniciais,usuariosDominio,u.id(),Map.of("razao_social","Tarefas","cnpj",UUID.randomUUID().toString().substring(0,14),"endereco","Rua A","cidade","Brasília")).id();}
     UUID caso(Usuario u){return casos.salvar(u.id(),null,new CasosService.Formulario(null,"Caso",null,null,null,"","",null,null,null)).caso().id();}
     @BeforeEach void preparar(){master=usuario();empresa=empresa(master);caso=caso(master);mvc=MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();}
     TarefasCasoService.Dados dados(UUID tipo,List<UUID> responsaveis,List<String> flags){return new TarefasCasoService.Dados(tipo,tipo==null?"Revisar contrato":"",LocalDate.of(2026,10,10),LocalDate.of(2026,10,11),LocalTime.of(10,0),LocalTime.of(11,0),LocalDate.of(2026,10,15),"Escritório","Descrição",true,false,"semanal",flags,responsaveis);}

@@ -35,7 +35,7 @@ A empresa é obtida pela sessão. MASTER ou membros ativos com acesso a Casos e 
 
 Atualizações e anotações exigem a versão atual; conflitos retornam 409. Escritas exigem CSRF e são transacionais. As respostas usam `Cache-Control: no-store`. CPF não tem validação de dígitos verificadores nesta etapa, seguindo o comportamento de Contatos. Valores têm até duas casas decimais; o frontend usa formato brasileiro, como `1.234,56`.
 
-A migração **V19** amplia a tabela `caso` criada no CRM e cria `caso_anotacao`, preservando os casos e snapshots anteriores. Para atualizar o ambiente local, execute na raiz:
+A migração **V27** amplia a tabela `caso` criada no CRM e cria `caso_anotacao`, preservando os casos e snapshots anteriores. Para atualizar o ambiente local, execute na raiz:
 
 ```sh
 docker compose -f docker/compose.yaml up --build --no-deps -d api app
@@ -55,7 +55,7 @@ Realizar abre a pergunta **Qual providência foi tomada?**. O texto é opcional 
 
 Tarefas privadas são visíveis ao criador, responsáveis e master, com a restrição aplicada também na API. Escrita utiliza as mesmas permissões de Casos e exige caso ativo. Encerrados podem ser consultados. IDs de outro caso/empresa ou de tarefa privada sem acesso retornam 404. Cada tarefa tem sua própria versão: alterações simultâneas retornam 409. Escritas exigem CSRF e são transacionais; respostas usam `Cache-Control: no-store`.
 
-A migração **V20** cria `caso_tarefa`, `caso_tarefa_responsavel` e `caso_tarefa_comentario`. Excluir uma tarefa remove seus responsáveis e comentários; excluir um caso manual remove suas tarefas. Nenhum dado antigo é importado do navegador.
+A migração **V28** cria `caso_tarefa`, `caso_tarefa_responsavel` e `caso_tarefa_comentario`. Excluir uma tarefa remove seus responsáveis e comentários; excluir um caso manual remove suas tarefas. Nenhum dado antigo é importado do navegador.
 
 | Método | Endpoint | Uso |
 | --- | --- | --- |
@@ -82,7 +82,7 @@ A aba Financeiro utiliza os quatro indicadores da referência: Honorários combi
 
 A API exige usuário ativo com acesso a **Casos e Financeiro**. O acesso explícito a Financeiro autoriza as operações financeiras; não concede edição dos dados gerais do caso. Casos encerrados podem ser consultados; reative antes de alterar o financeiro. Não há importação do protótipo. O financeiro possui versão própria compartilhada por honorários, parcelas e despesas. Uma alteração concorrente retorna 409, preservando o rascunho no frontend. Escritas exigem CSRF e usam transações; consultas usam `Cache-Control: no-store`.
 
-Cada operação registra autor, identificadores e data em `caso_financeiro_evento`. Casos com histórico financeiro devem ser encerrados e não podem ser excluídos, mesmo após remover seus lançamentos, para preservar a auditoria. A migração **V21** cria as tabelas do financeiro de Casos e preserva dados de configurações já existentes.
+Cada operação registra autor, identificadores e data em `caso_financeiro_evento`. Casos com histórico financeiro devem ser encerrados e não podem ser excluídos, mesmo após remover seus lançamentos, para preservar a auditoria. A migração **V29** cria as tabelas do financeiro de Casos e preserva dados de configurações já existentes.
 
 **Limites desta etapa:** lançamentos e baixas são registros internos. Não há emissão ou envio real de boleto/PIX/cartão, integração com ASAAS, assinatura automática, alteração de saldos das contas em Configurações, nota fiscal, recibo ou fatura em PDF. A modalidade fica registrada; escolher Assinatura recorrente cria as parcelas informadas e não uma assinatura em gateway. Os botões ASAAS/Fatura em PDF ficam desabilitados com indicação. Conforme a referência, divisão de honorários e repasses dependem de parceiros vinculados ao processo; não são adicionados artificialmente aos casos.
 

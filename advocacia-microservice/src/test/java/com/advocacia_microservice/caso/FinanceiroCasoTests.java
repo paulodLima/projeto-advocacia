@@ -29,7 +29,9 @@ class FinanceiroCasoTests {
     @Autowired CriarUsuarioUseCase usuarios;@Autowired EmpresaRepository vinculos;@Autowired JdbcTemplate jdbc;@Autowired WebApplicationContext context;
     Usuario master;UUID empresa,caso;MockMvc mvc;
     Usuario usuario(){return usuarios.executar("Teste Financeiro",UUID.randomUUID()+"@example.test");}
-    UUID empresa(Usuario u){return empresas.criar(u.id(),Map.of("razao_social","Financeiro","cnpj",UUID.randomUUID().toString().substring(0,14),"endereco","Rua A","cidade","Brasília")).id();}
+    @Autowired com.advocacia_microservice.plataforma.domain.repository.ConviteInicialRepository convitesIniciais;
+    @Autowired com.advocacia_microservice.usuario.domain.UsuarioRepository usuariosDominio;
+    UUID empresa(Usuario u){return com.advocacia_microservice.empresa.EmpresaTestSupport.criar(empresas,convitesIniciais,usuariosDominio,u.id(),Map.of("razao_social","Financeiro","cnpj",UUID.randomUUID().toString().substring(0,14),"endereco","Rua A","cidade","Brasília")).id();}
     UUID caso(Usuario u){return casos.salvar(u.id(),null,new CasosService.Formulario(null,"Caso",null,null,null,"","",null,null,null)).caso().id();}
     @BeforeEach void preparar(){master=usuario();empresa=empresa(master);caso=caso(master);mvc=MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();}
     FinanceiroCasoService.LancamentoRequest lancamento(long versao,String direcao,String valor,int parcelas){return new FinanceiroCasoService.LancamentoRequest(versao,"Honorários",new BigDecimal(valor),direcao,"pix",LocalDate.of(2027,1,31),parcelas,null,null,"");}

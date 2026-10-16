@@ -67,7 +67,7 @@ CREATE TABLE caso (
  FOREIGN KEY(empresa_id,cliente_id) REFERENCES contato(empresa_id,id),
  FOREIGN KEY(empresa_id,lead_id) REFERENCES crm_lead(empresa_id,id)
 );
-CREATE TABLE agenda_evento (
+CREATE TABLE crm_consulta (
  id UUID PRIMARY KEY, empresa_id UUID NOT NULL, lead_id UUID NOT NULL,
  titulo VARCHAR(200) NOT NULL, quando TIMESTAMP NOT NULL, status VARCHAR(20) NOT NULL,
  UNIQUE(empresa_id,lead_id),

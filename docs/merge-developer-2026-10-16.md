@@ -1,21 +1,18 @@
-# Integra??o da developer ? 16/10/2026
+# Integração da developer — 16/10/2026
 
 Branch: feature/adv-002-perfis-permissoes. Base local: 00e91a9.
-Origem consultada e integrada: origin/developer, 28541bd.
+Origem consultada e integrada: origin/developer, 28541bd. Merge: 23d72ac.
 
-Recebidos CRM, campanhas sazonais, atalhos configur?veis, m?scaras e Casos com tarefas e financeiro. Preservadas Agenda, convites e gest?o administrativa dos escrit?rios.
+Recebidos CRM, campanhas sazonais, atalhos configuráveis, máscaras e Casos com tarefas e financeiro. Preservadas Agenda, convites e gestão administrativa dos escritórios.
 
-Cinco conflitos conciliados preservando rotas dos tr?s m?dulos, RouterLink e m?scaras, atalhos, dom?nio Rotina e bloqueio de exclus?o de tipos usados na Agenda. AtalhosRequest em arquivo pr?prio; imports dos reposit?rios corrigidos em CRM/Casos.
+Cinco conflitos conciliados preservando rotas dos três módulos, RouterLink e máscaras, atalhos, domínio Rotina e bloqueio de exclusão de tipos usados na Agenda. AtalhosRequest em arquivo próprio; imports dos repositórios corrigidos em CRM/Casos.
 
-## Valida??o
-- Build Angular aprovado.
-- Frontend: 111 testes em 38 arquivos aprovados.
-- Backend: compila??o principal e de testes aprovada. mvn clean test: 155 testes, zero falhas, 147 erros; inicializa??o bloqueada pelo Flyway por vers?o 17 duplicada.
-- H? colis?es nas vers?es V17, V18, V19, V20 e V21. Nenhuma migration alterada ou renumerada; conferir flyway_schema_history dos ambientes antes de conciliar.
-- Integra??o funcional e inicializa??o da API n?o validadas. Containers n?o atualizados.
+## Validação inicial do merge
 
-## Pr?ximo passo
-Primeiro conciliar o hist?rico de migrations de CRM/Casos e da branch atual sem modificar migrations aplicadas, executar novamente testes e validar inicializa??o.
-Depois retomar ADV-026-AGENDA02: contatos/clientes e participantes nos compromissos, com isolamento por escrit?rio.
-O fechamento mais recente no Notion confirma o aceite da Agenda b?sica; a pend?ncia visual no documento local anterior j? foi encerrada pelo usu?rio.
-Sem push nesta sess?o.
+Build Angular aprovado e 111 testes frontend aprovados. Backend compilou, mas os testes foram bloqueados pelo Flyway: versões V17–V21 duplicadas. Nenhuma migration foi alterada naquela etapa. Containers ainda não haviam sido atualizados.
+
+## Continuação autorizada
+
+As colisões foram conciliadas após consultar o histórico PostgreSQL local: V1–V24 preservadas e migrations novas do CRM/Casos em V25–V29. A tabela comercial crm_consulta evita a colisão com agenda_evento. Desenvolvida ADV-026-AGENDA02 com V30. Regressão completa: 159 testes backend e 114 frontend aprovados; build e containers atualizados. Detalhes, decisões e evidências em agenda-participantes.md.
+
+O Notion confirma o aceite anterior da Agenda básica. A nova entrega de participantes segue para revisão com sessão real do usuário. Próxima entrega planejada: recorrência. Sem push.

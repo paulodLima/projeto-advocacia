@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { API_URL } from '../../../core/config/api-url.token';
-import { AtividadeAgenda, DadosAtividade, DiaAgenda, FiltroAgenda, OpcoesAgenda, PaginaAgenda, SituacaoAgenda } from '../models/agenda.model';
+import { AtividadeAgenda, DadosAtividade, DiaAgenda, FiltroAgenda, OpcoesAgenda, PaginaAgenda, SituacaoAgenda, OpcaoAgenda } from '../models/agenda.model';
 @Injectable({ providedIn: 'root' })
 export class AgendaApiService {
   private readonly http = inject(HttpClient);
@@ -10,6 +10,11 @@ export class AgendaApiService {
     let params = new HttpParams().set('inicio',f.inicio).set('fim',f.fim).set('incluirSemData',f.incluirSemData);
     for (const campo of ['tipo','situacao','responsavel','busca'] as const) if (f[campo]) params = params.set(campo,f[campo]);
     return params;
+  }
+  contatos(busca: string, ids: string[] = []) {
+    let params = new HttpParams().set('busca',busca);
+    if(ids.length) params=params.set('ids',ids.join(','));
+    return this.http.get<OpcaoAgenda[]>(this.url+'/contatos',{params});
   }
   opcoes() { return this.http.get<OpcoesAgenda>(this.url + '/opcoes'); }
   listar(f: FiltroAgenda, pagina = 0) { return this.http.get<PaginaAgenda>(this.url,{params:this.params(f).set('pagina',pagina).set('tamanho',50)}); }

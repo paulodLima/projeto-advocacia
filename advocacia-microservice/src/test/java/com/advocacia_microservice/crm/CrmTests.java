@@ -33,7 +33,9 @@ class CrmTests {
     @Autowired WebApplicationContext context;
     Usuario master; UUID empresa; MockMvc mvc;
     Usuario usuario() {return usuarios.executar("Teste CRM",UUID.randomUUID()+"@example.test");}
-    UUID empresa(Usuario u) {return empresas.criar(u.id(),Map.of("razao_social","Teste CRM","cnpj",UUID.randomUUID().toString().substring(0,14),"endereco","Rua A","cidade","Brasília")).id();}
+    @Autowired com.advocacia_microservice.plataforma.domain.repository.ConviteInicialRepository convitesIniciais;
+    @Autowired com.advocacia_microservice.usuario.domain.UsuarioRepository usuariosDominio;
+    UUID empresa(Usuario u) {return com.advocacia_microservice.empresa.EmpresaTestSupport.criar(empresas,convitesIniciais,usuariosDominio,u.id(),Map.of("razao_social","Teste CRM","cnpj",UUID.randomUUID().toString().substring(0,14),"endereco","Rua A","cidade","Brasília")).id();}
     @BeforeEach void preparar() {master=usuario();empresa=empresa(master);mvc=MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();}
     Lead.Cadastro cadastro(String nome,List<UUID> tags) {return new Lead.Cadastro(nome,"(61) 99999-1234","LEAD@EXAMPLE.TEST","Indicação","Inventário","quente","Observação",tags);}
     Lead lead() {return crm.salvar(master.id(),null,new CrmService.Formulario(null,cadastro("Interessado",List.of())));}
@@ -62,12 +64,12 @@ class CrmTests {
     @Test void consultaCriaAtualizaERemoveEventoDeAgendaEQualificacaoTemTresEstados() {
         var l=lead();var quando=LocalDateTime.of(2026,12,1,10,30);var q=new HashMap<String,Boolean>();q.put("fit",true);q.put("assunto",null);
         l=crm.estado(master.id(),l.id(),new CrmService.Atualizacao(l.versao(),new Lead.Estado("ativo",false,null,true,quando,"marcada",q)));
-        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM agenda_evento WHERE empresa_id=? AND lead_id=?",Integer.class,empresa,l.id()));assertNull(l.dados().estado().qualificacao().get("assunto"));
-        var evento=jdbc.queryForObject("SELECT id FROM agenda_evento WHERE lead_id=?",UUID.class,l.id());
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM crm_consulta WHERE empresa_id=? AND lead_id=?",Integer.class,empresa,l.id()));assertNull(l.dados().estado().qualificacao().get("assunto"));
+        var evento=jdbc.queryForObject("SELECT id FROM crm_consulta WHERE lead_id=?",UUID.class,l.id());
         l=crm.estado(master.id(),l.id(),new CrmService.Atualizacao(l.versao(),new Lead.Estado("ativo",false,null,true,quando.plusDays(1),"realizada",Map.of("fit",false))));
-        assertEquals("realizada",jdbc.queryForObject("SELECT status FROM agenda_evento WHERE lead_id=?",String.class,l.id()));
-        assertEquals(evento,jdbc.queryForObject("SELECT id FROM agenda_evento WHERE lead_id=?",UUID.class,l.id()));
-        l=crm.estado(master.id(),l.id(),new CrmService.Atualizacao(l.versao(),Lead.Estado.inicial()));assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM agenda_evento WHERE lead_id=?",Integer.class,l.id()));
+        assertEquals("realizada",jdbc.queryForObject("SELECT status FROM crm_consulta WHERE lead_id=?",String.class,l.id()));
+        assertEquals(evento,jdbc.queryForObject("SELECT id FROM crm_consulta WHERE lead_id=?",UUID.class,l.id()));
+        l=crm.estado(master.id(),l.id(),new CrmService.Atualizacao(l.versao(),Lead.Estado.inicial()));assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM crm_consulta WHERE lead_id=?",Integer.class,l.id()));
     }
     @Test void conversaoAtomicaIdempotenteCriaClienteIncompletoECasoComHistorico() {
         var l=registrar(lead(),"Sem resposta");var antes=l;

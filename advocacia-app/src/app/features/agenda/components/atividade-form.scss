@@ -27,3 +27,6 @@ time { font-size:.75rem; color:#797c70; }
 .observacao { white-space:pre-wrap; overflow-wrap:anywhere; }
 .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
 @media(max-width:500px){.colunas,.responsaveis { grid-template-columns:1fr; gap:0; }.editor{padding:1rem;}}
+
+.participantes { list-style:none; padding:0; display:grid; gap:.5rem; }
+.participantes li { display:flex; align-items:center; justify-content:space-between; gap:.75rem; overflow-wrap:anywhere; }

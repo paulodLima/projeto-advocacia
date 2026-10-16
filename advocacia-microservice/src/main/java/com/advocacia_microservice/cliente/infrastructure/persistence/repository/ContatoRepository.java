@@ -70,6 +70,8 @@ public class ContatoRepository {
         if(!busca.isEmpty()){sql.append(" AND EXISTS (SELECT 1 FROM contato_dado d WHERE d.contato_id=c.id AND d.campo IN ('nome','documento','email','telefone','observacoes') AND LOWER(d.valor) LIKE ? ESCAPE '!')");args.add("%"+busca.toLowerCase(Locale.ROOT).replace("!","!!").replace("%","!%").replace("_","!_")+"%");}
         return new Filtro(sql.toString(),args);
     }
-    public void excluir(UUID empresa,UUID id) {jdbc.update("DELETE FROM contato WHERE empresa_id=? AND id=?",empresa,id);}
+    public void excluir(UUID empresa,UUID id) {
+        if(jdbc.queryForObject("SELECT COUNT(*) FROM agenda_participante WHERE empresa_id=? AND contato_id=?",Long.class,empresa,id)>0)
+            throw new com.advocacia_microservice.shared.exception.ConflitoException("Contato vinculado à Agenda. Remova os v?nculos antes de excluir.");jdbc.update("DELETE FROM contato WHERE empresa_id=? AND id=?",empresa,id);}
     public void auditar(UUID empresa,UUID contato,UUID autor,String acao) {jdbc.update("INSERT INTO contato_evento(id,empresa_id,contato_id,autor_id,acao) VALUES (?,?,?,?,?)",UUID.randomUUID(),empresa,contato,autor,acao);}
 }

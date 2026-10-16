@@ -79,10 +79,10 @@ public class CrmService {
         repo.salvar(empresa,id,l.versao()+1,d,false);sincronizarConsulta(empresa,id,d);return repo.buscar(empresa,id);
     }
     private void sincronizarConsulta(UUID empresa,UUID id,Lead.Dados d) {
-        if(!d.estado().consultaAgendada() || d.estado().consultaEm()==null) {jdbc.update("DELETE FROM agenda_evento WHERE empresa_id=? AND lead_id=?",empresa,id);return;}
+        if(!d.estado().consultaAgendada() || d.estado().consultaEm()==null) {jdbc.update("DELETE FROM crm_consulta WHERE empresa_id=? AND lead_id=?",empresa,id);return;}
         var titulo="Consulta — "+d.cadastro().nome();
-        if(jdbc.update("UPDATE agenda_evento SET titulo=?,quando=?,status=? WHERE empresa_id=? AND lead_id=?",titulo,d.estado().consultaEm(),d.estado().consultaStatus(),empresa,id)==0)
-            jdbc.update("INSERT INTO agenda_evento(id,empresa_id,lead_id,titulo,quando,status) VALUES (?,?,?,?,?,?)",UUID.randomUUID(),empresa,id,titulo,d.estado().consultaEm(),d.estado().consultaStatus());
+        if(jdbc.update("UPDATE crm_consulta SET titulo=?,quando=?,status=? WHERE empresa_id=? AND lead_id=?",titulo,d.estado().consultaEm(),d.estado().consultaStatus(),empresa,id)==0)
+            jdbc.update("INSERT INTO crm_consulta(id,empresa_id,lead_id,titulo,quando,status) VALUES (?,?,?,?,?,?)",UUID.randomUUID(),empresa,id,titulo,d.estado().consultaEm(),d.estado().consultaStatus());
     }
     @Transactional public Lead registrar(UUID usuario,UUID id,ContatoRequest f) {
         var empresa=acesso(usuario,true).empresaId();repo.bloquear(empresa);var l=versao(empresa,id,f.versao());

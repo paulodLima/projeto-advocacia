@@ -18,12 +18,29 @@
       <label>{{ dados.modalidade === 'ONLINE' ? 'Link da reunião' : 'Local (opcional)' }}<input name="local" [(ngModel)]="dados.local" maxlength="1000"></label>
       <h3>Responsáveis</h3><p class="ajuda">Selecione até 20 pessoas ou deixe sem responsável.</p>
       <div class="responsaveis">@for(pessoa of opcoes().responsaveis;track pessoa.id){<label class="check"><input type="checkbox" [name]="'pessoa-' + pessoa.id" [checked]="dados.responsaveis.includes(pessoa.id)" (change)="alternarResponsavel(pessoa.id)" [disabled]="!pessoa.ativo && !dados.responsaveis.includes(pessoa.id)">{{ pessoa.nome }}{{ !pessoa.ativo ? ' (inativo)' : '' }}</label>}</div>
+      @if(opcoes().podeVincularContatos){
+        <section aria-label="Contatos participantes"><h3>Clientes e participantes</h3>
+          <p class="ajuda">Vincule até 50 contatos do escritório. Os responsáveis da equipe são definidos acima.</p>
+          <ul class="participantes">@for(id of dados.participantes;track id){
+            <li>{{ nomeContato(id) }} <button type="button" (click)="removerContato(id)" [attr.aria-label]="'Remover ' + nomeContato(id)">Remover</button></li>
+          }@empty{<li>Nenhum contato vinculado.</li>}</ul>
+          @if(podeEditar()){
+            <label>Buscar contato por nome<input name="buscaContato" [(ngModel)]="buscaContato" maxlength="150" (keydown.enter)="$event.preventDefault(); buscarContatos()"></label>
+            <button type="button" (click)="buscarContatos()" [disabled]="buscandoContatos()">{{ buscandoContatos() ? 'Buscando…' : 'Buscar contatos' }}</button>
+            @if(erroContatos()){<p role="alert">{{ erroContatos() }}</p>}
+            <ul class="participantes">@for(pessoa of contatos();track pessoa.id){
+              <li>{{ pessoa.nome }} <button type="button" (click)="adicionarContato(pessoa)" [disabled]="dados.participantes?.includes(pessoa.id) || (dados.participantes?.length ?? 0) >= 50">{{ dados.participantes?.includes(pessoa.id) ? 'Vinculado' : 'Adicionar' }}</button></li>
+            }</ul>
+            <p class="ajuda">A busca mostra até 50 resultados. Refine o nome para encontrar outros contatos.</p>
+          }@else if(erroContatos()){<p role="alert">{{ erroContatos() }}</p>}
+        </section>
+      }
       <label>Descrição<textarea name="descricao" [(ngModel)]="dados.descricao" rows="4" maxlength="4000"></textarea></label>
       @if(podeEditar()){<button class="primario" [disabled]="form.invalid || !dados.titulo.trim() && !dados.tipoTarefaId">{{ salvando() ? 'Salvando…' : 'Salvar atividade' }}</button>}
     </fieldset>
   </form>
   @if(base(); as atividade){
-    @if(opcoes().podeEditar){@if(temAlteracoes()){<p class="ajuda">Salve as altera??es do formul?rio antes de mudar a situa??o.</p>}<div class="acoes">@if(atividade.situacao === 'PENDENTE'){<button type="button" (click)="confirmarAcao('CONCLUIDA')" [disabled]="salvando() || temAlteracoes()">Concluir</button><button class="perigo" type="button" (click)="confirmarAcao('CANCELADA')" [disabled]="salvando() || temAlteracoes()">Cancelar atividade</button>}@else{<button type="button" (click)="confirmarAcao('PENDENTE')" [disabled]="salvando() || temAlteracoes()">Reabrir atividade</button>}</div>}
+    @if(opcoes().podeEditar){@if(temAlteracoes()){<p class="ajuda">Salve as alterações do formulário antes de mudar a situação.</p>}<div class="acoes">@if(atividade.situacao === 'PENDENTE'){<button type="button" (click)="confirmarAcao('CONCLUIDA')" [disabled]="salvando() || temAlteracoes()">Concluir</button><button class="perigo" type="button" (click)="confirmarAcao('CANCELADA')" [disabled]="salvando() || temAlteracoes()">Cancelar atividade</button>}@else{<button type="button" (click)="confirmarAcao('PENDENTE')" [disabled]="salvando() || temAlteracoes()">Reabrir atividade</button>}</div>}
     @if(acao(); as situacao){<section class="confirmacao"><h3>{{ situacao === 'CANCELADA' ? 'Confirmar cancelamento' : situacao === 'CONCLUIDA' ? 'Confirmar conclusão' : 'Confirmar reabertura' }}</h3><p>Esta ação será registrada no histórico.</p><label>{{ situacao === 'CANCELADA' ? 'Motivo obrigatório' : 'Providência ou observação (opcional)' }}<textarea [(ngModel)]="observacao" name="observacao" maxlength="2000" rows="3" [disabled]="salvando()"></textarea></label><div class="acoes"><button type="button" class="primario" (click)="executarAcao()" [disabled]="salvando() || temAlteracoes() || situacao === 'CANCELADA' && !observacao.trim()">Confirmar</button><button type="button" (click)="acao.set(null)" [disabled]="salvando()">Voltar</button></div></section>}
     <section class="historico"><h3>Histórico</h3>@for(evento of atividade.historico;track evento.id){<article><p><strong>{{ nomeAcao(evento.acao) }}</strong> · {{ evento.autor }}</p><time>{{ evento.criadoEm | date:'dd/MM/yyyy HH:mm':'-0300' }}</time>@if(evento.observacao){<p class="observacao">{{ evento.observacao }}</p>}</article>}@empty{<p>Nenhuma alteração registrada.</p>}</section>
   }

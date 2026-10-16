@@ -40,4 +40,34 @@ describe('Formulário de atividades da Agenda',()=>{
     const f=await criar(atividade);const c=f.componentInstance as any;c.dados.descricao='Alteração ainda não salva';c.confirmarAcao('CONCLUIDA');c.executarAcao();
     http.expectNone(url+'/atividade/situacao');expect(c.dados.descricao).toBe('Alteração ainda não salva');
   });
+
+  it('busca vincula e remove participantes sem perder responsáveis e preserva rascunho em conflito',async()=>{
+    const f=await criar(atividade);f.componentRef.setInput('opcoes',{...opcoes,podeVincularContatos:true});await f.whenStable();
+    const c=f.componentInstance as any;c.buscaContato='Maria';c.buscarContatos();
+    const busca=http.expectOne(r=>r.url===url+'/contatos' && r.params.get('busca')==='Maria');
+    busca.flush([{id:'cliente',nome:'Maria Silva',ativo:true}]);await f.whenStable();
+    c.adicionarContato(c.contatos()[0]);c.adicionarContato(c.contatos()[0]);
+    expect(c.dados.participantes).toEqual(['cliente']);expect(c.dados.responsaveis).toEqual(['pessoa']);
+    c.salvar();const request=http.expectOne(url+'/atividade');expect(request.request.body.participantes).toEqual(['cliente']);
+    request.flush({detail:'Conflito'},{status:409,statusText:'Conflict'});await f.whenStable();
+    expect(c.dados.participantes).toEqual(['cliente']);expect(f.nativeElement.textContent).toContain('Maria Silva');
+    c.removerContato('cliente');expect(c.dados.participantes).toEqual([]);
+  });
+  it('recarrega nomes selecionados e perfil de consulta não modifica vínculos',async()=>{
+    const f=await criar();f.componentRef.setInput('opcoes',{...opcoes,podeEditar:false,podeVincularContatos:true});
+    f.componentRef.setInput('base',{...atividade,dados:{...atividade.dados,participantes:['cliente']}});await f.whenStable();
+    http.expectOne(r=>r.url===url+'/contatos' && r.params.get('ids')==='cliente').flush([{id:'cliente',nome:'Maria Atualizada',ativo:true}]);await f.whenStable();
+    expect(f.nativeElement.textContent).toContain('Maria Atualizada');
+    const c=f.componentInstance as any;c.removerContato('cliente');c.adicionarContato({id:'outro',nome:'Outro',ativo:true});
+    expect(c.dados.participantes).toEqual(['cliente']);expect(c.temAlteracoes()).toBe(false);
+    expect(f.nativeElement.textContent).not.toContain('Buscar contato por nome');
+  });
+  it('sem acesso a Contatos não busca nem mostra participantes e falhas de busca mantêm a seleção',async()=>{
+    const f=await criar(atividade);const c=f.componentInstance as any;c.buscarContatos();http.expectNone(r=>r.url===url+'/contatos');
+    expect(f.nativeElement.textContent).not.toContain('Clientes e participantes');
+    f.componentRef.setInput('opcoes',{...opcoes,podeVincularContatos:true});await f.whenStable();
+    c.adicionarContato({id:'cliente',nome:'Maria',ativo:true});c.buscarContatos();
+    http.expectOne(r=>r.url===url+'/contatos').flush({},{status:500,statusText:'Failure'});await f.whenStable();
+    expect(c.dados.participantes).toEqual(['cliente']);expect(f.nativeElement.textContent).toContain('Não foi possível buscar contatos');
+  });
 });

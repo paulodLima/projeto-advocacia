@@ -32,11 +32,13 @@ public class JdbcAgendaRepository implements AgendaRepository {
     private List<AtividadeAgenda> comResponsaveis(List<AtividadeAgenda> itens) {
         if (itens.isEmpty()) return itens;
         var params=new ArrayList<Object>();params.add(itens.getFirst().empresaId());itens.forEach(a->params.add(a.id()));
-        var ids=String.join(",",Collections.nCopies(itens.size(),"?"));var responsaveis=new HashMap<UUID,List<UUID>>();
+        var ids=String.join(",",Collections.nCopies(itens.size(),"?"));var responsaveis=new HashMap<UUID,List<UUID>>();var participantes=new HashMap<UUID,List<UUID>>();
         jdbc.query("SELECT atividade_id,usuario_id FROM agenda_responsavel WHERE empresa_id=? AND atividade_id IN ("+ids+") ORDER BY usuario_id",
             r->{responsaveis.computeIfAbsent(r.getObject(1,UUID.class),k->new ArrayList<>()).add(r.getObject(2,UUID.class));},params.toArray());
+        jdbc.query("SELECT atividade_id,contato_id FROM agenda_participante WHERE empresa_id=? AND atividade_id IN ("+ids+") ORDER BY contato_id",
+            r->{participantes.computeIfAbsent(r.getObject(1,UUID.class),k->new ArrayList<>()).add(r.getObject(2,UUID.class));},params.toArray());
         return itens.stream().map(a->{var d=a.dados();return new AtividadeAgenda(a.id(),a.empresaId(),a.versao(),
-            new DadosAtividade(d.tipo(),d.titulo(),d.tipoTarefaId(),d.data(),d.dataFim(),d.hora(),d.horaFim(),d.prazoFatal(),d.diaInteiro(),d.modalidade(),d.local(),d.descricao(),responsaveis.getOrDefault(a.id(),List.of())),a.situacao(),a.concluidaEm(),a.criadoEm(),a.atualizadoEm(),a.historico());}).toList();
+            new DadosAtividade(d.tipo(),d.titulo(),d.tipoTarefaId(),d.data(),d.dataFim(),d.hora(),d.horaFim(),d.prazoFatal(),d.diaInteiro(),d.modalidade(),d.local(),d.descricao(),responsaveis.getOrDefault(a.id(),List.of()),participantes.getOrDefault(a.id(),List.of())),a.situacao(),a.concluidaEm(),a.criadoEm(),a.atualizadoEm(),a.historico());}).toList();
     }
     private String filtrar(UUID empresa,FiltroAgenda f,List<Object> params) {
         params.add(empresa);params.add(f.fim());params.add(f.inicio());params.add(f.inicio());params.add(f.fim());
@@ -68,6 +70,17 @@ public class JdbcAgendaRepository implements AgendaRepository {
     public List<OpcaoAgenda> tiposTarefa(UUID empresa) {
         return jdbc.query("SELECT id,nome,ativo FROM cadastro_item WHERE empresa_id=? AND tipo='tarefas' ORDER BY nome_chave,id",(r,n)->new OpcaoAgenda(r.getObject(1,UUID.class),r.getString(2),r.getBoolean(3)),empresa);
     }
+    public List<OpcaoAgenda> contatos(UUID empresa,String busca,List<UUID> ids) {
+        var args=new ArrayList<Object>();args.add(empresa);
+        var sql="SELECT id,nome FROM contato WHERE empresa_id=?";
+        if (!ids.isEmpty()) {
+            sql+=" AND id IN ("+String.join(",",Collections.nCopies(ids.size(),"?"))+")";args.addAll(ids);
+        } else {
+            sql+=" AND LOWER(nome) LIKE ? ESCAPE '!'";
+            args.add("%"+busca.toLowerCase(Locale.ROOT).replace("!","!!").replace("%","!%").replace("_","!_")+"%");
+        }
+        return jdbc.query(sql+" ORDER BY LOWER(nome),id LIMIT 50",(r,n)->new OpcaoAgenda(r.getObject(1,UUID.class),r.getString(2),true),args.toArray());
+    }
     public void salvar(AtividadeAgenda a,boolean nova) {
         var d=a.dados();
         var params=new ArrayList<Object>(Arrays.asList(a.versao(),d.tipo().name(),d.titulo(),d.tipoTarefaId(),d.data(),d.dataFim(),d.hora(),d.horaFim(),d.prazoFatal(),d.diaInteiro(),d.modalidade(),d.local(),d.descricao(),a.situacao().name(),a.concluidaEm()==null?null:java.sql.Timestamp.from(a.concluidaEm()),java.sql.Timestamp.from(a.criadoEm()),java.sql.Timestamp.from(a.atualizadoEm()),a.empresaId(),a.id()));
@@ -79,6 +92,8 @@ public class JdbcAgendaRepository implements AgendaRepository {
         }
         jdbc.update("DELETE FROM agenda_responsavel WHERE empresa_id=? AND atividade_id=?",a.empresaId(),a.id());
         for (var id:d.responsaveis()) jdbc.update("INSERT INTO agenda_responsavel(empresa_id,atividade_id,usuario_id) VALUES(?,?,?)",a.empresaId(),a.id(),id);
+        jdbc.update("DELETE FROM agenda_participante WHERE empresa_id=? AND atividade_id=?",a.empresaId(),a.id());
+        for (var id:d.participantes()) jdbc.update("INSERT INTO agenda_participante(empresa_id,atividade_id,contato_id) VALUES(?,?,?)",a.empresaId(),a.id(),id);
     }
     public void registrar(UUID empresa,UUID atividade,UUID autor,String acao,String observacao) {
         var nome=jdbc.queryForObject("SELECT nome FROM usuario WHERE id=?",String.class,autor);

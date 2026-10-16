@@ -136,4 +136,73 @@ class AgendaTests {
             .andExpect(status().isCreated()).andExpect(jsonPath("$.dados.titulo").value("API"));
         assertEquals(3,agenda.listar(master,filtro(DIA,DIA,false),0,50).total());
     }
+
+    UUID contato(UUID escritorio,String nome,String tipo) {
+        var id=UUID.randomUUID();
+        var registro=new com.advocacia_microservice.cliente.domain.Contato(id,escritorio,0,Map.of("nome",nome,"tipo",tipo,"tipo_pessoa","PF","whatsapp","nenhum","carteira","casa"),List.of(),List.of(),true);
+        context.getBean(com.advocacia_microservice.cliente.infrastructure.persistence.repository.ContatoRepository.class).salvar(registro,true);
+        return id;
+    }
+    SalvarAtividade participantes(AtividadeAgenda a,List<UUID> ids) {
+        var d=a.dados();
+        return new SalvarAtividade(a.versao(),d.tipo(),d.titulo(),d.tipoTarefaId(),d.data(),d.dataFim(),d.hora(),d.horaFim(),d.prazoFatal(),d.diaInteiro(),d.modalidade(),d.local(),d.descricao(),d.responsaveis(),ids);
+    }
+    @Test void participantesPersistemNaFichaListaSituacaoEEdicaoComHistorico() {
+        var cliente=contato(empresa,"Maria","Cliente");var advogado=contato(empresa,"João","Advogado(a)");
+        var a=agenda.salvar(master,null,tarefa("Reunião com cliente",DIA,List.of(master)));
+        a=agenda.salvar(master,a.id(),participantes(a,List.of(cliente,advogado)));
+        em.clear();
+        assertEquals(Set.of(cliente,advogado),new HashSet<>(agenda.buscar(master,a.id()).dados().participantes()));
+        assertEquals(2,agenda.listar(master,filtro(DIA,DIA,false),0,50).itens().getFirst().dados().participantes().size());
+        jdbc.update("UPDATE contato SET nome='Maria Silva' WHERE id=?",cliente);
+        assertEquals("Maria Silva",agenda.contatos(master,"",List.of(cliente)).getFirst().nome());
+        assertEquals(1,agenda.contatos(master,"Silva",List.of()).size());
+        var concluida=agenda.alterarSituacao(master,a.id(),new AlterarSituacaoAgenda(a.versao(),SituacaoAgenda.CONCLUIDA,""));
+        assertEquals(2,concluida.dados().participantes().size());assertEquals(List.of(master),concluida.dados().responsaveis());
+        assertEquals(3,concluida.historico().size());
+        var reaberta=agenda.alterarSituacao(master,a.id(),new AlterarSituacaoAgenda(concluida.versao(),SituacaoAgenda.PENDENTE,""));
+        var removida=agenda.salvar(master,a.id(),participantes(reaberta,List.of(cliente)));
+        assertEquals(List.of(cliente),removida.dados().participantes());
+        assertEquals(DIA,removida.dados().data());
+    }
+    @Test void participantesRejeitamOutraEmpresaDuplicadosLimitesEConflitosSemSobrescrever() {
+        var outro=usuario("Outro");var externa=empresa(outro);var contato=contato(externa,"Externo","Cliente");
+        var local=contato(empresa,"Local","Fornecedor");
+        var a=agenda.salvar(master,null,tarefa("Protegida",DIA,List.of()));
+        assertThrows(IllegalArgumentException.class,()->agenda.salvar(master,a.id(),participantes(a,List.of(contato))));
+        assertThrows(IllegalArgumentException.class,()->agenda.salvar(master,a.id(),participantes(a,List.of(local,local))));
+        assertThrows(IllegalArgumentException.class,()->agenda.salvar(master,a.id(),participantes(a,java.util.stream.IntStream.range(0,51).mapToObj(i->UUID.randomUUID()).toList())));
+        var alterada=agenda.salvar(master,a.id(),participantes(a,List.of(local)));
+        assertThrows(ConflitoException.class,()->agenda.salvar(master,a.id(),participantes(a,List.of())));
+        assertEquals(List.of(local),agenda.buscar(master,alterada.id()).dados().participantes());
+        assertTrue(agenda.contatos(master,"",List.of(contato)).isEmpty());
+        assertTrue(agenda.contatos(master,"%",List.of()).isEmpty());
+        assertEquals(2,agenda.buscar(master,a.id()).historico().size());
+    }
+    @Test void semPermissaoContatosOcultaVinculosEPreservaAoEditarOuConcluir() throws Exception {
+        var contato=contato(empresa,"Privado","Cliente");
+        var original=agenda.salvar(master,null,tarefa("Agenda",DIA,List.of()));
+        var a=agenda.salvar(master,original.id(),participantes(original,List.of(contato)));
+        jdbc.update("UPDATE empresa_modulo SET liberado=FALSE WHERE empresa_id=? AND modulo_codigo='contatos'",empresa);
+        assertFalse(agenda.opcoes(master).podeVincularContatos());
+        assertTrue(agenda.buscar(master,a.id()).dados().participantes().isEmpty());
+        assertTrue(agenda.listar(master,filtro(DIA,DIA,false),0,50).itens().getFirst().dados().participantes().isEmpty());
+        mvc.perform(get("/api/agenda/contatos").with(user(master.toString()))).andExpect(status().isForbidden());
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,()->agenda.salvar(master,a.id(),participantes(a,List.of(contato))));
+        var editada=agenda.salvar(master,a.id(),participantes(a,List.of()));
+        agenda.alterarSituacao(master,a.id(),new AlterarSituacaoAgenda(editada.versao(),SituacaoAgenda.CONCLUIDA,""));
+        jdbc.update("UPDATE empresa_modulo SET liberado=TRUE WHERE empresa_id=? AND modulo_codigo='contatos'",empresa);
+        assertEquals(List.of(contato),agenda.buscar(master,a.id()).dados().participantes());
+    }
+    @Test void exclusaoDeContatoVinculadoRetornaConflitoEAposRemocaoPermiteExcluir() {
+        var id=contato(empresa,"Cliente","Cliente");
+        var a=agenda.salvar(master,null,tarefa("Agenda",DIA,List.of()));
+        a=agenda.salvar(master,a.id(),participantes(a,List.of(id)));
+        var contatos=context.getBean(com.advocacia_microservice.cliente.application.ContatosService.class);
+        assertThrows(ConflitoException.class,()->contatos.excluir(master,id,0));
+        assertEquals(1,agenda.contatos(master,"",List.of(id)).size());
+        agenda.salvar(master,a.id(),participantes(a,List.of()));
+        contatos.excluir(master,id,0);
+        assertTrue(agenda.contatos(master,"",List.of(id)).isEmpty());
+    }
 }

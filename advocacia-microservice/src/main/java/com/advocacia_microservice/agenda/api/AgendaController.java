@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.*;
 public class AgendaController {
     private final AgendaService service;
     public AgendaController(AgendaService service) {this.service=service;}
+    @GetMapping("/contatos") public List<OpcaoAgenda> contatos(Principal principal,@RequestParam(defaultValue="") String busca,@RequestParam(required=false) List<UUID> ids) {
+        return service.contatos(usuario(principal),busca,ids==null?List.of():ids);
+    }
     @GetMapping("/opcoes") public OpcoesAgendaResponse opcoes(Principal principal) {return OpcoesAgendaResponse.de(service.opcoes(usuario(principal)));}
     @GetMapping public PaginaAgendaResponse listar(Principal principal,@RequestParam LocalDate inicio,@RequestParam LocalDate fim,
             @RequestParam(required=false) TipoAtividade tipo,@RequestParam(required=false) SituacaoAgenda situacao,

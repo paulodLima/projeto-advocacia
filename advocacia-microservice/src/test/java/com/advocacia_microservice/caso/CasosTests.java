@@ -37,7 +37,9 @@ class CasosTests {
     @Autowired WebApplicationContext context;
     Usuario master; UUID empresa; MockMvc mvc;
     Usuario usuario(){return usuarios.executar("Teste Casos",UUID.randomUUID()+"@example.test");}
-    UUID empresa(Usuario u){return empresas.criar(u.id(),Map.of("razao_social","Teste Casos","cnpj",UUID.randomUUID().toString().substring(0,14),"endereco","Rua A","cidade","Brasília")).id();}
+    @Autowired com.advocacia_microservice.plataforma.domain.repository.ConviteInicialRepository convitesIniciais;
+    @Autowired com.advocacia_microservice.usuario.domain.UsuarioRepository usuariosDominio;
+    UUID empresa(Usuario u){return com.advocacia_microservice.empresa.EmpresaTestSupport.criar(empresas,convitesIniciais,usuariosDominio,u.id(),Map.of("razao_social","Teste Casos","cnpj",UUID.randomUUID().toString().substring(0,14),"endereco","Rua A","cidade","Brasília")).id();}
     @BeforeEach void preparar(){master=usuario();empresa=empresa(master);mvc=MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();}
     CasosService.Formulario form(Integer versao,UUID cliente,CasosService.NovoCliente novo){return new CasosService.Formulario(versao,"Inventário",cliente,null,master.id(),"Parte adversa","Notas",new BigDecimal("1500.50"),LocalDate.of(2026,10,9),novo);}
     CasosService.Caso caso(){return casos.salvar(master.id(),null,form(null,null,null)).caso();}
