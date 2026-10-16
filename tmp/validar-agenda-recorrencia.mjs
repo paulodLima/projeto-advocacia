@@ -27,6 +27,7 @@ async function fulfill(e){
   else if(p==='/api/equipe/me')body={empresaId:empresa,papel:modo==='master'?'MASTER':'MEMBRO',perfil:modo==='master'?'ADMINISTRADOR':'FINANCEIRO',modulos:['inicio','config','agenda','contatos','parceiros','equipe'],enviaDocumento:false};
   else if(p==='/api/agenda/opcoes')body={podeEditar:modo==='master',podeVincularContatos:true,responsaveis:pessoas,tiposTarefa:[],fusoHorario:'America/Sao_Paulo'};
   else if(p==='/api/agenda/contatos')body=[{id:'cliente-maria',nome:'Maria Silva',ativo:true},{id:'advogado-joao',nome:'João Oliveira',ativo:true}].filter(c=>u.searchParams.has('ids')?u.searchParams.get('ids').split(',').includes(c.id):c.nome.toLowerCase().includes((u.searchParams.get('busca')||'').toLowerCase()));
+  else if(p==='/api/agenda/vinculos')body={itens:[],total:0,pagina:0,tamanho:20};
   else if(p==='/api/agenda/calendario'){
     body=[];for(let d=new Date(u.searchParams.get('inicio')+'T12:00:00');data(d)<=u.searchParams.get('fim');d.setDate(d.getDate()+1)){const dia=data(d),itens=atividades.filter(a=>corresponde(a,u) && (a.dados.data && a.dados.data<=dia && (a.dados.dataFim || a.dados.data)>=dia || a.dados.prazoFatal===dia));body.push({data:dia,total:itens.length,pendentes:itens.filter(a=>a.situacao==='PENDENTE').length,prazosFatais:itens.filter(a=>a.situacao==='PENDENTE'&&a.dados.prazoFatal===dia).length});}
   } else if(p==='/api/agenda' && e.request.method==='GET'){const itens=atividades.filter(a=>corresponde(a,u));body={itens,total:itens.length,pagina:0,tamanho:50};}

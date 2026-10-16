@@ -1,3 +1,4 @@
+import { VinculosAgenda } from '../components/vinculos-agenda';
 import { ExecucaoWorkflow } from '../services/workflows-agenda-api.service';
 import { AfterViewInit, Component, DestroyRef, ElementRef, ViewChild, computed, effect, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
@@ -11,7 +12,7 @@ import { CalendarioMensal } from '../components/calendario-mensal';
 import { AgendaApiService } from '../services/agenda-api.service';
 import { AtividadeAgenda, DiaAgenda, FiltroAgenda, OpcoesAgenda, PaginaAgenda, SITUACOES_AGENDA, TIPOS_AGENDA, atividadeAtrasada, dataCivil, hojeEscritorio, nomeSituacao, nomeTipo } from '../models/agenda.model';
 
-@Component({selector:'app-agenda',imports:[FormsModule,DatePipe,AtividadeForm,CalendarioMensal],templateUrl:'./agenda.html',styleUrl:'./agenda.scss'})
+@Component({selector:'app-agenda',imports:[FormsModule,DatePipe,AtividadeForm,CalendarioMensal,VinculosAgenda],templateUrl:'./agenda.html',styleUrl:'./agenda.scss'})
 export class Agenda implements AfterViewInit {
   private readonly route=inject(ActivatedRoute);
   private readonly router=inject(Router);
@@ -22,6 +23,7 @@ export class Agenda implements AfterViewInit {
   private readonly destroyRef=inject(DestroyRef);
   @ViewChild('editor') private editor?:ElementRef<HTMLDialogElement>;
   @ViewChild(AtividadeForm) private formulario?:AtividadeForm;
+  protected readonly filtroVinculos=signal<FiltroAgenda|null>(null);
   protected readonly opcoes=signal<OpcoesAgenda|null>(null);
   protected readonly resultado=signal<PaginaAgenda|null>(null);
   protected readonly calendario=signal<DiaAgenda[]>([]);
@@ -80,7 +82,7 @@ export class Agenda implements AfterViewInit {
   }
   protected carregar(pagina=0){
     this.pedido?.unsubscribe();this.carregando.set(true);this.erro.set('');this.resultado.set(null);this.calendario.set([]);this.pagina=pagina;
-    const f=this.filtro(),dias=this.dias();
+    const f=this.filtro(),dias=this.dias();this.filtroVinculos.set(f);
     const calendario=this.visual()==='calendario' ? this.api.calendario({...f,inicio:dias[0].data,fim:dias[41].data,incluirSemData:false}) : of([] as DiaAgenda[]);
     this.pedido=forkJoin({lista:this.api.listar(f,pagina),calendario}).pipe(finalize(()=>this.carregando.set(false)),takeUntilDestroyed(this.destroyRef)).subscribe({next:r=>{this.resultado.set(r.lista);this.calendario.set(r.calendario);},error:e=>this.erro.set(e.error?.detail || 'Não foi possível carregar a Agenda. Tente novamente.')});
   }

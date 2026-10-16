@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly=true)
 public class TarefasCasoService {
+    private final com.advocacia_microservice.agenda.domain.repository.VinculosAgendaRepository agendaVinculos;
     public record Dados(UUID tipoId,String titulo,LocalDate data,LocalDate dataFim,
             LocalTime hora,LocalTime horaFim,LocalDate prazoFatal,String local,String descricao,
             boolean mostrarAgenda,boolean diaInteiro,String repeticao,List<String> flags,List<UUID> responsaveis) {}
@@ -37,7 +38,8 @@ public class TarefasCasoService {
     private final ContatoRepository lock;
     private final CrmRepository json;
 
-    public TarefasCasoService(JdbcTemplate jdbc,CasosService casos,EquipeService equipe,ContatoRepository lock,CrmRepository json) {
+    public TarefasCasoService(JdbcTemplate jdbc,CasosService casos,EquipeService equipe,ContatoRepository lock,CrmRepository json,com.advocacia_microservice.agenda.domain.repository.VinculosAgendaRepository agendaVinculos) {
+        this.agendaVinculos=agendaVinculos;
         this.jdbc=jdbc;this.casos=casos;this.equipe=equipe;this.lock=lock;this.json=json;
     }
     private UUID empresa(UUID usuario,UUID caso,boolean escrita) {
@@ -112,7 +114,7 @@ public class TarefasCasoService {
         var dados=normalizar(f.dados(),opcoes(usuario,caso),anterior);
         if(id==null){id=UUID.randomUUID();jdbc.update("INSERT INTO caso_tarefa(id,empresa_id,caso_id,dados,autor_id) VALUES (?,?,?,?,?)",id,empresa,caso,json.json(dados),usuario);for(var u:dados.responsaveis())jdbc.update("INSERT INTO caso_tarefa_responsavel(empresa_id,tarefa_id,usuario_id) VALUES (?,?,?)",empresa,id,u);}
         else persistir(empresa,id,dados);
-        return ficha(empresa,exigirInterno(empresa,caso,id));
+        agendaVinculos.sincronizarTarefa(empresa,id);return ficha(empresa,exigirInterno(empresa,caso,id));
     }
     private Registro exigirInterno(UUID empresa,UUID caso,UUID id){return jdbc.query(SELECT+" WHERE t.empresa_id=? AND t.caso_id=? AND t.id=?",this::mapear,empresa,caso,id).getFirst();}
     private void comentar(UUID empresa,UUID id,UUID usuario,String texto){jdbc.update("INSERT INTO caso_tarefa_comentario(id,empresa_id,tarefa_id,autor_id,texto) VALUES (?,?,?,?,?)",UUID.randomUUID(),empresa,id,usuario,texto);}
@@ -122,7 +124,7 @@ public class TarefasCasoService {
         var providencia=texto(f.providencia(),4000);boolean concluida=f.status().equals("concluida");
         jdbc.update("UPDATE caso_tarefa SET status=?,concluida_por=?,concluida_em=?,versao=versao+1,atualizado_em=CURRENT_TIMESTAMP WHERE empresa_id=? AND id=?",f.status(),concluida?usuario:null,concluida?OffsetDateTime.now(ZoneOffset.UTC):null,empresa,id);
         if(concluida&&!providencia.isBlank())comentar(empresa,id,usuario,providencia);
-        return ficha(empresa,exigirInterno(empresa,caso,id));
+        agendaVinculos.sincronizarTarefa(empresa,id);return ficha(empresa,exigirInterno(empresa,caso,id));
     }
     @Transactional public Tarefa adiar(UUID usuario,UUID caso,UUID id,Adiamento f){
         var empresa=empresa(usuario,caso,true);versao(f.versao());var t=exigir(usuario,empresa,caso,id,f.versao());
@@ -130,16 +132,16 @@ public class TarefasCasoService {
         var d=t.dados();long dias=d.data()==null?0:java.time.temporal.ChronoUnit.DAYS.between(d.data(),f.data());
         var fim=d.dataFim()==null?null:d.dataFim().plusDays(dias);data(fim);
         persistir(empresa,id,new Dados(d.tipoId(),d.titulo(),f.data(),fim,d.hora(),d.horaFim(),d.prazoFatal()==null?null:f.data(),d.local(),d.descricao(),d.mostrarAgenda(),d.diaInteiro(),d.repeticao(),d.flags(),d.responsaveis()));
-        return ficha(empresa,exigirInterno(empresa,caso,id));
+        agendaVinculos.sincronizarTarefa(empresa,id);return ficha(empresa,exigirInterno(empresa,caso,id));
     }
     @Transactional public Tarefa delegar(UUID usuario,UUID caso,UUID id,Delegacao f){
         var empresa=empresa(usuario,caso,true);versao(f.versao());var t=exigir(usuario,empresa,caso,id,f.versao());var ids=responsaveis(f.responsaveis(),opcoes(usuario,caso));var d=t.dados();
         persistir(empresa,id,new Dados(d.tipoId(),d.titulo(),d.data(),d.dataFim(),d.hora(),d.horaFim(),d.prazoFatal(),d.local(),d.descricao(),d.mostrarAgenda(),d.diaInteiro(),d.repeticao(),d.flags(),ids));
-        return ficha(empresa,exigirInterno(empresa,caso,id));
+        agendaVinculos.sincronizarTarefa(empresa,id);return ficha(empresa,exigirInterno(empresa,caso,id));
     }
     @Transactional public Tarefa comentar(UUID usuario,UUID caso,UUID id,ComentarioRequest f){
         var empresa=empresa(usuario,caso,true);versao(f.versao());exigir(usuario,empresa,caso,id,f.versao());var texto=texto(f.texto(),4000);if(texto.isBlank())throw new IllegalArgumentException("Escreva um comentário.");
-        comentar(empresa,id,usuario,texto);jdbc.update("UPDATE caso_tarefa SET versao=versao+1,atualizado_em=CURRENT_TIMESTAMP WHERE empresa_id=? AND id=?",empresa,id);return ficha(empresa,exigirInterno(empresa,caso,id));
+        comentar(empresa,id,usuario,texto);jdbc.update("UPDATE caso_tarefa SET versao=versao+1,atualizado_em=CURRENT_TIMESTAMP WHERE empresa_id=? AND id=?",empresa,id);agendaVinculos.sincronizarTarefa(empresa,id);return ficha(empresa,exigirInterno(empresa,caso,id));
     }
     @Transactional public void excluir(UUID usuario,UUID caso,UUID id,int versao){var empresa=empresa(usuario,caso,true);exigir(usuario,empresa,caso,id,versao);jdbc.update("DELETE FROM caso_tarefa WHERE empresa_id=? AND caso_id=? AND id=?",empresa,caso,id);}
 }

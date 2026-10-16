@@ -6,7 +6,7 @@ Implementação na branch `feature/crm`, baseada nas funções `D7`, `S7`, `U7`,
 
 - **Leads:** indicadores, busca, filtros de temperatura/origem/situação, retornos vencidos e cartões com histórico lateral. Cadastro em painel à direita; edição em formulário.
 - **Cadência:** registrar uma tentativa avança o passo, atualiza o último contato e limpa o retorno combinado. “Quer agendar consultoria” altera a situação para “Agendou consultoria”; “Sem interesse” marca perdido. A pausa permite escolher uma data de retorno, inclusive ficar sem data. Ao esgotar a régua, o lead permanece ativo para decisão.
-- **Consulta:** agendamento, data/hora e situações marcada, confirmada, realizada e não compareceu. A consulta é persistida em `agenda_evento`; sua identidade é preservada nas alterações.
+- **Consulta:** agendamento, data/hora e situações marcada, confirmada, realizada e não compareceu. A consulta é persistida em `crm_consulta`; sua identidade é preservada nas alterações. Consultas datadas aparecem na Agenda para quem também possui acesso ao CRM, com situação e horário sincronizados.
 - **F.A.C.A.:** Fit, Assunto, Capacidade e Autoridade alternam entre não avaliado, sim e não. As quatro respostas positivas indicam qualificado.
 - **Comentários:** histórico interno e menções selecionadas ao digitar `@`. Membros ativos da mesma empresa com acesso ao CRM recebem uma notificação no painel do cabeçalho.
 - **Ganho:** pode apenas marcar ganho ou criar cliente e caso. A conversão preserva o histórico anterior e impede criar outro caso para o mesmo lead. Clientes existentes são procurados por email e telefone normalizados; correspondências ambíguas interrompem a operação inteira.
@@ -26,7 +26,7 @@ Clientes criados pela conversão podem não ter CPF ou email. Nessa situação f
 
 ## Integrações preparadas
 
-Os módulos completos de **Casos**, **Agenda** e **Gestão Processual** ainda não foram implementados. Esta etapa cria as bases `caso` e `agenda_evento` para persistir a conversão e a consulta do CRM. Elas ainda não aparecem em telas completas desses módulos.
+Casos e Agenda já possuem telas funcionais. A consulta do CRM aparece na seção de vínculos e nas contagens do calendário da Agenda, sem criar outra ficha editável. Abrir o vínculo leva ao lead. Gestão Processual ainda não possui cadastro funcional. Consulte [Integração da Agenda](agenda-integracoes.md).
 
 A área **Manutenção de planejamento** mantém a apresentação e o estado vazio da referência. A base `crm_manutencao` e o registro de contato estão preparados, mas as datas de entrega e intervalos serão definidos na futura ficha de Casos/Gestão Processual. Não há campanhas por processos sem esse módulo.
 

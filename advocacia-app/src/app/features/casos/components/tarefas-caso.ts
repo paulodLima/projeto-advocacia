@@ -8,6 +8,7 @@ import {
   inject,
   input,
   signal,
+  untracked,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -30,6 +31,8 @@ import { TarefasCasoApiService } from '../services/tarefas-caso-api.service';
 })
 export class TarefasCaso {
   readonly caso = input.required<Caso>();
+  readonly tarefaInicial = input<string|null>(null);
+  private ultimoLink = '';
   private readonly api = inject(TarefasCasoApiService);
   private readonly destroy = inject(DestroyRef);
   private readonly casoId = computed(() => this.caso().id);
@@ -66,6 +69,14 @@ export class TarefasCaso {
   protected providencia = '';
   protected comentario = '';
   constructor() {
+    effect(()=>{
+      const id=this.tarefaInicial(),tarefas=this.tarefas();
+      if(!id || this.carregando() || !this.opcoes() || this.ultimoLink===id)return;
+      this.ultimoLink=id;
+      const tarefa=tarefas.find(t=>t.id===id);
+      untracked(()=>{if(tarefa)this.abrir(tarefa);else this.erro.set('A tarefa vinculada não está disponível para você.');});
+    });
+
     effect((onCleanup) => {
       const id = this.casoId();
       this.carregando.set(true);

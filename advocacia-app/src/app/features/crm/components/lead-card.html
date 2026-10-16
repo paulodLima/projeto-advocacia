@@ -64,6 +64,7 @@
                 <input
                   type="datetime-local"
                   aria-label="Quando é a consulta"
+                  title="Data e horário de Brasília. Consultas datadas aparecem também na Agenda."
                   [ngModel]="estado().consultaEm"
                   (ngModelChange)="atualizar({ consultaEm: $event || null })"
                 /><select

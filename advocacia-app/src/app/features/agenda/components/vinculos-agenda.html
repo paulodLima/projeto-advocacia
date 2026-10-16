@@ -1,0 +1,21 @@
+<section aria-labelledby="titulo-vinculos">
+ <h2 id="titulo-vinculos">Consultas e tarefas vinculadas</h2>
+ <p>Atualizadas pelo CRM e pelos casos. Abra a origem para consultar ou alterar. Tarefas privadas respeitam as permissões do caso.</p>
+ @if(carregando()){<p role="status">Carregando vínculos…</p>}
+ @if(erro()){<p role="alert">{{ erro() }}</p><button type="button" (click)="carregar()">Tentar novamente</button>}
+ @if(resultado();as p){
+  <p>{{ p.total }} registros vinculados encontrados</p>
+  @for(v of p.itens;track v.id){
+   <a class="vinculo" [routerLink]="v.leadId ? '/crm' : '/casos'" [queryParams]="v.leadId ? {lead:v.leadId} : {id:v.casoId,aba:'tarefas',tarefa:v.tarefaId}">
+    <span>{{ v.leadId ? 'Consulta CRM' : 'Tarefa do caso' }} · {{ nomeSituacao(v.situacao) }}</span>
+    <h3>{{ v.titulo }}</h3>
+    <p>{{ v.data ? (v.data + 'T12:00:00' | date:'dd/MM/yyyy') : 'Sem data' }} · {{ v.diaInteiro ? 'Dia inteiro' : (v.hora || '').slice(0,5) }}
+    @if(v.dataFim){ até {{ v.dataFim + 'T12:00:00' | date:'dd/MM/yyyy' }}}
+    @if(v.horaFim){ · {{ v.horaFim.slice(0,5) }}}</p>
+    @if(v.prazoFatal){<p>Prazo fatal: {{ v.prazoFatal + 'T12:00:00' | date:'dd/MM/yyyy' }}</p>}
+    <p>{{ responsaveis(v) }}@if(v.local){ · {{ v.local }}}</p><strong>Abrir {{ v.leadId ? 'lead' : 'tarefa no caso' }} →</strong>
+   </a>
+  }@empty{<p>Nenhuma consulta ou tarefa vinculada para estes filtros.</p>}
+  @if(p.total>p.tamanho || p.pagina>0){<nav aria-label="Páginas dos vínculos"><button type="button" (click)="carregar(p.pagina-1)" [disabled]="p.pagina===0">Anterior</button><span>Página {{ p.pagina+1 }}</span><button type="button" (click)="carregar(p.pagina+1)" [disabled]="(p.pagina+1)*p.tamanho>=p.total">Próxima</button></nav>}
+ }
+</section>

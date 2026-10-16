@@ -161,4 +161,17 @@ describe('Tarefas na ficha do caso', () => {
     expect(f.nativeElement.querySelector('[role=alert]')).toBeNull();
     expect(campo.value).toBe('Novo comentário');
   });
+
+  it('abre a tarefa indicada pela Agenda após carregar as permissões da origem',async()=>{
+    const f=await preparar();f.componentRef.setInput('tarefaInicial','tarefa');await f.whenStable();
+    expect((f.componentInstance as any).selecionada()?.id).toBe('tarefa');
+    expect(HTMLDialogElement.prototype.showModal).toHaveBeenCalled();
+    (f.componentInstance as any).fechar();await f.whenStable();
+    expect((f.componentInstance as any).aberto()).toBe(false);
+  });
+  it('link para tarefa não autorizada não abre outra ficha e mostra indisponibilidade',async()=>{
+    const f=await preparar();f.componentRef.setInput('tarefaInicial','privada-oculta');await f.whenStable();
+    expect((f.componentInstance as any).aberto()).toBe(false);
+    expect(f.nativeElement.textContent).toContain('A tarefa vinculada não está disponível');
+  });
 });

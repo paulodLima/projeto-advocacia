@@ -30,6 +30,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest @ActiveProfiles("test") @Transactional
 class AgendaTests {
     @Autowired AgendaService agenda;
+    @Autowired com.advocacia_microservice.agenda.application.VinculosAgendaService vinculosAgenda;
+    @Autowired com.advocacia_microservice.agenda.domain.repository.VinculosAgendaRepository vinculosRepository;
+    @Autowired com.advocacia_microservice.crm.application.CrmService crm;
+    @Autowired com.advocacia_microservice.caso.application.CasosService casos;
+    @Autowired com.advocacia_microservice.caso.application.TarefasCasoService tarefasCaso;
     @Autowired com.advocacia_microservice.agenda.application.ExecucoesWorkflowService execucoes;
     @Autowired com.advocacia_microservice.workflow.application.WorkflowsService workflows;
     @Autowired com.advocacia_microservice.agenda.application.LembretesAgendaService lembretes;
@@ -429,5 +434,90 @@ class AgendaTests {
         jdbc.update("UPDATE cadastro_item SET ativo=FALSE WHERE id=?",c.tipoTarefaId());
         assertTrue(execucoes.modelos(master,c.tipoTarefaId()).isEmpty());
         assertThrows(ConflitoException.class,()->execucoes.prever(master,c));
+    }
+
+    com.advocacia_microservice.crm.domain.Lead lead() {
+        return crm.salvar(master,null,new com.advocacia_microservice.crm.application.CrmService.Formulario(null,
+            new com.advocacia_microservice.crm.domain.Lead.Cadastro("Maria","61999999999","","Site","Consulta","morno","",List.of())));
+    }
+    com.advocacia_microservice.crm.domain.Lead agendar(com.advocacia_microservice.crm.domain.Lead l,String status,LocalDateTime quando,boolean ativo){
+        return crm.estado(master,l.id(),new com.advocacia_microservice.crm.application.CrmService.Atualizacao(l.versao(),
+            new com.advocacia_microservice.crm.domain.Lead.Estado("agendou",false,null,ativo,quando,status,Map.of())));
+    }
+    UUID casoAgenda(){
+        return casos.salvar(master,null,new com.advocacia_microservice.caso.application.CasosService.Formulario(null,"Caso integrado",null,null,null,"","",null,null,null)).caso().id();
+    }
+    com.advocacia_microservice.caso.application.TarefasCasoService.Dados tarefaCasoAgenda(boolean mostrar,List<String> flags,List<UUID> responsaveis){
+        return new com.advocacia_microservice.caso.application.TarefasCasoService.Dados(null,"Tarefa do caso",DIA,DIA.plusDays(1),LocalTime.of(10,0),LocalTime.of(11,0),DIA.plusDays(3),"Sala","Descrição",mostrar,false,"nunca",flags,responsaveis);
+    }
+    UUID membroVinculos(boolean crm,boolean casos){
+        var u=membro("ADVOGADO");jdbc.update("UPDATE equipe_membro SET restrito=TRUE WHERE usuario_id=?",u);
+        jdbc.update("INSERT INTO equipe_membro_aba(usuario_id,aba) VALUES (?,'agenda')",u);
+        if(crm)jdbc.update("INSERT INTO equipe_membro_aba(usuario_id,aba) VALUES (?,'crm')",u);
+        if(casos)jdbc.update("INSERT INTO equipe_membro_aba(usuario_id,aba) VALUES (?,'casos')",u);
+        return u;
+    }
+    @Test void consultaCrmApareceReagendaConcluiCancelaRemoveSemDuplicar() {
+        var l=agendar(lead(),"marcada",DIA.atTime(14,30),true);
+        var f=filtro(DIA.minusDays(1),DIA.plusDays(5),true);
+        var p=vinculosAgenda.listar(master,f,0,20);assertEquals(1,p.total());var original=p.itens().getFirst();
+        assertEquals(l.id(),original.leadId());assertEquals(LocalTime.of(14,30),original.hora());
+        assertEquals(1,agenda.calendario(master,filtro(DIA,DIA,false)).getFirst().total());
+        l=agendar(l,"confirmada",DIA.plusDays(1).atTime(15,0),true);
+        assertEquals(original.id(),vinculosAgenda.listar(master,f,0,20).itens().getFirst().id());
+        assertEquals(0,agenda.calendario(master,filtro(DIA,DIA,false)).getFirst().total());
+        l=agendar(l,"realizada",DIA.plusDays(1).atTime(15,0),true);
+        assertEquals(SituacaoAgenda.CONCLUIDA,vinculosAgenda.listar(master,f,0,20).itens().getFirst().situacao());
+        l=agendar(l,"nao_compareceu",DIA.plusDays(1).atTime(15,0),true);
+        assertEquals(SituacaoAgenda.CANCELADA,vinculosAgenda.listar(master,f,0,20).itens().getFirst().situacao());
+        l=agendar(l,null,null,false);assertEquals(0,vinculosAgenda.listar(master,f,0,20).total());
+        l=agendar(l,"marcada",DIA.atTime(9,0),true);crm.excluir(master,l.id(),l.versao());
+        assertEquals(0,vinculosAgenda.listar(master,f,0,20).total());
+    }
+    @Test void tarefasCasoSincronizamDatasResponsaveisSituacaoVisibilidadeEExclusao() {
+        var caso=casoAgenda();var t=tarefasCaso.salvar(master,caso,null,new com.advocacia_microservice.caso.application.TarefasCasoService.Formulario(null,tarefaCasoAgenda(true,List.of(),List.of(master))));
+        var f=filtro(DIA.minusDays(1),DIA.plusDays(20),true);
+        var v=vinculosAgenda.listar(master,f,0,20).itens().getFirst();
+        assertEquals(t.id(),v.tarefaId());assertEquals(caso,v.casoId());assertEquals(master,v.responsaveis().getFirst().id());
+        assertEquals(1,agenda.calendario(master,filtro(DIA.plusDays(3),DIA.plusDays(3),false)).getFirst().prazosFatais());
+        t=tarefasCaso.adiar(master,caso,t.id(),new com.advocacia_microservice.caso.application.TarefasCasoService.Adiamento(t.versao(),DIA.plusDays(5)));
+        v=vinculosAgenda.listar(master,f,0,20).itens().getFirst();assertEquals(DIA.plusDays(5),v.data());assertEquals(DIA.plusDays(6),v.dataFim());assertEquals(DIA.plusDays(5),v.prazoFatal());
+        t=tarefasCaso.estado(master,caso,t.id(),new com.advocacia_microservice.caso.application.TarefasCasoService.Atualizacao(t.versao(),"concluida","Feito"));
+        assertEquals(SituacaoAgenda.CONCLUIDA,vinculosAgenda.listar(master,f,0,20).itens().getFirst().situacao());
+        t=tarefasCaso.estado(master,caso,t.id(),new com.advocacia_microservice.caso.application.TarefasCasoService.Atualizacao(t.versao(),"pendente",""));
+        t=tarefasCaso.salvar(master,caso,t.id(),new com.advocacia_microservice.caso.application.TarefasCasoService.Formulario(t.versao(),tarefaCasoAgenda(false,List.of(),List.of())));
+        assertEquals(0,vinculosAgenda.listar(master,f,0,20).total());
+        tarefasCaso.excluir(master,caso,t.id(),t.versao());assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM agenda_vinculo WHERE empresa_id=?",Integer.class,empresa));
+    }
+    @Test void vinculosPreservamPrivacidadeModulosEmpresaPaginacaoEFiltros() {
+        var autor=membroVinculos(false,true);var responsavel=membroVinculos(false,true);var outro=membroVinculos(true,true);var apenasAgenda=membroVinculos(false,false);
+        var caso=casoAgenda();
+        var t=tarefasCaso.salvar(autor,caso,null,new com.advocacia_microservice.caso.application.TarefasCasoService.Formulario(null,tarefaCasoAgenda(true,List.of("Privada"),List.of(responsavel))));
+        agendar(lead(),"marcada",DIA.atTime(9,0),true);
+        var f=filtro(DIA,DIA.plusDays(5),true);
+        assertEquals(2,vinculosAgenda.listar(master,f,0,1).total());assertEquals(1,vinculosAgenda.listar(master,f,1,1).itens().size());
+        assertEquals(1,vinculosAgenda.listar(autor,f,0,20).total());assertEquals(1,vinculosAgenda.listar(responsavel,f,0,20).total());
+        assertEquals(1,vinculosAgenda.listar(outro,f,0,20).total());assertEquals(0,vinculosAgenda.listar(apenasAgenda,f,0,20).total());
+        assertEquals(0,agenda.calendario(apenasAgenda,filtro(DIA,DIA,false)).getFirst().total());
+        assertEquals(1,agenda.calendario(outro,filtro(DIA,DIA,false)).getFirst().total());
+        var externo=usuario("Externo");empresa(externo);assertEquals(0,vinculosAgenda.listar(externo,f,0,20).total());
+        assertEquals(1,vinculosAgenda.listar(master,new FiltroAgenda(DIA,DIA.plusDays(5),TipoAtividade.TAREFA,SituacaoAgenda.PENDENTE,responsavel,"Tarefa",true),0,20).total());
+        t=tarefasCaso.delegar(master,caso,t.id(),new com.advocacia_microservice.caso.application.TarefasCasoService.Delegacao(t.versao(),List.of()));
+        assertEquals(0,vinculosAgenda.listar(responsavel,f,0,20).total());
+        casos.excluir(master,caso,0);
+        assertEquals(1,vinculosAgenda.listar(master,f,0,20).total());
+    }
+    @Test void reindexacaoRecuperaAntigosSemDuplicarELeituraNaoGrava() throws Exception {
+        var caso=casoAgenda();var tipo=tipoTarefa(master,"Tipo antigo");
+        var dados=new com.advocacia_microservice.caso.application.TarefasCasoService.Dados(tipo.id(),"",DIA,null,null,null,null,"","",true,true,"nunca",List.of(),List.of());
+        tarefasCaso.salvar(master,caso,null,new com.advocacia_microservice.caso.application.TarefasCasoService.Formulario(null,dados));
+        cadastros.excluir(master,"tarefas",tipo.id());
+        agendar(lead(),"marcada",DIA.atTime(9,0),true);
+        jdbc.update("DELETE FROM agenda_vinculo WHERE empresa_id=?",empresa);
+        vinculosRepository.reindexar();vinculosRepository.reindexar();
+        assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM agenda_vinculo WHERE empresa_id=?",Integer.class,empresa));
+        mvc.perform(get("/api/agenda/vinculos").param("inicio",DIA.toString()).param("fim",DIA.plusDays(5).toString()).with(user(master.toString())))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(2)).andExpect(header().string("Cache-Control","no-store"));
+        mvc.perform(get("/api/agenda/vinculos").param("inicio",DIA.toString()).param("fim",DIA.toString())).andExpect(status().isUnauthorized());
     }
 }

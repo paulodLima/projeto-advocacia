@@ -84,7 +84,7 @@ export class Casos {
         tap(() => {
           this.ficha.set(null);
           this.editando.set(false);
-          this.aba = 'dados';
+          this.aba = this.route.snapshot.queryParamMap.get('aba') === 'tarefas' ? 'tarefas' : 'dados';
           this.confirmarExcluir.set(false);
           this.descricao = '';
           this.erro.set('');
@@ -109,6 +109,7 @@ export class Casos {
   private falha(e: { error?: { detail?: string } }) {
     this.erro.set(e.error?.detail || 'Não foi possível carregar ou salvar o caso.');
   }
+  protected get tarefaVinculada(){return this.route.snapshot.queryParamMap.get('tarefa');}
   protected get routeId() {
     return this.route.snapshot.queryParamMap.get('id');
   }

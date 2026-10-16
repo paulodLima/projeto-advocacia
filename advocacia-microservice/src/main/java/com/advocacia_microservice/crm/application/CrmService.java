@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service @Transactional(readOnly=true)
 public class CrmService {
+    private final com.advocacia_microservice.agenda.domain.repository.VinculosAgendaRepository agendaVinculos;
     public record Formulario(Integer versao,Lead.Cadastro cadastro) {}
     public record Atualizacao(Integer versao,Lead.Estado estado) {}
     public record ContatoRequest(Integer versao,LocalDate data,String canal,String resultado,String observacao) {}
@@ -33,7 +34,7 @@ public class CrmService {
     public record Marketing(List<Campanha> campanhas,List<Map<String,Object>> manutencoes,int ano) {}
     private final CrmRepository repo; private final JdbcTemplate jdbc; private final EquipeService equipe; private final ContatoRepository contatos;
     private static final ZoneId ZONA=ZoneId.of("America/Sao_Paulo");
-    public CrmService(CrmRepository repo,JdbcTemplate jdbc,EquipeService equipe,ContatoRepository contatos) {this.repo=repo;this.jdbc=jdbc;this.equipe=equipe;this.contatos=contatos;}
+    public CrmService(CrmRepository repo,JdbcTemplate jdbc,EquipeService equipe,ContatoRepository contatos,com.advocacia_microservice.agenda.domain.repository.VinculosAgendaRepository agendaVinculos) {this.agendaVinculos=agendaVinculos;this.repo=repo;this.jdbc=jdbc;this.equipe=equipe;this.contatos=contatos;}
     private boolean edita(EquipeService.Acesso a) {return a.papel()==PapelEmpresa.MASTER || Set.of(PerfilEquipe.ADMINISTRADOR,PerfilEquipe.ADVOGADO,PerfilEquipe.ASSISTENTE).contains(a.perfil());}
     private EquipeService.Acesso acesso(UUID usuario,boolean escrita) {
         var a=equipe.acesso(usuario);
@@ -79,10 +80,11 @@ public class CrmService {
         repo.salvar(empresa,id,l.versao()+1,d,false);sincronizarConsulta(empresa,id,d);return repo.buscar(empresa,id);
     }
     private void sincronizarConsulta(UUID empresa,UUID id,Lead.Dados d) {
-        if(!d.estado().consultaAgendada() || d.estado().consultaEm()==null) {jdbc.update("DELETE FROM crm_consulta WHERE empresa_id=? AND lead_id=?",empresa,id);return;}
+        if(!d.estado().consultaAgendada() || d.estado().consultaEm()==null) {jdbc.update("DELETE FROM crm_consulta WHERE empresa_id=? AND lead_id=?",empresa,id);agendaVinculos.sincronizarConsulta(empresa,id);return;}
         var titulo="Consulta — "+d.cadastro().nome();
         if(jdbc.update("UPDATE crm_consulta SET titulo=?,quando=?,status=? WHERE empresa_id=? AND lead_id=?",titulo,d.estado().consultaEm(),d.estado().consultaStatus(),empresa,id)==0)
             jdbc.update("INSERT INTO crm_consulta(id,empresa_id,lead_id,titulo,quando,status) VALUES (?,?,?,?,?,?)",UUID.randomUUID(),empresa,id,titulo,d.estado().consultaEm(),d.estado().consultaStatus());
+        agendaVinculos.sincronizarConsulta(empresa,id);
     }
     @Transactional public Lead registrar(UUID usuario,UUID id,ContatoRequest f) {
         var empresa=acesso(usuario,true).empresaId();repo.bloquear(empresa);var l=versao(empresa,id,f.versao());

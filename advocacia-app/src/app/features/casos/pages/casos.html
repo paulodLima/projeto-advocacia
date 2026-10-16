@@ -207,7 +207,7 @@
             } @else if (aba === 'financeiro' && o.podeVerFinanceiro) {
               <app-financeiro-caso [caso]="f.caso" />
             } @else if (aba === 'tarefas') {
-              <app-tarefas-caso [caso]="f.caso" />
+              <app-tarefas-caso [caso]="f.caso" [tarefaInicial]="tarefaVinculada" />
             } @else {
               <div class="conteudo-ficha pilha">
                 @if (o.podeEditar && f.caso.status === 'ativo') {

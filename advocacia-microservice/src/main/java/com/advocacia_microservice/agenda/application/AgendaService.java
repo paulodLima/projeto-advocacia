@@ -18,7 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class AgendaService {
     private final AgendaRepository repository;
     private final EquipeService equipe;
-    public AgendaService(AgendaRepository repository,EquipeService equipe) { this.repository=repository; this.equipe=equipe; }
+    private final VinculosAgendaService vinculos;
+    public AgendaService(AgendaRepository repository,EquipeService equipe,VinculosAgendaService vinculos) { this.repository=repository; this.equipe=equipe;this.vinculos=vinculos; }
     private EquipeService.Acesso acesso(UUID usuario,boolean escrita) {
         var a=equipe.acesso(usuario);
         if (a.empresaId()==null || !a.modulos().contains("agenda") || !equipe.ativo(usuario)) throw new AccessDeniedException("Você não tem acesso à Agenda deste escritório.");
@@ -39,7 +40,8 @@ public class AgendaService {
     }
     public List<DiaAgenda> calendario(UUID usuario,FiltroAgenda filtro) {
         if (ChronoUnit.DAYS.between(filtro.inicio(),filtro.fim())>61) throw new IllegalArgumentException("O calendário aceita até 62 dias por consulta.");
-        var marcos=repository.marcos(acesso(usuario,false).empresaId(),filtro);
+        var marcos=new ArrayList<>(repository.marcos(acesso(usuario,false).empresaId(),filtro));
+        marcos.addAll(vinculos.marcos(usuario,filtro));
         var dias=new ArrayList<DiaAgenda>();
         for(var dia=filtro.inicio();!dia.isAfter(filtro.fim());dia=dia.plusDays(1)) {
             var data=dia; var ocorrencias=marcos.stream().filter(m->m.ocorreEm(data)).toList();

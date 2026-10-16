@@ -24,5 +24,6 @@
       <div class="paginacao"><button type="button" (click)="carregar(pagina - 1)" [disabled]="pagina === 0 || carregando()">Anterior</button><span>Página {{ pagina + 1 }}</span><button type="button" (click)="carregar(pagina + 1)" [disabled]="(pagina + 1) * paginaAtual.tamanho >= paginaAtual.total || carregando()">Próxima</button></div>
     }
   </section>
+  @if(filtroVinculos(); as f){<app-vinculos-agenda [filtro]="f" />}
 </section>
 <dialog #editor class="painel-editor" aria-labelledby="titulo-atividade" (cancel)="cancelarDialogo($event)">@if(aberto() && opcoes(); as opcoesAtuais){<app-atividade-form [base]="atividade()" [opcoes]="opcoesAtuais" [dataInicial]="dataNova()" (salvou)="salvo($event)" (workflowGerado)="workflowGerado($event)" (recarregou)="atividade.set($event)" (fechar)="fechar()"/>}</dialog>
