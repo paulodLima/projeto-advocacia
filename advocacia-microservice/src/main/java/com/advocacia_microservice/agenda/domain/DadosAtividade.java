@@ -7,11 +7,17 @@ import java.util.*;
 
 public record DadosAtividade(TipoAtividade tipo, String titulo, UUID tipoTarefaId, LocalDate data, LocalDate dataFim,
         LocalTime hora, LocalTime horaFim, LocalDate prazoFatal, boolean diaInteiro, String modalidade,
-        String local, String descricao, List<UUID> responsaveis, List<UUID> participantes) {
+        String local, String descricao, List<UUID> responsaveis, List<UUID> participantes, RepeticaoAgenda repeticao) {
+    public DadosAtividade(TipoAtividade tipo,String titulo,UUID tipoTarefaId,LocalDate data,LocalDate dataFim,LocalTime hora,LocalTime horaFim,LocalDate prazoFatal,boolean diaInteiro,String modalidade,String local,String descricao,List<UUID> responsaveis,List<UUID> participantes) {
+        this(tipo,titulo,tipoTarefaId,data,dataFim,hora,horaFim,prazoFatal,diaInteiro,modalidade,local,descricao,responsaveis,participantes,RepeticaoAgenda.NUNCA);
+    }
     public DadosAtividade(TipoAtividade tipo,String titulo,UUID tipoTarefaId,LocalDate data,LocalDate dataFim,LocalTime hora,LocalTime horaFim,LocalDate prazoFatal,boolean diaInteiro,String modalidade,String local,String descricao,List<UUID> responsaveis) {
         this(tipo,titulo,tipoTarefaId,data,dataFim,hora,horaFim,prazoFatal,diaInteiro,modalidade,local,descricao,responsaveis,List.of());
     }
     public DadosAtividade {
+        repeticao=repeticao==null?RepeticaoAgenda.NUNCA:repeticao;
+        if (repeticao!=RepeticaoAgenda.NUNCA && (tipo!=TipoAtividade.TAREFA || data==null))
+            throw new IllegalArgumentException("A repetição exige uma tarefa com data inicial.");
         if (tipo==null) throw new IllegalArgumentException("Selecione o tipo de atividade.");
         titulo = texto(titulo,150,"título"); local = texto(local,1000,"local/link"); descricao = texto(descricao,4000,"descrição");
         if (titulo.isBlank()) throw new IllegalArgumentException("Informe um título ou selecione um tipo de tarefa.");

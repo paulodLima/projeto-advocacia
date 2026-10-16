@@ -9,6 +9,9 @@ public interface AgendaRepository {
     List<OpcaoAgenda> responsaveis(UUID empresa);
     List<OpcaoAgenda> tiposTarefa(UUID empresa);
     List<OpcaoAgenda> contatos(UUID empresa,String busca,List<UUID> ids);
+    CicloRecorrencia ciclo(UUID empresa,UUID atividade);
+    boolean temSucessora(UUID empresa,UUID atividade);
+    void vincularSucessora(UUID empresa,UUID anterior,UUID proxima,CicloRecorrencia ciclo);
     void salvar(AtividadeAgenda atividade,boolean nova);
     void registrar(UUID empresa,UUID atividade,UUID autor,String acao,String observacao);
 }

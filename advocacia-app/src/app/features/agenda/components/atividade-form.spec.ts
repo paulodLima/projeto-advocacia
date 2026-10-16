@@ -70,4 +70,24 @@ describe('Formulário de atividades da Agenda',()=>{
     http.expectOne(r=>r.url===url+'/contatos').flush({},{status:500,statusText:'Failure'});await f.whenStable();
     expect(c.dados.participantes).toEqual(['cliente']);expect(f.nativeElement.textContent).toContain('Não foi possível buscar contatos');
   });
+
+  it('configura recorrência e exige data inicial para tarefas que se repetem',async()=>{
+    const f=await criar(atividade);const c=f.componentInstance as any;
+    const campo=f.nativeElement.querySelector('[name=repeticao]') as HTMLSelectElement;
+    campo.value='MENSAL';campo.dispatchEvent(new Event('change'));await f.whenStable();
+    expect(f.nativeElement.textContent).toContain('Ao concluir, será criada uma próxima tarefa');
+    c.salvar();const request=http.expectOne(url+'/atividade');
+    expect(request.request.body.repeticao).toBe('MENSAL');request.flush({...atividade,dados:{...atividade.dados,repeticao:'MENSAL'}});await f.whenStable();
+    c.dados.data=null;await f.whenStable();expect(f.nativeElement.querySelector('[name=data]').required).toBe(true);
+    const tipo=f.nativeElement.querySelector('[name=tipo]') as HTMLSelectElement;tipo.value='REUNIAO';tipo.dispatchEvent(new Event('change'));await f.whenStable();
+    expect(c.dados.repeticao).toBe('NUNCA');expect(f.nativeElement.querySelector('[name=repeticao]')).toBeNull();
+  });
+  it('carrega recorrência sem marcar rascunho alterado e conserva configuração na falha',async()=>{
+    const f=await criar({...atividade,dados:{...atividade.dados,repeticao:'SEMANAL'}});
+    const c=f.componentInstance as any;expect(c.temAlteracoes()).toBe(false);expect(c.dados.repeticao).toBe('SEMANAL');
+    c.dados.titulo='Revisão semanal';c.salvar();
+    http.expectOne(url+'/atividade').flush({detail:'Conflito'},{status:409,statusText:'Conflict'});await f.whenStable();
+    expect(c.dados.repeticao).toBe('SEMANAL');expect(c.dados.titulo).toBe('Revisão semanal');
+    c.confirmarAcao('CONCLUIDA');await f.whenStable();expect(f.nativeElement.textContent).toContain('A primeira conclusão cria uma próxima tarefa');
+  });
 });

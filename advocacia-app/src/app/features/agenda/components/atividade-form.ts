@@ -4,7 +4,7 @@ import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize, Subscription } from 'rxjs';
 import { AgendaApiService } from '../services/agenda-api.service';
-import { AtividadeAgenda, DadosAtividade, OpcoesAgenda, OpcaoAgenda, SituacaoAgenda, TIPOS_AGENDA, nomeSituacao } from '../models/agenda.model';
+import { AtividadeAgenda, DadosAtividade, OpcoesAgenda, OpcaoAgenda, SituacaoAgenda, TIPOS_AGENDA, REPETICOES_AGENDA, nomeSituacao } from '../models/agenda.model';
 
 @Component({ selector:'app-atividade-form', imports:[FormsModule,DatePipe], templateUrl:'./atividade-form.html',styleUrl:'./atividade-form.scss' })
 export class AtividadeForm {
@@ -27,11 +27,12 @@ export class AtividadeForm {
   protected readonly erroContatos = signal('');
   private consultaContatos?: Subscription;
   protected observacao = '';
+  protected readonly repeticoes = REPETICOES_AGENDA;
   protected readonly tipos = TIPOS_AGENDA;
   protected readonly nomeSituacao = nomeSituacao;
   protected dados: DadosAtividade = this.vazio();
   constructor() {
-    effect(() => { const base=this.base(); this.dados=base ? { ...base.dados,responsaveis:[...base.dados.responsaveis],participantes:[...(base.dados.participantes ?? [])] } : { ...this.vazio(),data:this.dataInicial() || null }; this.erro.set('');this.conflito.set(false);this.acao.set(null);this.observacao='';
+    effect(() => { const base=this.base(); this.dados=base ? { ...base.dados,responsaveis:[...base.dados.responsaveis],participantes:[...(base.dados.participantes ?? [])],repeticao:base.dados.repeticao ?? 'NUNCA' } : { ...this.vazio(),data:this.dataInicial() || null }; this.erro.set('');this.conflito.set(false);this.acao.set(null);this.observacao='';
       this.selecionados.set([]);this.contatos.set([]);this.erroContatos.set('');
       this.consultaContatos?.unsubscribe();
       const ids=this.dados.participantes ?? [];
@@ -41,11 +42,12 @@ export class AtividadeForm {
         });
     });
   }
-  private vazio(): DadosAtividade { return { tipo:'TAREFA',titulo:'',tipoTarefaId:null,data:null,dataFim:null,hora:null,horaFim:null,prazoFatal:null,diaInteiro:true,modalidade:null,local:'',descricao:'',responsaveis:[],participantes:[] }; }
+  private vazio(): DadosAtividade { return { tipo:'TAREFA',titulo:'',tipoTarefaId:null,data:null,dataFim:null,hora:null,horaFim:null,prazoFatal:null,diaInteiro:true,modalidade:null,local:'',descricao:'',responsaveis:[],participantes:[],repeticao:'NUNCA' }; }
   protected podeEditar() { return this.opcoes().podeEditar && (!this.base() || this.base()?.situacao === 'PENDENTE'); }
   protected compromisso() { return ['REUNIAO','AUDIENCIA'].includes(this.dados.tipo); }
-  protected temAlteracoes() { return !!this.base() && JSON.stringify(this.dados) !== JSON.stringify({...this.base()?.dados,participantes:this.base()?.dados.participantes ?? []}); }
+  protected temAlteracoes() { return !!this.base() && JSON.stringify(this.dados) !== JSON.stringify({...this.base()?.dados,participantes:this.base()?.dados.participantes ?? [],repeticao:this.base()?.dados.repeticao ?? 'NUNCA'}); }
   protected trocarTipo() {
+    if(this.dados.tipo!=='TAREFA') this.dados.repeticao='NUNCA';
     if(this.compromisso()) { this.dados.modalidade='PRESENCIAL';this.dados.prazoFatal=null; }
     else this.dados.modalidade=null;
     if(this.dados.tipo==='PRAZO' && !this.dados.prazoFatal) this.dados.prazoFatal=this.dados.data;
@@ -90,7 +92,7 @@ export class AtividadeForm {
     this.salvando.set(true);
     this.api.buscar(base.id).pipe(finalize(()=>this.salvando.set(false)),takeUntilDestroyed(this.destroyRef)).subscribe({next:a=>this.recarregou.emit(a),error:e=>this.falha(e)});
   }
-  protected nomeAcao(acao:string) {return ({CRIADA:'Criada',EDITADA:'Editada',CONCLUIDA:'Concluída',CANCELADA:'Cancelada',REABERTA:'Reaberta'} as Record<string,string>)[acao] ?? acao;}
+  protected nomeAcao(acao:string) {return ({CRIADA:'Criada',EDITADA:'Editada',CONCLUIDA:'Concluída',CANCELADA:'Cancelada',REABERTA:'Reaberta',RECORRENCIA_GERADA:'Próxima tarefa gerada'} as Record<string,string>)[acao] ?? acao;}
   private iniciar() {this.salvando.set(true);this.erro.set('');this.conflito.set(false);}
   private falha(e:{status?:number;error?:{detail?:string;erros?:string[]}}) {this.conflito.set(e.status===409);this.erro.set(e.error?.detail || e.error?.erros?.join(' · ') || 'Não foi possível salvar. Seu rascunho foi preservado.');}
 }

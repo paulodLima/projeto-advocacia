@@ -1,11 +1,13 @@
 export type TipoAtividade = 'TAREFA' | 'PRAZO' | 'REUNIAO' | 'AUDIENCIA';
+export type RepeticaoAgenda = 'NUNCA' | 'DIARIA' | 'SEMANAL' | 'MENSAL' | 'ANUAL';
+export const REPETICOES_AGENDA = [{codigo:'NUNCA',nome:'Não se repete'},{codigo:'DIARIA',nome:'Diariamente'},{codigo:'SEMANAL',nome:'Semanalmente'},{codigo:'MENSAL',nome:'Mensalmente'},{codigo:'ANUAL',nome:'Anualmente'}];
 export type SituacaoAgenda = 'PENDENTE' | 'CONCLUIDA' | 'CANCELADA';
 export const TIPOS_AGENDA: { codigo: TipoAtividade; nome: string }[] = [{ codigo: 'TAREFA', nome: 'Tarefa' }, { codigo: 'PRAZO', nome: 'Prazo' }, { codigo: 'REUNIAO', nome: 'Reunião' }, { codigo: 'AUDIENCIA', nome: 'Audiência' }];
 export const SITUACOES_AGENDA = [{ codigo: 'PENDENTE', nome: 'Pendente' }, { codigo: 'CONCLUIDA', nome: 'Concluída' }, { codigo: 'CANCELADA', nome: 'Cancelada' }];
 export interface DadosAtividade {
   tipo: TipoAtividade; titulo: string; tipoTarefaId: string | null; data: string | null; dataFim: string | null;
   hora: string | null; horaFim: string | null; prazoFatal: string | null; diaInteiro: boolean;
-  modalidade: string | null; local: string; descricao: string; responsaveis: string[]; participantes?: string[];
+  modalidade: string | null; local: string; descricao: string; responsaveis: string[]; participantes?: string[]; repeticao?: RepeticaoAgenda;
 }
 export interface EventoAgenda { id: string; autor: string; acao: string; observacao: string; criadoEm: string; }
 export interface AtividadeAgenda { id: string; versao: number; dados: DadosAtividade; situacao: SituacaoAgenda; concluidaEm: string | null; criadoEm: string; atualizadoEm: string; historico: EventoAgenda[]; }

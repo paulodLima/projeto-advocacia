@@ -1,0 +1,10 @@
+ALTER TABLE agenda_atividade ADD COLUMN repeticao VARCHAR(10) NOT NULL DEFAULT 'NUNCA';
+ALTER TABLE agenda_atividade ADD COLUMN repeticao_base DATE;
+ALTER TABLE agenda_atividade ADD COLUMN repeticao_data DATE;
+ALTER TABLE agenda_atividade ADD COLUMN repeticao_indice INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE agenda_atividade ADD COLUMN anterior_id UUID;
+ALTER TABLE agenda_atividade ADD CONSTRAINT ck_agenda_repeticao CHECK(repeticao IN ('NUNCA','DIARIA','SEMANAL','MENSAL','ANUAL'));
+ALTER TABLE agenda_atividade ADD CONSTRAINT ck_agenda_repeticao_tipo CHECK(repeticao='NUNCA' OR (tipo='TAREFA' AND data IS NOT NULL));
+ALTER TABLE agenda_atividade ADD CONSTRAINT ck_agenda_repeticao_indice CHECK(repeticao_indice>=0);
+ALTER TABLE agenda_atividade ADD CONSTRAINT fk_agenda_anterior FOREIGN KEY(empresa_id,anterior_id) REFERENCES agenda_atividade(empresa_id,id);
+ALTER TABLE agenda_atividade ADD CONSTRAINT uk_agenda_sucessora UNIQUE(empresa_id,anterior_id);

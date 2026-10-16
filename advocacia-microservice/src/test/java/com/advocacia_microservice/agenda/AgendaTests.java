@@ -205,4 +205,72 @@ class AgendaTests {
         contatos.excluir(master,id,0);
         assertTrue(agenda.contatos(master,"",List.of(id)).isEmpty());
     }
+
+    SalvarAtividade repetida(AtividadeAgenda a,RepeticaoAgenda repeticao,LocalDate data) {
+        var d=a.dados();
+        return new SalvarAtividade(a.versao(),d.tipo(),d.titulo(),d.tipoTarefaId(),data,d.dataFim(),d.hora(),d.horaFim(),d.prazoFatal(),d.diaInteiro(),d.modalidade(),d.local(),d.descricao(),d.responsaveis(),d.participantes(),repeticao);
+    }
+    AtividadeAgenda sucessora(UUID id) {
+        var proxima=jdbc.queryForObject("SELECT id FROM agenda_atividade WHERE empresa_id=? AND anterior_id=?",UUID.class,empresa,id);
+        return agenda.buscar(master,proxima);
+    }
+    @Test void recorrenciaMensalMantemDiaOriginalAposFevereiroEConcluirNovamenteNaoDuplica() {
+        var a=agenda.salvar(master,null,tarefa("Mensal",LocalDate.of(2027,1,31),List.of(master)));
+        a=agenda.salvar(master,a.id(),repetida(a,RepeticaoAgenda.MENSAL,a.dados().data()));
+        var concluida=agenda.alterarSituacao(master,a.id(),new AlterarSituacaoAgenda(a.versao(),SituacaoAgenda.CONCLUIDA,"Feito"));
+        var fevereiro=sucessora(a.id());assertEquals(LocalDate.of(2027,2,28),fevereiro.dados().data());
+        assertEquals(RepeticaoAgenda.MENSAL,fevereiro.dados().repeticao());
+        assertEquals(List.of(master),fevereiro.dados().responsaveis());assertEquals(SituacaoAgenda.PENDENTE,fevereiro.situacao());
+        agenda.alterarSituacao(master,fevereiro.id(),new AlterarSituacaoAgenda(fevereiro.versao(),SituacaoAgenda.CONCLUIDA,""));
+        assertEquals(LocalDate.of(2027,3,31),sucessora(fevereiro.id()).dados().data());
+        var reaberta=agenda.alterarSituacao(master,a.id(),new AlterarSituacaoAgenda(concluida.versao(),SituacaoAgenda.PENDENTE,""));
+        agenda.alterarSituacao(master,a.id(),new AlterarSituacaoAgenda(reaberta.versao(),SituacaoAgenda.CONCLUIDA,""));
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM agenda_atividade WHERE anterior_id=?",Integer.class,a.id()));
+        assertEquals(1,concluida.historico().stream().filter(e->e.acao().equals("RECORRENCIA_GERADA")).count());
+        assertEquals(1,agenda.calendario(master,filtro(LocalDate.of(2027,3,31),LocalDate.of(2027,3,31),false)).getFirst().total());
+    }
+    @Test void recorrenciaPreservaParticipantesSemPermissaoDeContatosEPrazosRelativos() {
+        var contato=contato(empresa,"Participante","Cliente");
+        var a=agenda.salvar(master,null,new SalvarAtividade(0,TipoAtividade.TAREFA,"Semanal",null,DIA,DIA.plusDays(1),null,null,DIA.plusDays(2),true,null,"Local","Descrição",List.of(master),List.of(contato),RepeticaoAgenda.SEMANAL));
+        jdbc.update("UPDATE empresa_modulo SET liberado=FALSE WHERE empresa_id=? AND modulo_codigo='contatos'",empresa);
+        agenda.alterarSituacao(master,a.id(),new AlterarSituacaoAgenda(0,SituacaoAgenda.CONCLUIDA,""));
+        assertTrue(sucessora(a.id()).dados().participantes().isEmpty());
+        jdbc.update("UPDATE empresa_modulo SET liberado=TRUE WHERE empresa_id=? AND modulo_codigo='contatos'",empresa);
+        var nova=sucessora(a.id());assertEquals(List.of(contato),nova.dados().participantes());
+        assertEquals(DIA.plusDays(7),nova.dados().data());assertEquals(DIA.plusDays(8),nova.dados().dataFim());assertEquals(DIA.plusDays(9),nova.dados().prazoFatal());
+    }
+    @Test void cancelamentoNaoGeraProximaEDesativarOuMudarDataAtingeSomenteOcorrenciaAtual() {
+        var a=agenda.salvar(master,null,tarefa("Diária",DIA,List.of()));
+        a=agenda.salvar(master,a.id(),repetida(a,RepeticaoAgenda.DIARIA,DIA));
+        var cancelada=agenda.alterarSituacao(master,a.id(),new AlterarSituacaoAgenda(a.versao(),SituacaoAgenda.CANCELADA,"Dispensada"));
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM agenda_atividade WHERE anterior_id=?",Integer.class,a.id()));
+        var reaberta=agenda.alterarSituacao(master,a.id(),new AlterarSituacaoAgenda(cancelada.versao(),SituacaoAgenda.PENDENTE,""));
+        var adiada=agenda.salvar(master,a.id(),repetida(reaberta,RepeticaoAgenda.DIARIA,DIA.plusDays(5)));
+        agenda.alterarSituacao(master,a.id(),new AlterarSituacaoAgenda(adiada.versao(),SituacaoAgenda.CONCLUIDA,""));
+        var proxima=sucessora(a.id());assertEquals(DIA.plusDays(6),proxima.dados().data());
+        var encerrada=agenda.salvar(master,proxima.id(),repetida(proxima,RepeticaoAgenda.NUNCA,proxima.dados().data()));
+        agenda.alterarSituacao(master,proxima.id(),new AlterarSituacaoAgenda(encerrada.versao(),SituacaoAgenda.CONCLUIDA,""));
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM agenda_atividade WHERE anterior_id=?",Integer.class,proxima.id()));
+    }
+    @Test void repeticaoExigeTarefaDatadaEApiPreservaConfiguracao() throws Exception {
+        var semData=agenda.salvar(master,null,tarefa("Sem data",null,List.of()));
+        assertThrows(IllegalArgumentException.class,()->agenda.salvar(master,semData.id(),repetida(semData,RepeticaoAgenda.DIARIA,null)));
+        mvc.perform(post("/api/agenda").with(user(master.toString())).with(csrf()).contentType("application/json")
+            .content("{\"versao\":0,\"tipo\":\"TAREFA\",\"titulo\":\"Anual\",\"data\":\"2028-02-29\",\"diaInteiro\":true,\"responsaveis\":[],\"repeticao\":\"ANUAL\"}"))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.dados.repeticao").value("ANUAL"));
+        var dados=new DadosAtividade(TipoAtividade.TAREFA,"Anual",null,LocalDate.of(2028,2,29),null,null,null,null,true,null,"","",List.of(),List.of(),RepeticaoAgenda.ANUAL);
+        var ciclo=new CicloRecorrencia(dados.data(),0);
+        assertEquals(LocalDate.of(2029,2,28),ciclo.proxima(dados).data());
+        assertEquals(LocalDate.of(2032,2,29),RepeticaoAgenda.ANUAL.data(dados.data(),4));
+        assertThrows(IllegalArgumentException.class,()->new DadosAtividade(TipoAtividade.REUNIAO,"Reunião",null,DIA,null,null,null,null,true,"PRESENCIAL","","",List.of(),List.of(),RepeticaoAgenda.DIARIA));
+    }
+    @Test void responsavelInativoImpedeConclusaoRecorrenteSemGravacaoParcial() {
+        var responsavel=membro("ASSISTENTE");
+        var a=agenda.salvar(master,null,tarefa("Diária",DIA,List.of(responsavel)));
+        var recorrente=agenda.salvar(master,a.id(),repetida(a,RepeticaoAgenda.DIARIA,DIA));
+        jdbc.update("UPDATE equipe_membro SET situacao='INATIVO' WHERE usuario_id=?",responsavel);
+        assertThrows(ConflitoException.class,()->agenda.alterarSituacao(master,a.id(),new AlterarSituacaoAgenda(recorrente.versao(),SituacaoAgenda.CONCLUIDA,"")));
+        assertEquals(SituacaoAgenda.PENDENTE,agenda.buscar(master,a.id()).situacao());
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM agenda_atividade WHERE anterior_id=?",Integer.class,a.id()));
+    }
 }

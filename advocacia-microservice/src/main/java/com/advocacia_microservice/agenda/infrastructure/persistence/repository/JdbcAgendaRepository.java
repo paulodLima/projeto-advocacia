@@ -25,7 +25,7 @@ public class JdbcAgendaRepository implements AgendaRepository {
     }
     private AtividadeAgenda atividade(ResultSet r,int n) throws SQLException {
         var dados=new DadosAtividade(TipoAtividade.valueOf(r.getString("tipo")),r.getString("titulo"),r.getObject("tipo_tarefa_id",UUID.class),
-            r.getObject("data",LocalDate.class),r.getObject("data_fim",LocalDate.class),r.getObject("hora",LocalTime.class),r.getObject("hora_fim",LocalTime.class),r.getObject("prazo_fatal",LocalDate.class),r.getBoolean("dia_inteiro"),r.getString("modalidade"),r.getString("local"),r.getString("descricao"),List.of());
+            r.getObject("data",LocalDate.class),r.getObject("data_fim",LocalDate.class),r.getObject("hora",LocalTime.class),r.getObject("hora_fim",LocalTime.class),r.getObject("prazo_fatal",LocalDate.class),r.getBoolean("dia_inteiro"),r.getString("modalidade"),r.getString("local"),r.getString("descricao"),List.of(),List.of(),RepeticaoAgenda.valueOf(r.getString("repeticao")));
         return new AtividadeAgenda(r.getObject("id",UUID.class),r.getObject("empresa_id",UUID.class),r.getLong("versao"),dados,SituacaoAgenda.valueOf(r.getString("situacao")),
             r.getTimestamp("concluida_em")==null?null:r.getTimestamp("concluida_em").toInstant(),r.getTimestamp("criado_em").toInstant(),r.getTimestamp("atualizado_em").toInstant(),List.of());
     }
@@ -38,7 +38,7 @@ public class JdbcAgendaRepository implements AgendaRepository {
         jdbc.query("SELECT atividade_id,contato_id FROM agenda_participante WHERE empresa_id=? AND atividade_id IN ("+ids+") ORDER BY contato_id",
             r->{participantes.computeIfAbsent(r.getObject(1,UUID.class),k->new ArrayList<>()).add(r.getObject(2,UUID.class));},params.toArray());
         return itens.stream().map(a->{var d=a.dados();return new AtividadeAgenda(a.id(),a.empresaId(),a.versao(),
-            new DadosAtividade(d.tipo(),d.titulo(),d.tipoTarefaId(),d.data(),d.dataFim(),d.hora(),d.horaFim(),d.prazoFatal(),d.diaInteiro(),d.modalidade(),d.local(),d.descricao(),responsaveis.getOrDefault(a.id(),List.of()),participantes.getOrDefault(a.id(),List.of())),a.situacao(),a.concluidaEm(),a.criadoEm(),a.atualizadoEm(),a.historico());}).toList();
+            new DadosAtividade(d.tipo(),d.titulo(),d.tipoTarefaId(),d.data(),d.dataFim(),d.hora(),d.horaFim(),d.prazoFatal(),d.diaInteiro(),d.modalidade(),d.local(),d.descricao(),responsaveis.getOrDefault(a.id(),List.of()),participantes.getOrDefault(a.id(),List.of()),d.repeticao()),a.situacao(),a.concluidaEm(),a.criadoEm(),a.atualizadoEm(),a.historico());}).toList();
     }
     private String filtrar(UUID empresa,FiltroAgenda f,List<Object> params) {
         params.add(empresa);params.add(f.fim());params.add(f.inicio());params.add(f.inicio());params.add(f.fim());
@@ -81,13 +81,27 @@ public class JdbcAgendaRepository implements AgendaRepository {
         }
         return jdbc.query(sql+" ORDER BY LOWER(nome),id LIMIT 50",(r,n)->new OpcaoAgenda(r.getObject(1,UUID.class),r.getString(2),true),args.toArray());
     }
+    public CicloRecorrencia ciclo(UUID empresa,UUID atividade) {
+        return jdbc.queryForObject("SELECT COALESCE(repeticao_base,data),repeticao_indice FROM agenda_atividade WHERE empresa_id=? AND id=?",
+            (r,n)->new CicloRecorrencia(r.getObject(1,LocalDate.class),r.getInt(2)),empresa,atividade);
+    }
+    public boolean temSucessora(UUID empresa,UUID atividade) {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM agenda_atividade WHERE empresa_id=? AND anterior_id=?",Long.class,empresa,atividade)>0;
+    }
+    public void vincularSucessora(UUID empresa,UUID anterior,UUID proxima,CicloRecorrencia ciclo) {
+        jdbc.update("UPDATE agenda_atividade SET anterior_id=?,repeticao_base=?,repeticao_indice=? WHERE empresa_id=? AND id=?",anterior,ciclo.base(),ciclo.indice()+1,empresa,proxima);
+    }
     public void salvar(AtividadeAgenda a,boolean nova) {
         var d=a.dados();
         var params=new ArrayList<Object>(Arrays.asList(a.versao(),d.tipo().name(),d.titulo(),d.tipoTarefaId(),d.data(),d.dataFim(),d.hora(),d.horaFim(),d.prazoFatal(),d.diaInteiro(),d.modalidade(),d.local(),d.descricao(),a.situacao().name(),a.concluidaEm()==null?null:java.sql.Timestamp.from(a.concluidaEm()),java.sql.Timestamp.from(a.criadoEm()),java.sql.Timestamp.from(a.atualizadoEm()),a.empresaId(),a.id()));
-        if (nova) jdbc.update("INSERT INTO agenda_atividade(versao,tipo,titulo,tipo_tarefa_id,data,data_fim,hora,hora_fim,prazo_fatal,dia_inteiro,modalidade,local,descricao,situacao,concluida_em,criado_em,atualizado_em,empresa_id,id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",params.toArray());
+        if (nova) {
+            params.addAll(17,Arrays.asList(d.repeticao().name(),d.data(),d.data()));
+            jdbc.update("INSERT INTO agenda_atividade(versao,tipo,titulo,tipo_tarefa_id,data,data_fim,hora,hora_fim,prazo_fatal,dia_inteiro,modalidade,local,descricao,situacao,concluida_em,criado_em,atualizado_em,repeticao,repeticao_base,repeticao_data,empresa_id,id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",params.toArray());
+        }
         else {
+            params.addAll(17,Arrays.asList(d.repeticao().name(),d.data(),d.data(),d.repeticao().name(),d.data(),d.data(),d.repeticao().name()));
             params.add(a.versao()-1);
-            var alterados=jdbc.update("UPDATE agenda_atividade SET versao=?,tipo=?,titulo=?,tipo_tarefa_id=?,data=?,data_fim=?,hora=?,hora_fim=?,prazo_fatal=?,dia_inteiro=?,modalidade=?,local=?,descricao=?,situacao=?,concluida_em=?,criado_em=?,atualizado_em=? WHERE empresa_id=? AND id=? AND versao=?",params.toArray());
+            var alterados=jdbc.update("UPDATE agenda_atividade SET versao=?,tipo=?,titulo=?,tipo_tarefa_id=?,data=?,data_fim=?,hora=?,hora_fim=?,prazo_fatal=?,dia_inteiro=?,modalidade=?,local=?,descricao=?,situacao=?,concluida_em=?,criado_em=?,atualizado_em=?,repeticao_base=CASE WHEN repeticao<>? OR repeticao_data IS DISTINCT FROM ? THEN ? ELSE repeticao_base END,repeticao_indice=CASE WHEN repeticao<>? OR repeticao_data IS DISTINCT FROM ? THEN 0 ELSE repeticao_indice END,repeticao_data=?,repeticao=? WHERE empresa_id=? AND id=? AND versao=?",params.toArray());
             if (alterados!=1) throw new ConflitoException("A atividade foi alterada. Recarregue a ficha.");
         }
         jdbc.update("DELETE FROM agenda_responsavel WHERE empresa_id=? AND atividade_id=?",a.empresaId(),a.id());

@@ -58,7 +58,7 @@ public class AgendaService {
     private AtividadeAgenda visivel(EquipeService.Acesso acesso,AtividadeAgenda a) {
         if (acesso.modulos().contains("contatos")) return a;
         var d=a.dados();
-        var dados=new DadosAtividade(d.tipo(),d.titulo(),d.tipoTarefaId(),d.data(),d.dataFim(),d.hora(),d.horaFim(),d.prazoFatal(),d.diaInteiro(),d.modalidade(),d.local(),d.descricao(),d.responsaveis(),List.of());
+        var dados=new DadosAtividade(d.tipo(),d.titulo(),d.tipoTarefaId(),d.data(),d.dataFim(),d.hora(),d.horaFim(),d.prazoFatal(),d.diaInteiro(),d.modalidade(),d.local(),d.descricao(),d.responsaveis(),List.of(),d.repeticao());
         return new AtividadeAgenda(a.id(),a.empresaId(),a.versao(),dados,a.situacao(),a.concluidaEm(),a.criadoEm(),a.atualizadoEm(),a.historico());
     }
     private AtividadeAgenda exigir(UUID empresa,UUID id) { return repository.buscar(empresa,id).orElseThrow(()->new RecursoNaoEncontradoException("Atividade não encontrada no seu escritório.")); }
@@ -84,7 +84,7 @@ public class AgendaService {
             if (!participantes.isEmpty() && repository.contatos(empresa,"",participantes).size()!=participantes.size())
                 throw new IllegalArgumentException("Selecione contatos do seu escritório.");
         }
-        var dados=new DadosAtividade(c.tipo(),titulo,c.tipoTarefaId(),c.data(),c.dataFim(),c.hora(),c.horaFim(),c.prazoFatal(),c.diaInteiro(),c.modalidade(),c.local(),c.descricao(),c.responsaveis(),participantes);
+        var dados=new DadosAtividade(c.tipo(),titulo,c.tipoTarefaId(),c.data(),c.dataFim(),c.hora(),c.horaFim(),c.prazoFatal(),c.diaInteiro(),c.modalidade(),c.local(),c.descricao(),c.responsaveis(),participantes,c.repeticao());
         var ativos=repository.responsaveis(empresa).stream().filter(OpcaoAgenda::ativo).map(OpcaoAgenda::id).toList();
         if (!ativos.containsAll(dados.responsaveis())) throw new IllegalArgumentException("Selecione responsáveis ativos do seu escritório.");
         var agora=Instant.now();
@@ -101,9 +101,25 @@ public class AgendaService {
         if (c.situacao()==null || observacao.length()>2000 || c.situacao()==SituacaoAgenda.CANCELADA && observacao.isBlank()) throw new IllegalArgumentException("Informe a situação e, para cancelar, um motivo de até 2000 caracteres.");
         if (atual.situacao()==c.situacao() || atual.situacao()!=SituacaoAgenda.PENDENTE && c.situacao()!=SituacaoAgenda.PENDENTE)
             throw new ConflitoException("Reabra a atividade antes de alterar sua situação.");
+        var ciclo=c.situacao()==SituacaoAgenda.CONCLUIDA && atual.dados().repeticao()!=RepeticaoAgenda.NUNCA && !repository.temSucessora(empresa,id)?repository.ciclo(empresa,id):null;
+        DadosAtividade proxima=null;
+        if(ciclo!=null) {
+            var d=atual.dados();
+            var ativos=repository.responsaveis(empresa).stream().filter(OpcaoAgenda::ativo).map(OpcaoAgenda::id).toList();
+            if(!ativos.containsAll(d.responsaveis()) || d.tipoTarefaId()!=null && repository.tiposTarefa(empresa).stream().noneMatch(t->t.id().equals(d.tipoTarefaId()) && t.ativo()))
+                throw new ConflitoException("Atualize os responsáveis e o tipo de tarefa inativos antes de concluir a tarefa recorrente, ou desative a repetição.");
+            proxima=ciclo.proxima(d);
+        }
         var agora=Instant.now();
         repository.salvar(new AtividadeAgenda(id,empresa,atual.versao()+1,atual.dados(),c.situacao(),c.situacao()==SituacaoAgenda.CONCLUIDA?agora:null,atual.criadoEm(),agora,List.of()),false);
         repository.registrar(empresa,id,usuario,switch(c.situacao()){case PENDENTE->"REABERTA";case CONCLUIDA->"CONCLUIDA";case CANCELADA->"CANCELADA";},observacao);
+        if(proxima!=null) {
+            var nova=new AtividadeAgenda(UUID.randomUUID(),empresa,0,proxima,SituacaoAgenda.PENDENTE,null,agora,agora,List.of());
+            repository.salvar(nova,true);
+            repository.vincularSucessora(empresa,id,nova.id(),ciclo);
+            repository.registrar(empresa,nova.id(),usuario,"CRIADA","Gerada pela conclusão de uma tarefa recorrente.");
+            repository.registrar(empresa,id,usuario,"RECORRENCIA_GERADA","Próxima tarefa criada para "+proxima.data()+".");
+        }
         return buscar(usuario,id);
     }
 }
