@@ -59,7 +59,7 @@ public class AgendaService {
         if (acesso.modulos().contains("contatos")) return a;
         var d=a.dados();
         var dados=new DadosAtividade(d.tipo(),d.titulo(),d.tipoTarefaId(),d.data(),d.dataFim(),d.hora(),d.horaFim(),d.prazoFatal(),d.diaInteiro(),d.modalidade(),d.local(),d.descricao(),d.responsaveis(),List.of(),d.repeticao());
-        return new AtividadeAgenda(a.id(),a.empresaId(),a.versao(),dados,a.situacao(),a.concluidaEm(),a.criadoEm(),a.atualizadoEm(),a.historico());
+        return new AtividadeAgenda(a.id(),a.empresaId(),a.versao(),dados,a.situacao(),a.concluidaEm(),a.criadoEm(),a.atualizadoEm(),a.historico(),a.workflow());
     }
     private AtividadeAgenda exigir(UUID empresa,UUID id) { return repository.buscar(empresa,id).orElseThrow(()->new RecursoNaoEncontradoException("Atividade não encontrada no seu escritório.")); }
     @Transactional

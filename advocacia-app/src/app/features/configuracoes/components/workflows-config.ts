@@ -8,7 +8,7 @@ import { ConfiguracoesLocalService } from '../services/configuracoes-local.servi
 import { Icone } from '../../../shared/components/icone/icone';
 @Component({ selector: 'app-workflows-config', imports: [FormsModule, Icone], template: `
   <div class="cfg-pilha"><div class="cfg-titulo" style="margin:0"><app-icone nome="workflow" /><div><h2>Workflows</h2><p>cadeias de etapas que distribuem o prazo entre as pessoas</p></div></div>
-    <p class="cfg-info">Cadastre as etapas, responsáveis, dias úteis e os tipos de tarefa que acionam cada workflow. A execução automática e o cálculo de datas serão integrados ao módulo de tarefas.</p>
+    <p class="cfg-info">Cadastre as etapas, responsáveis, dias úteis e os tipos de tarefa que acionam cada workflow. Na Agenda, selecione um tipo de tarefa e ative o workflow para conferir as datas antes de gerar as atividades.</p>
     @if (aviso()) { <p class="cfg-info" [class.cfg-erro]="erro()" [attr.role]="erro() ? 'alert' : 'status'">{{ aviso() }}</p> }
     @if (carregando()) { <p role="status">Carregando workflows…</p> }
     @if (!pronto() && !carregando()) { <button (click)="carregar()">Tentar novamente</button> }

@@ -90,4 +90,14 @@ describe('Formulário de atividades da Agenda',()=>{
     expect(c.dados.repeticao).toBe('SEMANAL');expect(c.dados.titulo).toBe('Revisão semanal');
     c.confirmarAcao('CONCLUIDA');await f.whenStable();expect(f.nativeElement.textContent).toContain('A primeira conclusão cria uma próxima tarefa');
   });
+
+  it('modo workflow preserva o rascunho manual e bloqueia envio da atividade individual',async()=>{
+    const f=await criar();const c=f.componentInstance as any;
+    c.dados.titulo='Rascunho';c.usandoWorkflow.set(true);await f.whenStable();
+    expect(f.nativeElement.querySelector('[name=titulo]')).toBeNull();
+    expect(f.nativeElement.querySelector('[name=workflowPrazoFatal]')).not.toBeNull();
+    c.salvar();http.expectNone(url);
+    c.usandoWorkflow.set(false);await f.whenStable();
+    expect(f.nativeElement.querySelector('[name=titulo]').value).toBe('Rascunho');
+  });
 });

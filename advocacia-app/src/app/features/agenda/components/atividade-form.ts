@@ -1,3 +1,5 @@
+import { WorkflowExecucao } from './workflow-execucao';
+import { ExecucaoWorkflow } from '../services/workflows-agenda-api.service';
 import { Component, DestroyRef, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
@@ -6,7 +8,7 @@ import { finalize, Subscription } from 'rxjs';
 import { AgendaApiService } from '../services/agenda-api.service';
 import { AtividadeAgenda, DadosAtividade, OpcoesAgenda, OpcaoAgenda, SituacaoAgenda, TIPOS_AGENDA, REPETICOES_AGENDA, nomeSituacao } from '../models/agenda.model';
 
-@Component({ selector:'app-atividade-form', imports:[FormsModule,DatePipe], templateUrl:'./atividade-form.html',styleUrl:'./atividade-form.scss' })
+@Component({ selector:'app-atividade-form', imports:[FormsModule,DatePipe,WorkflowExecucao], templateUrl:'./atividade-form.html',styleUrl:'./atividade-form.scss' })
 export class AtividadeForm {
   readonly base = input<AtividadeAgenda | null>(null);
   readonly opcoes = input.required<OpcoesAgenda>();
@@ -14,6 +16,8 @@ export class AtividadeForm {
   readonly salvou = output<AtividadeAgenda>();
   readonly recarregou = output<AtividadeAgenda>();
   readonly fechar = output<void>();
+  readonly workflowGerado = output<ExecucaoWorkflow>();
+  protected readonly usandoWorkflow = signal(false);
   private readonly api = inject(AgendaApiService);
   private readonly destroyRef = inject(DestroyRef);
   readonly salvando = signal(false);
@@ -32,7 +36,7 @@ export class AtividadeForm {
   protected readonly nomeSituacao = nomeSituacao;
   protected dados: DadosAtividade = this.vazio();
   constructor() {
-    effect(() => { const base=this.base(); this.dados=base ? { ...base.dados,responsaveis:[...base.dados.responsaveis],participantes:[...(base.dados.participantes ?? [])],repeticao:base.dados.repeticao ?? 'NUNCA' } : { ...this.vazio(),data:this.dataInicial() || null }; this.erro.set('');this.conflito.set(false);this.acao.set(null);this.observacao='';
+    effect(() => { const base=this.base(); this.usandoWorkflow.set(false); this.dados=base ? { ...base.dados,responsaveis:[...base.dados.responsaveis],participantes:[...(base.dados.participantes ?? [])],repeticao:base.dados.repeticao ?? 'NUNCA' } : { ...this.vazio(),data:this.dataInicial() || null }; this.erro.set('');this.conflito.set(false);this.acao.set(null);this.observacao='';
       this.selecionados.set([]);this.contatos.set([]);this.erroContatos.set('');
       this.consultaContatos?.unsubscribe();
       const ids=this.dados.participantes ?? [];
@@ -47,6 +51,7 @@ export class AtividadeForm {
   protected compromisso() { return ['REUNIAO','AUDIENCIA'].includes(this.dados.tipo); }
   protected temAlteracoes() { return !!this.base() && JSON.stringify(this.dados) !== JSON.stringify({...this.base()?.dados,participantes:this.base()?.dados.participantes ?? [],repeticao:this.base()?.dados.repeticao ?? 'NUNCA'}); }
   protected trocarTipo() {
+    if(this.compromisso())this.usandoWorkflow.set(false);
     if(this.dados.tipo!=='TAREFA') this.dados.repeticao='NUNCA';
     if(this.compromisso()) { this.dados.modalidade='PRESENCIAL';this.dados.prazoFatal=null; }
     else this.dados.modalidade=null;
@@ -73,7 +78,7 @@ export class AtividadeForm {
   }
   protected alternarResponsavel(id:string) { this.dados.responsaveis=this.dados.responsaveis.includes(id) ? this.dados.responsaveis.filter(r=>r!==id) : [...this.dados.responsaveis,id]; }
   protected salvar() {
-    if(this.salvando() || !this.podeEditar() || !this.dados.titulo.trim() && !this.dados.tipoTarefaId) return;
+    if(this.usandoWorkflow() || this.salvando() || !this.podeEditar() || !this.dados.titulo.trim() && !this.dados.tipoTarefaId) return;
     const d=this.dados;
     const dados={...d,titulo:d.titulo.trim(),tipoTarefaId:d.tipoTarefaId || null,data:d.data || null,dataFim:d.dataFim || null,
       hora:d.diaInteiro?null:d.hora || null,horaFim:d.diaInteiro?null:d.horaFim || null,prazoFatal:d.prazoFatal || null,modalidade:this.compromisso()?d.modalidade:null};

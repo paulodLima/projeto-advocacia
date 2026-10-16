@@ -12,22 +12,24 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class JdbcAgendaRepository implements AgendaRepository {
+    private static final String BASE="SELECT a.*,w.execucao_id AS workflow_execucao,x.nome AS workflow_nome,w.ordem AS workflow_ordem,x.total_etapas AS workflow_total,x.prazo_fatal AS workflow_prazo,w.inicio AS workflow_inicio,w.fim AS workflow_fim FROM agenda_atividade a LEFT JOIN agenda_workflow_etapa w ON w.empresa_id=a.empresa_id AND w.atividade_id=a.id LEFT JOIN agenda_workflow_execucao x ON x.empresa_id=w.empresa_id AND x.id=w.execucao_id";
     private final JdbcTemplate jdbc;
     public JdbcAgendaRepository(JdbcTemplate jdbc) { this.jdbc=jdbc; }
     public void bloquear(UUID empresa) { jdbc.queryForObject("SELECT id FROM empresa WHERE id=? FOR UPDATE",UUID.class,empresa); }
     public Optional<AtividadeAgenda> buscar(UUID empresa,UUID id) {
-        var itens=jdbc.query("SELECT * FROM agenda_atividade WHERE empresa_id=? AND id=?",this::atividade,empresa,id);
+        var itens=jdbc.query(BASE+" WHERE a.empresa_id=? AND a.id=?",this::atividade,empresa,id);
         if (itens.isEmpty()) return Optional.empty();
         var a=comResponsaveis(itens).getFirst();
         var eventos=jdbc.query("SELECT * FROM agenda_evento WHERE empresa_id=? AND atividade_id=? ORDER BY criado_em DESC,id DESC",
             (r,n)->new EventoAgenda(r.getObject("id",UUID.class),r.getString("autor_nome"),r.getString("acao"),r.getString("observacao"),r.getTimestamp("criado_em").toInstant()),empresa,id);
-        return Optional.of(new AtividadeAgenda(a.id(),empresa,a.versao(),a.dados(),a.situacao(),a.concluidaEm(),a.criadoEm(),a.atualizadoEm(),eventos));
+        return Optional.of(new AtividadeAgenda(a.id(),empresa,a.versao(),a.dados(),a.situacao(),a.concluidaEm(),a.criadoEm(),a.atualizadoEm(),eventos,a.workflow()));
     }
     private AtividadeAgenda atividade(ResultSet r,int n) throws SQLException {
         var dados=new DadosAtividade(TipoAtividade.valueOf(r.getString("tipo")),r.getString("titulo"),r.getObject("tipo_tarefa_id",UUID.class),
             r.getObject("data",LocalDate.class),r.getObject("data_fim",LocalDate.class),r.getObject("hora",LocalTime.class),r.getObject("hora_fim",LocalTime.class),r.getObject("prazo_fatal",LocalDate.class),r.getBoolean("dia_inteiro"),r.getString("modalidade"),r.getString("local"),r.getString("descricao"),List.of(),List.of(),RepeticaoAgenda.valueOf(r.getString("repeticao")));
+        var origem=r.getObject("workflow_execucao",UUID.class)==null?null:new OrigemWorkflow(r.getObject("workflow_execucao",UUID.class),r.getString("workflow_nome"),r.getInt("workflow_ordem"),r.getInt("workflow_total"),r.getObject("workflow_prazo",LocalDate.class),r.getObject("workflow_inicio",LocalDate.class),r.getObject("workflow_fim",LocalDate.class));
         return new AtividadeAgenda(r.getObject("id",UUID.class),r.getObject("empresa_id",UUID.class),r.getLong("versao"),dados,SituacaoAgenda.valueOf(r.getString("situacao")),
-            r.getTimestamp("concluida_em")==null?null:r.getTimestamp("concluida_em").toInstant(),r.getTimestamp("criado_em").toInstant(),r.getTimestamp("atualizado_em").toInstant(),List.of());
+            r.getTimestamp("concluida_em")==null?null:r.getTimestamp("concluida_em").toInstant(),r.getTimestamp("criado_em").toInstant(),r.getTimestamp("atualizado_em").toInstant(),List.of(),origem);
     }
     private List<AtividadeAgenda> comResponsaveis(List<AtividadeAgenda> itens) {
         if (itens.isEmpty()) return itens;
@@ -38,7 +40,7 @@ public class JdbcAgendaRepository implements AgendaRepository {
         jdbc.query("SELECT atividade_id,contato_id FROM agenda_participante WHERE empresa_id=? AND atividade_id IN ("+ids+") ORDER BY contato_id",
             r->{participantes.computeIfAbsent(r.getObject(1,UUID.class),k->new ArrayList<>()).add(r.getObject(2,UUID.class));},params.toArray());
         return itens.stream().map(a->{var d=a.dados();return new AtividadeAgenda(a.id(),a.empresaId(),a.versao(),
-            new DadosAtividade(d.tipo(),d.titulo(),d.tipoTarefaId(),d.data(),d.dataFim(),d.hora(),d.horaFim(),d.prazoFatal(),d.diaInteiro(),d.modalidade(),d.local(),d.descricao(),responsaveis.getOrDefault(a.id(),List.of()),participantes.getOrDefault(a.id(),List.of()),d.repeticao()),a.situacao(),a.concluidaEm(),a.criadoEm(),a.atualizadoEm(),a.historico());}).toList();
+            new DadosAtividade(d.tipo(),d.titulo(),d.tipoTarefaId(),d.data(),d.dataFim(),d.hora(),d.horaFim(),d.prazoFatal(),d.diaInteiro(),d.modalidade(),d.local(),d.descricao(),responsaveis.getOrDefault(a.id(),List.of()),participantes.getOrDefault(a.id(),List.of()),d.repeticao()),a.situacao(),a.concluidaEm(),a.criadoEm(),a.atualizadoEm(),a.historico(),a.workflow());}).toList();
     }
     private String filtrar(UUID empresa,FiltroAgenda f,List<Object> params) {
         params.add(empresa);params.add(f.fim());params.add(f.inicio());params.add(f.inicio());params.add(f.fim());
@@ -55,7 +57,7 @@ public class JdbcAgendaRepository implements AgendaRepository {
         var params=new ArrayList<Object>();var where=filtrar(empresa,filtro,params);
         var total=jdbc.queryForObject("SELECT COUNT(*) FROM agenda_atividade a"+where,Long.class,params.toArray());
         params.add(tamanho);params.add((long)pagina*tamanho);
-        var itens=jdbc.query("SELECT a.* FROM agenda_atividade a"+where+" ORDER BY CASE WHEN a.data IS NULL THEN 1 ELSE 0 END,a.data,a.hora,a.id LIMIT ? OFFSET ?",this::atividade,params.toArray());
+        var itens=jdbc.query(BASE+where+" ORDER BY CASE WHEN a.data IS NULL THEN 1 ELSE 0 END,a.data,a.hora,a.id LIMIT ? OFFSET ?",this::atividade,params.toArray());
         return new PaginaAgenda(comResponsaveis(itens),total,pagina,tamanho);
     }
     public List<MarcoAgenda> marcos(UUID empresa,FiltroAgenda filtro) {

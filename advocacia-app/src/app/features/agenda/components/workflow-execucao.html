@@ -1,0 +1,24 @@
+@if(carregando()){<p role="status">Consultando workflows deste tipo…</p>}
+@if(erro()){<p class="erro" role="alert">{{ erro() }}</p>}
+@if(!carregando() && !modelos().length && erro()){<button type="button" (click)="carregarModelos()">Tentar carregar workflows</button>}
+@if(modelos().length){
+  <section aria-label="Execução de workflow" class="workflow">
+    <label class="check"><input name="usarWorkflow" type="checkbox" [checked]="ativo()" (change)="alternar()" [disabled]="processando()">Gerar etapas de um workflow</label>
+    @if(ativo()){
+      <p>O workflow cria tarefas separadas para suas etapas. O rascunho manual fica guardado enquanto você planeja.</p>
+      <label>Workflow<select name="workflowEscolhido" [(ngModel)]="escolhido" [ngModelOptions]="{standalone:true}" (ngModelChange)="invalidar()" [disabled]="processando()"><option value="">Selecione…</option>@for(m of modelos();track m.id){<option [value]="m.id">{{ m.nome }} · {{ m.quantidadeEtapas }} etapas</option>}</select></label>
+      <p>Planejamento interno de segunda a sexta. Informe os feriados e dias sem expediente; eles não são presumidos. O prazo fatal é informado manualmente e permanece inalterado.</p>
+      <label>Datas sem expediente nesta execução (opcional)<textarea name="diasSemExpediente" [(ngModel)]="diasSemExpediente" [ngModelOptions]="{standalone:true}" (ngModelChange)="invalidar()" maxlength="4096" rows="3" placeholder="AAAA-MM-DD, uma data por linha" [disabled]="processando()"></textarea></label>
+      <div class="acoes"><button type="button" (click)="carregarModelos()" [disabled]="processando() || carregando()">Recarregar modelos</button><button type="button" (click)="prever()" [disabled]="processando() || carregando()">{{ processando() ? 'Processando…' : 'Conferir etapas' }}</button></div>
+      @if(plano();as p){
+        <section class="previa" aria-label="Prévia do workflow"><h3>{{ p.nome }}</h3><p>Prazo fatal manual: {{ p.prazoFatal + 'T12:00:00' | date:'dd/MM/yyyy' }} · Reserva final: {{ p.buffer }} dias de trabalho.</p>
+          @for(e of p.etapas;track e.ordem){
+            <article><strong>{{ e.ordem }}. {{ e.nome }}</strong><span>{{ e.responsavelNome || 'Sem responsável' }}</span><span>{{ e.inicio + 'T12:00:00' | date:'dd/MM/yyyy' }} até {{ e.fim + 'T12:00:00' | date:'dd/MM/yyyy' }} · {{ e.dias }} dias de trabalho</span></article>
+          }
+          <p>Confira as datas antes de gerar. Depois, cada tarefa poderá ser editada ou concluída sem alterar as demais.</p>
+          <button type="button" class="primario" (click)="gerar()" [disabled]="processando() || carregando()">Gerar {{ p.etapas.length }} atividades</button>
+        </section>
+      }
+    }
+  </section>
+}

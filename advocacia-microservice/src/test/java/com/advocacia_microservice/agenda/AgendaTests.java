@@ -30,6 +30,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest @ActiveProfiles("test") @Transactional
 class AgendaTests {
     @Autowired AgendaService agenda;
+    @Autowired com.advocacia_microservice.agenda.application.ExecucoesWorkflowService execucoes;
+    @Autowired com.advocacia_microservice.workflow.application.WorkflowsService workflows;
     @Autowired com.advocacia_microservice.agenda.application.LembretesAgendaService lembretes;
     @Autowired com.advocacia_microservice.agenda.domain.repository.LembretesAgendaRepository lembretesRepository;
     @Autowired CriarUsuarioUseCase criar;
@@ -365,5 +367,67 @@ class AgendaTests {
         jdbc.update("UPDATE empresa_modulo SET liberado=TRUE WHERE empresa_id=? AND modulo_codigo='agenda'",empresa);
         jdbc.update("UPDATE escritorio SET ativo=FALSE WHERE id=?",empresa);em.clear();
         mvc.perform(get(url).with(user(financeiro.toString()))).andExpect(status().isUnauthorized());
+    }
+
+    PlanejarWorkflow workflow() {
+        var tipo=tipoTarefa(master,"Petição");
+        var w=workflows.criar(master,"Preparação");
+        workflows.salvar(master,w.id(),w.nome(),1,0,List.of(tipo.id()),List.of(
+            new com.advocacia_microservice.workflow.application.WorkflowsService.Etapa(UUID.randomUUID(),"Redigir",master,2),
+            new com.advocacia_microservice.workflow.application.WorkflowsService.Etapa(UUID.randomUUID(),"Protocolar",null,1)));
+        return new PlanejarWorkflow(w.id(),1,tipo.id(),LocalDate.of(2026,10,19),List.of(LocalDate.of(2026,10,16)));
+    }
+    @Test void workflowPlanejaDiasUteisGeraSnapshotEPreservaReenvioAposExcluirModelo() {
+        var c=workflow();var p=execucoes.prever(master,c);
+        assertEquals(LocalDate.of(2026,10,15),p.etapas().getLast().fim());
+        assertEquals(LocalDate.of(2026,10,13),p.etapas().getFirst().inicio());
+        assertEquals(LocalDate.of(2026,10,14),p.etapas().getFirst().fim());
+        assertEquals(0,agenda.listar(master,filtro(DIA.minusDays(10),DIA.plusDays(10),true),0,50).total());
+        var requisicao=UUID.randomUUID();var e=execucoes.gerar(master,requisicao,c,p.assinatura());
+        assertEquals(2,e.atividades().size());
+        var a=agenda.buscar(master,e.atividades().getFirst());
+        assertEquals("Redigir",a.dados().titulo());assertEquals(List.of(master),a.dados().responsaveis());
+        assertNull(a.dados().prazoFatal());assertNull(a.dados().tipoTarefaId());
+        assertEquals(c.prazoFatal(),a.workflow().prazoFatal());assertEquals(e.id(),a.workflow().execucaoId());
+        assertEquals(1,a.historico().size());
+        assertTrue(agenda.buscar(master,e.atividades().getLast()).dados().responsaveis().isEmpty());
+        var editada=agenda.salvar(master,a.id(),copia(a,DIA.minusDays(3)));
+        assertEquals(a.workflow(),editada.workflow());
+        workflows.excluir(master,c.workflowId(),1);
+        assertEquals(e,execucoes.gerar(master,requisicao,c,p.assinatura()));
+        assertEquals(2,agenda.listar(master,filtro(DIA.minusDays(10),DIA.plusDays(10),true),0,50).total());
+        assertEquals("Preparação",agenda.buscar(master,a.id()).workflow().nome());
+        assertThrows(ConflitoException.class,()->execucoes.gerar(master,requisicao,c,"a".repeat(64)));
+    }
+    @Test void workflowRejeitaPreviaAntigaResponsavelInativoOutroEscritorioEPerfilConsulta() {
+        var c=workflow();var p=execucoes.prever(master,c);
+        assertThrows(ConflitoException.class,()->execucoes.gerar(master,UUID.randomUUID(),c,"a".repeat(64)));
+        var outro=usuario("Outro");empresa(outro);
+        assertTrue(execucoes.modelos(outro,c.tipoTarefaId()).isEmpty());
+        assertThrows(RecursoNaoEncontradoException.class,()->execucoes.prever(outro,c));
+        var financeiro=membro("FINANCEIRO");
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,()->execucoes.prever(financeiro,c));
+        jdbc.update("UPDATE usuario SET nome='Renomeado' WHERE id=?",master);
+        assertThrows(ConflitoException.class,()->execucoes.gerar(master,UUID.randomUUID(),c,p.assinatura()));
+        workflows.salvar(master,c.workflowId(),"Novo nome",1,1,List.of(c.tipoTarefaId()),List.of(
+            new com.advocacia_microservice.workflow.application.WorkflowsService.Etapa(UUID.randomUUID(),"Etapa",master,1)));
+        assertThrows(ConflitoException.class,()->execucoes.prever(master,c));
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM agenda_workflow_execucao WHERE empresa_id=?",Integer.class,empresa));
+        var atual=new PlanejarWorkflow(c.workflowId(),2,c.tipoTarefaId(),c.prazoFatal(),List.of());
+        var assistente=membro("ASSISTENTE");
+        jdbc.update("UPDATE workflow_etapa SET responsavel=? WHERE workflow_id=?",assistente,c.workflowId());
+        jdbc.update("UPDATE usuario SET status='INATIVO' WHERE id=?",assistente);
+        assertThrows(ConflitoException.class,()->execucoes.prever(master,atual));
+    }
+    @Test void workflowHttpExigeCsrfValidaEntradaEExibeModelosApenasDoTipoAtivo() throws Exception {
+        var c=workflow();
+        mvc.perform(get("/api/agenda/workflows").param("tipoTarefaId",c.tipoTarefaId().toString()).with(user(master.toString())))
+            .andExpect(status().isOk()).andExpect(jsonPath("$[0].quantidadeEtapas").value(2));
+        mvc.perform(post("/api/agenda/workflows/previsao").with(user(master.toString())).contentType("application/json").content("{}")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/agenda/workflows/previsao").with(user(master.toString())).with(csrf()).contentType("application/json").content("{}")).andExpect(status().isBadRequest());
+        assertThrows(IllegalArgumentException.class,()->new PlanejarWorkflow(c.workflowId(),1,c.tipoTarefaId(),DIA,List.of(DIA,DIA)));
+        jdbc.update("UPDATE cadastro_item SET ativo=FALSE WHERE id=?",c.tipoTarefaId());
+        assertTrue(execucoes.modelos(master,c.tipoTarefaId()).isEmpty());
+        assertThrows(ConflitoException.class,()->execucoes.prever(master,c));
     }
 }

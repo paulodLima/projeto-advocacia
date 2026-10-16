@@ -1,0 +1,7 @@
+:host { display:block; } .workflow { padding:1rem;border:1px solid var(--tema-primaria,#4f5a49);border-radius:.8rem;margin:.7rem 0;display:grid;gap:.7rem; }
+label {display:grid;gap:.4rem;font-size:.85rem;} .check {display:flex;align-items:center;gap:.5rem;} .check input{width:auto;}
+input,select,textarea {width:100%;box-sizing:border-box;font:inherit;padding:.6rem;border:1px solid #d3d7cc;border-radius:.5rem;background:white;color:inherit;}
+p,span {font-size:.8rem;line-height:1.5;} p,h3 {margin:0;} h3 {font-size:.95rem;}
+.acoes {display:flex;gap:.5rem;flex-wrap:wrap;} button{font:inherit;padding:.6rem .8rem;border:1px solid #cdd2c5;border-radius:.5rem;background:#fff;color:inherit;cursor:pointer;}
+button:disabled{opacity:.55;cursor:default;} .primario{background:var(--tema-primaria,#4f5a49);color:#fff;} .erro{color:#963e2c;}
+.previa,article {display:grid;gap:.5rem;} article {border-top:1px solid #d9ddcf;padding:.75rem 0;overflow-wrap:anywhere;}

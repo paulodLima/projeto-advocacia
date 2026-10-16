@@ -1,3 +1,4 @@
+import { ExecucaoWorkflow } from '../services/workflows-agenda-api.service';
 import { AfterViewInit, Component, DestroyRef, ElementRef, ViewChild, computed, effect, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -102,5 +103,6 @@ export class Agenda implements AfterViewInit {
   protected fechar(){if(this.formulario?.salvando())return;this.aberto.set(false);this.editor?.nativeElement.close();this.atividade.set(null);this.limparLink();}
   protected cancelarDialogo(event:Event){event.preventDefault();this.fechar();}
   protected salvo(a:AtividadeAgenda){this.aberto.set(false);this.editor?.nativeElement.close();this.atividade.set(null);this.aviso.set('Atividade salva. '+nomeSituacao(a.situacao)+'.');this.limparLink();this.carregar();}
+  protected workflowGerado(execucao:ExecucaoWorkflow){this.aberto.set(false);this.editor?.nativeElement.close();this.atividade.set(null);this.limparLink();this.aviso.set(execucao.atividades.length+' atividades geradas pelo workflow.');this.carregar();}
   protected dataNova(){return this.diaSelecionado() || hojeEscritorio();}
 }

@@ -10,7 +10,7 @@ export interface DadosAtividade {
   modalidade: string | null; local: string; descricao: string; responsaveis: string[]; participantes?: string[]; repeticao?: RepeticaoAgenda;
 }
 export interface EventoAgenda { id: string; autor: string; acao: string; observacao: string; criadoEm: string; }
-export interface AtividadeAgenda { id: string; versao: number; dados: DadosAtividade; situacao: SituacaoAgenda; concluidaEm: string | null; criadoEm: string; atualizadoEm: string; historico: EventoAgenda[]; }
+export interface AtividadeAgenda { workflow?: { execucaoId:string; nome:string; ordem:number; totalEtapas:number; prazoFatal:string; inicioPlanejado:string; fimPlanejado:string } | null; id: string; versao: number; dados: DadosAtividade; situacao: SituacaoAgenda; concluidaEm: string | null; criadoEm: string; atualizadoEm: string; historico: EventoAgenda[]; }
 export interface OpcaoAgenda { id: string; nome: string; ativo: boolean; }
 export interface OpcoesAgenda { podeEditar: boolean; podeVincularContatos?: boolean; responsaveis: OpcaoAgenda[]; tiposTarefa: OpcaoAgenda[]; fusoHorario: string; }
 export interface PaginaAgenda { itens: AtividadeAgenda[]; total: number; pagina: number; tamanho: number; }

@@ -25,4 +25,4 @@
     }
   </section>
 </section>
-<dialog #editor class="painel-editor" aria-labelledby="titulo-atividade" (cancel)="cancelarDialogo($event)">@if(aberto() && opcoes(); as opcoesAtuais){<app-atividade-form [base]="atividade()" [opcoes]="opcoesAtuais" [dataInicial]="dataNova()" (salvou)="salvo($event)" (recarregou)="atividade.set($event)" (fechar)="fechar()"/>}</dialog>
+<dialog #editor class="painel-editor" aria-labelledby="titulo-atividade" (cancel)="cancelarDialogo($event)">@if(aberto() && opcoes(); as opcoesAtuais){<app-atividade-form [base]="atividade()" [opcoes]="opcoesAtuais" [dataInicial]="dataNova()" (salvou)="salvo($event)" (workflowGerado)="workflowGerado($event)" (recarregou)="atividade.set($event)" (fechar)="fechar()"/>}</dialog>
